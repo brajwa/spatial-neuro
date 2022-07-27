@@ -81,34 +81,34 @@ constructMap <- function(pp1, pp2, type){
     X_2 = t(pp_density_map_2$v)
     
   }else if(type=="local_linhom"){
-    pp1_l = localLinhom(pp1, rvalue = 0.0352, verbose=FALSE)
+    pp1_l = localLinhom(pp1, rvalue = intr_dist, verbose=FALSE)
     marks(pp1) = pp1_l
     
     X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
     
-    pp2_l = localLinhom(pp2, rvalue = 0.0352, verbose=FALSE)
+    pp2_l = localLinhom(pp2, rvalue = intr_dist, verbose=FALSE)
     marks(pp2) = pp2_l
     
     X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
     
   }else if(type=="local_linhom_sector_horizontal"){
-    pp1_l = localLinhomsector(pp1, rvalue = 0.0352, begin=-15, end=15, units="degrees", verbose=FALSE)
+    pp1_l = localLinhomsector(pp1, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(pp1) = pp1_l
     
     X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
     
-    pp2_l = localLinhomsector(pp2, rvalue = 0.0352, begin=-15, end=15, units="degrees", verbose=FALSE)
+    pp2_l = localLinhomsector(pp2, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(pp2) = pp2_l
     
     X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.025))$v)
     
   }else if(type=="local_linhom_sector_vertical"){
-    pp1_l = localLinhomsector(pp1, rvalue = 0.0352, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    pp1_l = localLinhomsector(pp1, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(pp1) = pp1_l
     
     X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.025))$v)
     
-    pp2_l = localLinhomsector(pp2, rvalue = 0.0352, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    pp2_l = localLinhomsector(pp2, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(pp2) = pp2_l
     
     X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
