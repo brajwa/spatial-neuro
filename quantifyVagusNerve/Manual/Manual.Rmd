@@ -1,7 +1,7 @@
 ---
-title: Quantifying Similarities between Spatial Arrangement of Axons in Peripheral Nerves
+title: Quantify Vagus and Pelvic Nerves
 author: "Abida Sanjana Shemonti"
-date: "June 18, 2022"
+date: "July 27, 2022"
 output:
   html_document:
     toc: yes
@@ -21,9 +21,23 @@ knitr::opts_chunk$set(out.width = 10)
 ```
 
 # What are we doing?
-We are using the R package [Barycenter](https://cran.r-project.org/web/packages/Barycenter/Barycenter.pdf) to compute Sinkhorn distances between images of certain spatial features of the spatial point patterns constructed to represent the centroids of the unmyelinated axons in several vagus and pelvic nerve fascicles.
+We are demonstrating a pipeline that represents the segmented unmyelinated axons in several vagus and pelvic nerve cross-sections as spatial point patterns, and computes Sinkhorn distance between certain spatial features of the point patterns and their corresponding images, to quantify spatial inhomogeneity and anisotropy in the peripheral nerve cross-sections.
+
+
+# Data 
+The directory **spatial-neuro/quantifyVagusNerve/Data/** contains the following subdirectories:
+
+* **U-Net predictions:** This subdirectory contains images (*.png*) of the segmented unmyelinated axons in the vagus and pelvic nerve cross-sections under consideration.  @plebani2022high describes the segmentation process.
+
+* **Inputs:** There are *.csv* and *.rds* files in this subdirectory. The *.csv* files contain several morphometric characteristics of the segmented unmyelinated axons in each nerve cross-section, along with their centroid locations, which we use in particular to construct the spatial point patterns. The morphometric characteristics are extracted using an open source image processing package Fiji (@schindelin2012fiji). The *.rds* files, drawn using R graphics tools, store the outer boundary and inner holes of the cross-sections that are used for spatial point pattern construction also. These are the main input files for the analysis.
+
+* **Demo Inputs:** This subdirectory contains a small subset of the inputs for quick demonstration purpose.
+
+* **Supporting Files:** Some additional information of the nerve samples, such as sample ID, nerve location and sex, are saved in this subdirectory. The pair-wise orientation of the cross-sections are computed at a certain stage of the pipeline. Those orientations are also stored inside this subdirectory.
 
 # Some required libraries
+We are using the R package [Barycenter](https://cran.r-project.org/web/packages/Barycenter/Barycenter.pdf) to compute Sinkhorn distances between images of certain spatial features of the spatial point patterns constructed to represent the centroids of the unmyelinated axons in several vagus and pelvic nerve fascicles.
+
 Here are the R libraries required to be loaded. Specifying the location where we want the libraries to be installed (*lib.loc*) is optional.
 
 ```{r eval=FALSE}
