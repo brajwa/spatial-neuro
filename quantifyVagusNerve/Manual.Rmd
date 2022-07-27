@@ -1,0 +1,331 @@
+---
+title: Quantifying Similarities between Spatial Arrangement of Axons in Peripheral Nerves
+author: "Abida Sanjana Shemonti"
+date: "June 18, 2022"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+    highlight: tango
+bibliography: paper-list.bib
+nocite: |
+  @*
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(out.width = 10)
+```
+
+# What are we doing?
+We are using the R package [Barycenter](https://cran.r-project.org/web/packages/Barycenter/Barycenter.pdf) to compute Sinkhorn distances between images of certain spatial features of the spatial point patterns constructed to represent the centroids of the unmyelinated axons in several vagus and pelvic nerve fascicles.
+
+# Some required libraries
+Here are the R libraries required to be loaded. Specifying the location where we want the libraries to be installed (*lib.loc*) is optional.
+
+```{r eval=FALSE}
+load.lib = c("deldir", "spatstat", "spatstat.utils", "magrittr", "dplyr", "igraph", "scales", "httr",
+             "tidyverse", "ggnetwork", "ggplot2", "poweRlaw", "imager", "viridis", "plotrix", "openxlsx", 
+             "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools", "officer", "rvg", "oce", 
+             "OneR", "RandomFieldsUtils", "RandomFields", "Cairo", "knitr", "scorepeak", "Rcpp", "emdist", 
+             "RImageJROI", "svglite", "transport", "Barycenter", "T4transport", "OpenImageR", "wvtool", 
+             "adimpro", "proxy", "RColorBrewer", "tictoc")
+
+install.lib = load.lib[!load.lib %in% installed.packages(lib.loc = "PATH TO WHERE YOU WANT THE LIBRARIES TO BE 
+                                                         INSTALLED")]
+for(lib in install.lib) install.packages(pkgs=lib, lib="PATH TO WHERE YOU WANT THE LIBRARIES TO BE INSTALLED", 
+                                         dependencies=TRUE)
+sapply(load.lib, require, lib.loc = "PATH TO WHERE YOU WANT THE LIBRARIES TO BE INSTALLED", character=TRUE)
+```
+
+# Command line arguments
+While running the R code from the terminal (with a script or directly), three command line arguments are passed: (1) *analysis_type*: the spatial feature of the point pattern to consider. It can the spatial intensity (basic_density), local inhomogeneous L-function (local_linhom), local inhomogeneous L-function with horizontal and vertical sectors (local_linhom_sector_horizontal and local_linhom_sector_vertical). (2) *scaling*: whether scaling is to be done to the point pattern. (3) *lambda*: the value of the regularization parameter for the Sinkhorn distance computation.
+
+```{r eval=FALSE}
+#retrieving the command line arguments
+args = commandArgs()
+print(args)
+
+if(length(args) != 5){
+  print("Invalid arguments...\n")
+  return()
+} else{
+  analysis_type = args[3]
+  scaling = args[4]
+  lambda  = args[5]
+}
+
+print(analysis_type)
+print(scaling)
+print(lambda)
+```
+
+# Helping functions
+The two R files sourced below: *LocalKSector.R* and *Kinhomsector.R* are included as separate codes.
+
+```{r eval=FALSE}
+plot_dest_path = paste("PATH TO WHERE YOU WANT THE RESULTS TO BE SAVED", analysis_type, scaling, "_", lambda, 
+                       "/", sep="")
+if (!dir.exists(plot_dest_path)) {dir.create(plot_dest_path, recursive=TRUE)}
+
+#source the inhomogeneous sector functions, the original spatstat functions have been modified
+source("LocalKSector.R")
+source("Kinhomsector.R")
+
+#processMap1 takes as input a matrix X, replaces any of its NA values with very small number close to zero, normalizes the matrix to sum to 1, and returns the modified matrix.
+processMap1 <- function(X){
+  X[is.na(X)] = 10^(-20) #very small number close to 0, but not 0.
+  X = X / sum(X)
+  M = nrow(X)
+  P = ncol(X)
+  cat(M, "*", P, "\n")
+  
+  return(X)
+}
+
+#constructMap takes as input two point patterns and the type of spatial feature under consideration. It computes the distribution of that spatial feature for the two point patterns and returns the resulting matrices
+
+#rvalue=0.0373 was for 29 fascicles, one of them has quite different spatial arrangement, hence different Linhom characteristics. we eliminated that one in rvalue
+#computation and came up with another rvalue=0.0139.
+#analysis of variance gives 0.032 (29 fascicles), 0.0352 (28 fascicles).
+constructMap <- function(pp1, pp2, type){
+  cat(type, "\n")
+  
+  if(type=="basic_density"){
+    pp_density_map_1 = density(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025) 
+    X_1 = t(pp_density_map_1$v)
+    
+    pp_density_map_2 = density(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025) 
+    X_2 = t(pp_density_map_2$v)
+    
+  }else if(type=="local_linhom"){
+    pp1_l = localLinhom(pp1, rvalue = 0.0373, verbose=FALSE)
+    marks(pp1) = pp1_l
+    
+    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
+    
+    pp2_l = localLinhom(pp2, rvalue = 0.0373, verbose=FALSE)
+    marks(pp2) = pp2_l
+    
+    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
+    
+  }else if(type=="local_linhom_sector_horizontal"){
+    pp1_l = localLinhomsector(pp1, rvalue = 0.0373, begin=-15, end=15, units="degrees", verbose=FALSE)
+    marks(pp1) = pp1_l
+    
+    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
+    
+    pp2_l = localLinhomsector(pp2, rvalue = 0.0373, begin=-15, end=15, units="degrees", verbose=FALSE)
+    marks(pp2) = pp2_l
+    
+    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.025))$v)
+    
+  }else if(type=="local_linhom_sector_vertical"){
+    pp1_l = localLinhomsector(pp1, rvalue = 0.0373, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    marks(pp1) = pp1_l
+    
+    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.025))$v)
+    
+    pp2_l = localLinhomsector(pp2, rvalue = 0.0373, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    marks(pp2) = pp2_l
+    
+    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
+    
+  }else{
+    print("Invalid argument!")
+    return(list(NULL, NULL))
+  }
+  
+  X_1 = processMap1(X_1)
+  X_2 = processMap1(X_2)
+  
+  r_1 = nrow(X_1)
+  c_1 = ncol(X_1)
+  
+  r_2 = nrow(X_2)
+  c_2 = ncol(X_2)
+  
+  #0-padding for making matrix equal size
+  if(r_1 > r_2){
+    X_2 = (padding(as.matrix(X_2), new_rows = r_1, new_cols = ncol(X_2), fill_value = 10^(-20)))$data
+  }else{
+    X_1 = (padding(as.matrix(X_1), new_rows = r_2, new_cols = ncol(X_1), fill_value = 10^(-20)))$data
+  }
+  
+  if(c_1 > c_2){
+    X_2 = (padding(as.matrix(X_2), new_rows = nrow(X_2), new_cols = c_1, fill_value = 10^(-20)))$data
+  }else{
+    X_1 = (padding(as.matrix(X_1), new_rows = nrow(X_1), new_cols = c_2, fill_value = 10^(-20)))$data
+  }
+  
+  return(list(X_1, X_2))
+  
+}
+```
+
+# Sinkhorn distance computation
+This is the starting point of the computation. We have the spatial coordinates of the centroids of the unmyelinated axons saved in *.csv* files and the boundary of the fascicles in *.rds* files.
+
+```{r eval=FALSE}
+folder_path = "PATH TO THE CSV AND RDS FILES" #change accordingly
+data_files = list.files(path=folder_path, pattern = ".csv", full.names = FALSE)
+extension = ".csv"
+
+# creating xlsx workbook to store the results
+wb = openxlsx::createWorkbook()
+distance_matrix = matrix(0, nrow = length(data_files), ncol = length(data_files))
+min_angle_matrix = matrix(0, nrow = length(data_files), ncol = length(data_files))
+
+# pair-wise Sinkhorn distance computation
+i = 1
+while (i <= length(data_files)) {
+  # nrow=8 because we will be rotating the fascicles in every 45 degree, that gives 8 orientations.
+  sinkhorn_info = data.frame(matrix(0, nrow = 8, ncol = length(data_files)))
+
+  j = i+1
+  while (j <= length(data_files)) {
+    cat("Fascicle pair: ", i, " ", j, "\n")
+    
+    #constructing the i-th point pattern
+    file_name_1 = strsplit(data_files[i], ".csv")[[1]]
+    print(file_name_1)
+    
+    axon_locations_1 = unique(read.csv(paste(folder_path, file_name_1, extension, sep="")))
+    retrieved_contour_1 = readRDS(paste(folder_path, file_name_1, ".rds", sep=""))
+    
+    axon_pp_1 = ppp(x=axon_locations_1$X, y=axon_locations_1$Y, checkdup=F, window=retrieved_contour_1)
+    if(scaling == 1){
+    	print("scaled")
+    	axon_pp_1 = rescale.ppp(axon_pp_1, s=axon_pp_1$window$yrange[2]) #scaling
+    }
+    axon_pp_1 = shift.ppp(axon_pp_1, origin = "centroid") #shifting origin
+    axon_pp_1 = as.ppp(axon_pp_1)
+    
+    #constructing the j-th point pattern
+    file_name_2 = strsplit(data_files[j], ".csv")[[1]]
+    print(file_name_2)
+    
+    axon_locations_2 = unique(read.csv(paste(folder_path, file_name_2, extension, sep="")))
+    retrieved_contour_2 = readRDS(paste(folder_path, file_name_2, ".rds", sep=""))
+    
+    axon_pp_2 = ppp(x=axon_locations_2$X, y=axon_locations_2$Y, checkdup=F, window=retrieved_contour_2)
+    if(scaling == 1){
+    	print("scaled")
+    	axon_pp_2 = rescale.ppp(axon_pp_2, s=axon_pp_2$window$yrange[2]) #scaling
+    }
+    axon_pp_2 = shift.ppp(axon_pp_2, origin = "centroid") #shifting origin
+    axon_pp_2 = as.ppp(axon_pp_2)
+    
+    col_info = c()
+    row_info = c()
+    
+    #loop for rotating the i-th point pattern
+    angle_of_rotation = 45 # in degree
+    theta = 0
+    while(theta < 360){
+      cat("theta: ", theta, "\n")
+      row_info[length(row_info) + 1] = theta
+      
+      axon_pp_1_rotated = rotate.ppp(axon_pp_1, angle = theta*pi/180, centre = "centroid")
+      
+      #saving a plot
+      svglite(paste(plot_dest_path, paste(file_name_1, theta, "deg rotated", sep = " "), "_pp.svg", sep=""), 
+              width = 10, height = 10)
+      plot(axon_pp_1_rotated, pch=21, bg="black", cex=0.7, main=paste(file_name_1, theta, "deg rotated", 
+                                                                      sep = " "))
+      dev.off()
+      
+      #constructing images of the spatial feature based on the input
+      result_map = constructMap(pp1=axon_pp_1_rotated, pp2=axon_pp_2, type=analysis_type)
+      map_1 = result_map[[1]]
+      map_2 = result_map[[2]]
+
+      #saving a plot
+      jpeg(paste(plot_dest_path, file_name_1,"_", theta, "_", analysis_type, ".jpeg", sep=""),
+      	 width = 10, height = 10, units = "in", res=900)
+      image(map_1, main="", col=colorRampPalette(brewer.pal(9, "YlOrRd"))(9), box=FALSE)
+      dev.off()
+      #saving a plot
+      jpeg(paste(plot_dest_path, file_name_2,"_", analysis_type, ".jpeg", sep=""),
+      	 width = 10, height = 10, units = "in", res=900)
+      image(map_2, main="", col=colorRampPalette(brewer.pal(9, "YlOrRd"))(9), box=FALSE)
+      dev.off()
+
+      r_1 = nrow(map_1)
+      c_1 = ncol(map_1)
+      
+      r_2 = nrow(map_2)
+      c_2 = ncol(map_2)
+      
+      #constructing cost/ distance matrix 
+      m1 = seq(0,1,length.out=c_1)
+      m2 = seq(0,1,length.out=r_1)
+      
+      n1 = seq(0,1,length.out=c_2)
+      n2 = seq(0,1,length.out=r_2)
+      
+      expand_m <- data.frame(expand.grid(m1,rev(m2)))
+      expand_n <- data.frame(expand.grid(n1,rev(n2)))
+      
+      costm <- proxy::dist(expand_m, expand_n, method = "Euclidean")
+      costm <- `dim<-`(c(costm), dim(costm))
+      
+      #flattening the images
+      a <- matrix(map_1, r_1*c_1, 1, byrow = T)
+      b <- matrix(map_2, r_2*c_2, 1, byrow = T)
+      
+      cat(r_1, "*", c_1, " ", r_2, "*", c_2, "\n")
+      cat(dim(a), ", ", dim(b), ", ", dim(costm), "\n")
+      
+      #using the function from Barycenter package, tic-toc computes the runtime
+      tic("Barycenter::Sinkhorn")
+      skh_bary = Barycenter::Sinkhorn(a, b, costm, lambda = as.numeric(lambda)) 
+                                                    #default regularization param (lambda) is 1.
+      toc()
+      cat(skh_bary$Distance, "\n")
+      
+      #storing the distance
+      col_info[length(col_info) + 1] = skh_bary$Distance
+      
+      theta = theta + angle_of_rotation
+    }
+    
+    sinkhorn_info[, j] = col_info
+    j = j+1
+  }
+  
+  #including min, max, avg, variance and min index for all the sinkhorn distance per fascicle
+  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, min)
+  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, max)
+  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, mean)
+  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, var)
+  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = row_info[apply(sinkhorn_info[1:8, ], 2, which.min)]
+  
+  rownames(sinkhorn_info) = c(row_info, "min", "max", "avg", "var", "argmin")
+  colnames(sinkhorn_info) = c(1:length(sinkhorn_info))
+  
+  addWorksheet(wb, sheetName = paste("Sheet", i, sep=""))
+  writeData(wb, sheet = paste("Sheet", i, sep=""), x=sinkhorn_info, rowNames = TRUE)
+  
+  distance_matrix[i, ] = apply(sinkhorn_info[1:8, ], 2, min)
+  min_angle_matrix[i, ] = row_info[apply(sinkhorn_info[1:8, ], 2, which.min)]
+  
+  cat("\n")
+  i=i+1
+}
+
+#storing the results
+addWorksheet(wb, sheetName = "Distance matrix")
+writeData(wb, sheet = "Distance matrix", x=distance_matrix, rowNames = FALSE, colNames = FALSE)
+
+addWorksheet(wb, sheetName = "Min angle matrix")
+writeData(wb, sheet = "Min angle matrix", x=min_angle_matrix, rowNames = FALSE, colNames = FALSE)
+
+openxlsx::saveWorkbook(wb, file =paste(plot_dest_path, analysis_type, scaling, "_", lambda,"_all_result.xlsx", sep=""), overwrite = TRUE)
+```
+
+
+# References
