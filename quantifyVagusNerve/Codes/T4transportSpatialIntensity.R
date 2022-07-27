@@ -102,7 +102,7 @@ while (i <= length(data_files)) {
   	dev.off()
     
   }else if(analysis_type=="local_linhom"){
-  	pp_l = localLinhom(axon_pp, rvalue = 0.0352, verbose=FALSE)
+  	pp_l = localLinhom(axon_pp, rvalue = intr_dist, verbose=FALSE)
     marks(axon_pp) = pp_l
     dens = Smooth(axon_pp, sigma=bw.diggle(axon_pp), adjust=2, diggle=TRUE, eps=0.0025)
   	
@@ -115,7 +115,7 @@ while (i <= length(data_files)) {
   	dev.off()
 	
   }else if(analysis_type=="local_linhom_sector_horizontal"){
-  	pp_l = localLinhomsector(axon_pp, rvalue = 0.0352, begin=-15, end=15, units="degrees", verbose=FALSE)
+  	pp_l = localLinhomsector(axon_pp, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(axon_pp) = pp_l
     dens = Smooth(axon_pp, sigma=bw.diggle(axon_pp), adjust=2, diggle=TRUE, eps=0.0025)
   	
@@ -128,7 +128,7 @@ while (i <= length(data_files)) {
   	dev.off()
      
   }else if(analysis_type=="local_linhom_sector_vertical"){
-    pp_l = localLinhomsector(axon_pp, rvalue = 0.0352, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    pp_l = localLinhomsector(axon_pp, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(axon_pp) = pp_l
     dens = Smooth(axon_pp, sigma=bw.diggle(axon_pp), adjust=2, diggle=TRUE, eps=0.0025)
   	
@@ -221,22 +221,22 @@ while (i <= length(data_files)) {
     		WY = rep(1/axon_pp_2$n, axon_pp_2$n)
 		
   	  }else if(analysis_type=="local_linhom"){
-    		pp1_l = localLinhom(axon_pp_1_rotated, rvalue = 0.0352, verbose=FALSE)
-    		pp2_l = localLinhom(axon_pp_2, rvalue = 0.0352, verbose=FALSE)
+    		pp1_l = localLinhom(axon_pp_1_rotated, rvalue = intr_dist, verbose=FALSE)
+    		pp2_l = localLinhom(axon_pp_2, rvalue = intr_dist, verbose=FALSE)
     		
     		WX = pp1_l / sum(pp1_l)
     		WY = pp2_l / sum(pp2_l)
   		
   	  }else if(analysis_type=="local_linhom_sector_horizontal"){
-    		pp1_l = localLinhomsector(axon_pp_1_rotated, rvalue = 0.0352, begin=-15, end=15, units="degrees", verbose=FALSE)
-    		pp2_l = localLinhomsector(axon_pp_2, rvalue = 0.0352, begin=-15, end=15, units="degrees", verbose=FALSE)
+    		pp1_l = localLinhomsector(axon_pp_1_rotated, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
+    		pp2_l = localLinhomsector(axon_pp_2, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     		
     		WX = pp1_l / sum(pp1_l)
     		WY = pp2_l / sum(pp2_l)
   		 
   	  }else if(analysis_type=="local_linhom_sector_vertical"){
-    		pp1_l = localLinhomsector(axon_pp_1_rotated, rvalue = 0.0352, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
-    		pp2_l = localLinhomsector(axon_pp_2, rvalue = 0.0352, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    		pp1_l = localLinhomsector(axon_pp_1_rotated, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
+    		pp2_l = localLinhomsector(axon_pp_2, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     		
     		WX = pp1_l / sum(pp1_l)
     		WY = pp2_l / sum(pp2_l)
