@@ -15,9 +15,9 @@ args = commandArgs()
 print(args)
 
 #### the number of arguments to check for should be changed if required
-#### 10 arguments are used while using Rscript command from RStudio terminal
-#### 6 arguments are required if run with slurm job
-if(length(args) != 10){
+#### 11 arguments are used while using Rscript command from RStudio terminal
+#### 7 arguments are required if run with slurm job
+if(length(args) != 11){
   print("Invalid arguments...\n")
   return()
 } else{
@@ -25,12 +25,14 @@ if(length(args) != 10){
   scaling = args[8]
   lambda  = args[9]
   version = args[10]
+  intr_dist = args[11]
 }
 
 print(analysis_type)
 print(scaling)
 print(lambda)
 print(version)
+print(intr_dist)
 
 
 #### extracting parent directory information for accessing input and output location
