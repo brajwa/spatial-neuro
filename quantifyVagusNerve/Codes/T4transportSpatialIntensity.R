@@ -2,8 +2,8 @@
 load.lib = c("deldir", "spatstat", "spatstat.utils", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
              "officer", "rvg", "oce", "OneR", "RandomFieldsUtils", "RandomFields", "Cairo", "knitr", "scorepeak", "Rcpp", "emdist",
-             "RImageJROI", "svglite", "transport", "Barycenter", "T4transport", "OpenImageR", "wvtool", "adimpro",
-             "proxy", "RColorBrewer", "tictoc", "this.path")
+             "RImageJROI", "svglite", "transport", "Barycenter", "T4transport", "wvtool", "adimpro", "reshape2", "proxy", "RColorBrewer", "tictoc",
+             "ggrepel", "scatterplot3d", "car", "e1071", "rgl", "this.path")
 
 install.lib = load.lib[!load.lib %in% installed.packages()]
 for(lib in install.lib) install.packages(pkgs=lib, dependencies=TRUE)
