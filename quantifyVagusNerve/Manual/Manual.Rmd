@@ -3,14 +3,14 @@ title: Quantify spatial inhomogeneity and anisotropy in the peripheral nerve cro
 author: "Abida Sanjana Shemonti"
 date: "July 27, 2022"
 output:
-  html_document:
-    toc: yes
-    toc_depth: '2'
-    df_print: paged
   pdf_document:
     toc: yes
     toc_depth: 2
     highlight: tango
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
 bibliography: paper-list.bib
 nocite: |
   @*
