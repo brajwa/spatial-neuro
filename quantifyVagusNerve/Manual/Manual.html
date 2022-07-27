@@ -11,9 +11,9 @@
 
 <meta name="author" content="Abida Sanjana Shemonti" />
 
-<meta name="date" content="2022-06-18" />
+<meta name="date" content="2022-07-27" />
 
-<title>Quantifying Similarities between Spatial Arrangement of Axons in Peripheral Nerves</title>
+<title>Quantify Vagus and Pelvic Nerves</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1656,16 +1656,16 @@ pre code {
 
 
 
-<h1 class="title toc-ignore">Quantifying Similarities between Spatial
-Arrangement of Axons in Peripheral Nerves</h1>
+<h1 class="title toc-ignore">Quantify Vagus and Pelvic Nerves</h1>
 <h4 class="author">Abida Sanjana Shemonti</h4>
-<h4 class="date">June 18, 2022</h4>
+<h4 class="date">July 27, 2022</h4>
 
 </div>
 
 <div id="TOC">
 <ul>
 <li><a href="#what-are-we-doing">What are we doing?</a></li>
+<li><a href="#data">Data</a></li>
 <li><a href="#some-required-libraries">Some required libraries</a></li>
 <li><a href="#command-line-arguments">Command line arguments</a></li>
 <li><a href="#helping-functions">Helping functions</a></li>
@@ -1677,13 +1677,48 @@ computation</a></li>
 
 <div id="what-are-we-doing" class="section level1">
 <h1>What are we doing?</h1>
+<p>We are demonstrating a pipeline that represents the segmented
+unmyelinated axons in several vagus and pelvic nerve cross-sections as
+spatial point patterns, and computes Sinkhorn distance between certain
+spatial features of the point patterns and their corresponding images,
+to quantify spatial inhomogeneity and anisotropy in the peripheral nerve
+cross-sections.</p>
+</div>
+<div id="data" class="section level1">
+<h1>Data</h1>
+<p>The directory <strong>spatial-neuro/quantifyVagusNerve/Data/</strong>
+contains the following subdirectories:</p>
+<ul>
+<li><p><strong>U-Net predictions:</strong> This subdirectory contains
+images (<em>.png</em>) of the segmented unmyelinated axons in the vagus
+and pelvic nerve cross-sections under consideration. <span class="citation">Plebani et al. (2022)</span> describes the segmentation
+process.</p></li>
+<li><p><strong>Inputs:</strong> There are <em>.csv</em> and
+<em>.rds</em> files in this subdirectory. The <em>.csv</em> files
+contain several morphometric characteristics of the segmented
+unmyelinated axons in each nerve cross-section, along with their
+centroid locations, which we use in particular to construct the spatial
+point patterns. The morphometric characteristics are extracted using an
+open source image processing package Fiji (<span class="citation">Schindelin et al. (2012)</span>). The <em>.rds</em>
+files, drawn using R graphics tools, store the outer boundary and inner
+holes of the cross-sections that are used for spatial point pattern
+construction also. These are the main input files for the
+analysis.</p></li>
+<li><p><strong>Demo Inputs:</strong> This subdirectory contains a small
+subset of the inputs for quick demonstration purpose.</p></li>
+<li><p><strong>Supporting Files:</strong> Some additional information of
+the nerve samples, such as sample ID, nerve location and sex, are saved
+in this subdirectory. The pair-wise orientation of the cross-sections
+are computed at a certain stage of the pipeline. Those orientations are
+also stored inside this subdirectory.</p></li>
+</ul>
+</div>
+<div id="some-required-libraries" class="section level1">
+<h1>Some required libraries</h1>
 <p>We are using the R package <a href="https://cran.r-project.org/web/packages/Barycenter/Barycenter.pdf">Barycenter</a>
 to compute Sinkhorn distances between images of certain spatial features
 of the spatial point patterns constructed to represent the centroids of
 the unmyelinated axons in several vagus and pelvic nerve fascicles.</p>
-</div>
-<div id="some-required-libraries" class="section level1">
-<h1>Some required libraries</h1>
 <p>Here are the R libraries required to be loaded. Specifying the
 location where we want the libraries to be installed (<em>lib.loc</em>)
 is optional.</p>
@@ -1999,6 +2034,19 @@ openxlsx::saveWorkbook(wb, file =paste(plot_dest_path, analysis_type, scaling, &
 Cuturi, Marco. 2013. <span>“Sinkhorn Distances: Lightspeed Computation
 of Optimal Transport.”</span> <em>Advances in Neural Information
 Processing Systems</em> 26.
+</div>
+<div id="ref-plebani2022high" class="csl-entry">
+Plebani, Emanuele, Natalia P Biscola, Leif A Havton, Bartek Rajwa, Abida
+Sanjana Shemonti, Deborah Jaffey, Terry Powley, Janet R Keast, Kun-Han
+Lu, and M Murat Dundar. 2022. <span>“High-Throughput Segmentation of
+Unmyelinated Axons by Deep Learning.”</span> <em>Scientific Reports</em>
+12 (1): 1–16.
+</div>
+<div id="ref-schindelin2012fiji" class="csl-entry">
+Schindelin, Johannes, Ignacio Arganda-Carreras, Erwin Frise, Verena
+Kaynig, Mark Longair, Tobias Pietzsch, Stephan Preibisch, et al. 2012.
+<span>“Fiji: An Open-Source Platform for Biological-Image
+Analysis.”</span> <em>Nature Methods</em> 9 (7): 676–82.
 </div>
 </div>
 </div>
