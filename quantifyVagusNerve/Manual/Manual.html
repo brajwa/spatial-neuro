@@ -13,7 +13,7 @@
 
 <meta name="date" content="2022-07-27" />
 
-<title>Quantify Vagus and Pelvic Nerves</title>
+<title>Quantify spatial inhomogeneity and anisotropy in the peripheral nerve cross-sections</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1656,7 +1656,8 @@ pre code {
 
 
 
-<h1 class="title toc-ignore">Quantify Vagus and Pelvic Nerves</h1>
+<h1 class="title toc-ignore">Quantify spatial inhomogeneity and
+anisotropy in the peripheral nerve cross-sections</h1>
 <h4 class="author">Abida Sanjana Shemonti</h4>
 <h4 class="date">July 27, 2022</h4>
 
@@ -1666,11 +1667,17 @@ pre code {
 <ul>
 <li><a href="#what-are-we-doing">What are we doing?</a></li>
 <li><a href="#data">Data</a></li>
-<li><a href="#some-required-libraries">Some required libraries</a></li>
-<li><a href="#command-line-arguments">Command line arguments</a></li>
-<li><a href="#helping-functions">Helping functions</a></li>
-<li><a href="#sinkhorn-distance-computation">Sinkhorn distance
-computation</a></li>
+<li><a href="#codes">Codes</a>
+<ul>
+<li><a href="#configuration-of-the-interaction-distance">Configuration
+of the interaction distance</a></li>
+<li><a href="#modification-for-local-inhomogeneity-and-anisotropy">Modification
+for local inhomogeneity and anisotropy</a></li>
+<li><a href="#computation-of-sinkhorn-distance">Computation of Sinkhorn
+distance</a></li>
+</ul></li>
+<li><a href="#output-and-visualization">Output and
+visualization</a></li>
 <li><a href="#references">References</a></li>
 </ul>
 </div>
@@ -1713,319 +1720,84 @@ are computed at a certain stage of the pipeline. Those orientations are
 also stored inside this subdirectory.</p></li>
 </ul>
 </div>
-<div id="some-required-libraries" class="section level1">
-<h1>Some required libraries</h1>
-<p>We are using the R package <a href="https://cran.r-project.org/web/packages/Barycenter/Barycenter.pdf">Barycenter</a>
-to compute Sinkhorn distances between images of certain spatial features
-of the spatial point patterns constructed to represent the centroids of
-the unmyelinated axons in several vagus and pelvic nerve fascicles.</p>
-<p>Here are the R libraries required to be loaded. Specifying the
-location where we want the libraries to be installed (<em>lib.loc</em>)
-is optional.</p>
-<pre class="r"><code>load.lib = c(&quot;deldir&quot;, &quot;spatstat&quot;, &quot;spatstat.utils&quot;, &quot;magrittr&quot;, &quot;dplyr&quot;, &quot;igraph&quot;, &quot;scales&quot;, &quot;httr&quot;,
-             &quot;tidyverse&quot;, &quot;ggnetwork&quot;, &quot;ggplot2&quot;, &quot;poweRlaw&quot;, &quot;imager&quot;, &quot;viridis&quot;, &quot;plotrix&quot;, &quot;openxlsx&quot;, 
-             &quot;tidyr&quot;, &quot;spdep&quot;, &quot;maptools&quot;, &quot;tmap&quot;, &quot;OpenImageR&quot;, &quot;dismo&quot;, &quot;lctools&quot;, &quot;officer&quot;, &quot;rvg&quot;, &quot;oce&quot;, 
-             &quot;OneR&quot;, &quot;RandomFieldsUtils&quot;, &quot;RandomFields&quot;, &quot;Cairo&quot;, &quot;knitr&quot;, &quot;scorepeak&quot;, &quot;Rcpp&quot;, &quot;emdist&quot;, 
-             &quot;RImageJROI&quot;, &quot;svglite&quot;, &quot;transport&quot;, &quot;Barycenter&quot;, &quot;T4transport&quot;, &quot;OpenImageR&quot;, &quot;wvtool&quot;, 
-             &quot;adimpro&quot;, &quot;proxy&quot;, &quot;RColorBrewer&quot;, &quot;tictoc&quot;)
-
-install.lib = load.lib[!load.lib %in% installed.packages(lib.loc = &quot;PATH TO WHERE YOU WANT THE LIBRARIES TO BE 
-                                                         INSTALLED&quot;)]
-for(lib in install.lib) install.packages(pkgs=lib, lib=&quot;PATH TO WHERE YOU WANT THE LIBRARIES TO BE INSTALLED&quot;, 
-                                         dependencies=TRUE)
-sapply(load.lib, require, lib.loc = &quot;PATH TO WHERE YOU WANT THE LIBRARIES TO BE INSTALLED&quot;, character=TRUE)</code></pre>
-</div>
-<div id="command-line-arguments" class="section level1">
-<h1>Command line arguments</h1>
-<p>While running the R code from the terminal (with a script or
-directly), three command line arguments are passed: (1)
-<em>analysis_type</em>: the spatial feature of the point pattern to
-consider. It can the spatial intensity (basic_density), local
-inhomogeneous L-function (local_linhom), local inhomogeneous L-function
-with horizontal and vertical sectors (local_linhom_sector_horizontal and
-local_linhom_sector_vertical). (2) <em>scaling</em>: whether scaling is
-to be done to the point pattern. (3) <em>lambda</em>: the value of the
-regularization parameter for the Sinkhorn distance computation.</p>
-<pre class="r"><code>#retrieving the command line arguments
-args = commandArgs()
-print(args)
-
-if(length(args) != 5){
-  print(&quot;Invalid arguments...\n&quot;)
-  return()
-} else{
-  analysis_type = args[3]
-  scaling = args[4]
-  lambda  = args[5]
-}
-
-print(analysis_type)
-print(scaling)
-print(lambda)</code></pre>
-</div>
-<div id="helping-functions" class="section level1">
-<h1>Helping functions</h1>
-<p>The two R files sourced below: <em>LocalKSector.R</em> and
-<em>Kinhomsector.R</em> are included as separate codes.</p>
-<pre class="r"><code>plot_dest_path = paste(&quot;PATH TO WHERE YOU WANT THE RESULTS TO BE SAVED&quot;, analysis_type, scaling, &quot;_&quot;, lambda, 
-                       &quot;/&quot;, sep=&quot;&quot;)
-if (!dir.exists(plot_dest_path)) {dir.create(plot_dest_path, recursive=TRUE)}
-
-#source the inhomogeneous sector functions, the original spatstat functions have been modified
-source(&quot;LocalKSector.R&quot;)
-source(&quot;Kinhomsector.R&quot;)
-
-#processMap1 takes as input a matrix X, replaces any of its NA values with very small number close to zero, normalizes the matrix to sum to 1, and returns the modified matrix.
-processMap1 &lt;- function(X){
-  X[is.na(X)] = 10^(-20) #very small number close to 0, but not 0.
-  X = X / sum(X)
-  M = nrow(X)
-  P = ncol(X)
-  cat(M, &quot;*&quot;, P, &quot;\n&quot;)
-  
-  return(X)
-}
-
-#constructMap takes as input two point patterns and the type of spatial feature under consideration. It computes the distribution of that spatial feature for the two point patterns and returns the resulting matrices
-
-#rvalue=0.0373 was for 29 fascicles, one of them has quite different spatial arrangement, hence different Linhom characteristics. we eliminated that one in rvalue
-#computation and came up with another rvalue=0.0139.
-#analysis of variance gives 0.032 (29 fascicles), 0.0352 (28 fascicles).
-constructMap &lt;- function(pp1, pp2, type){
-  cat(type, &quot;\n&quot;)
-  
-  if(type==&quot;basic_density&quot;){
-    pp_density_map_1 = density(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025) 
-    X_1 = t(pp_density_map_1$v)
-    
-    pp_density_map_2 = density(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025) 
-    X_2 = t(pp_density_map_2$v)
-    
-  }else if(type==&quot;local_linhom&quot;){
-    pp1_l = localLinhom(pp1, rvalue = 0.0373, verbose=FALSE)
-    marks(pp1) = pp1_l
-    
-    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
-    
-    pp2_l = localLinhom(pp2, rvalue = 0.0373, verbose=FALSE)
-    marks(pp2) = pp2_l
-    
-    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
-    
-  }else if(type==&quot;local_linhom_sector_horizontal&quot;){
-    pp1_l = localLinhomsector(pp1, rvalue = 0.0373, begin=-15, end=15, units=&quot;degrees&quot;, verbose=FALSE)
-    marks(pp1) = pp1_l
-    
-    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
-    
-    pp2_l = localLinhomsector(pp2, rvalue = 0.0373, begin=-15, end=15, units=&quot;degrees&quot;, verbose=FALSE)
-    marks(pp2) = pp2_l
-    
-    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.025))$v)
-    
-  }else if(type==&quot;local_linhom_sector_vertical&quot;){
-    pp1_l = localLinhomsector(pp1, rvalue = 0.0373, begin=90-15, end=90+15, units=&quot;degrees&quot;, verbose=FALSE)
-    marks(pp1) = pp1_l
-    
-    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.025))$v)
-    
-    pp2_l = localLinhomsector(pp2, rvalue = 0.0373, begin=90-15, end=90+15, units=&quot;degrees&quot;, verbose=FALSE)
-    marks(pp2) = pp2_l
-    
-    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
-    
-  }else{
-    print(&quot;Invalid argument!&quot;)
-    return(list(NULL, NULL))
-  }
-  
-  X_1 = processMap1(X_1)
-  X_2 = processMap1(X_2)
-  
-  r_1 = nrow(X_1)
-  c_1 = ncol(X_1)
-  
-  r_2 = nrow(X_2)
-  c_2 = ncol(X_2)
-  
-  #0-padding for making matrix equal size
-  if(r_1 &gt; r_2){
-    X_2 = (padding(as.matrix(X_2), new_rows = r_1, new_cols = ncol(X_2), fill_value = 10^(-20)))$data
-  }else{
-    X_1 = (padding(as.matrix(X_1), new_rows = r_2, new_cols = ncol(X_1), fill_value = 10^(-20)))$data
-  }
-  
-  if(c_1 &gt; c_2){
-    X_2 = (padding(as.matrix(X_2), new_rows = nrow(X_2), new_cols = c_1, fill_value = 10^(-20)))$data
-  }else{
-    X_1 = (padding(as.matrix(X_1), new_rows = nrow(X_1), new_cols = c_2, fill_value = 10^(-20)))$data
-  }
-  
-  return(list(X_1, X_2))
-  
-}</code></pre>
-</div>
-<div id="sinkhorn-distance-computation" class="section level1">
-<h1>Sinkhorn distance computation</h1>
-<p>This is the starting point of the computation. We have the spatial
-coordinates of the centroids of the unmyelinated axons saved in
-<em>.csv</em> files and the boundary of the fascicles in <em>.rds</em>
+<div id="codes" class="section level1">
+<h1>Codes</h1>
+<p>The directory
+<strong>spatial-neuro/quantifyVagusNerve/Codes/</strong> contains the R
+code files. We utilize the R packages <em>spatstat</em> for spatial
+point pattern analysis, <em>T4transport</em> and <em>Barycenter</em> for
+optimal transportation problems extensively, along with the others. The
+R files can be run using RStudio terminal or Linux terminal. Here we
+demonstrate with the RStudio terminal commands. The changes required (if
+any) to run the codes from Linux terminal are mentioned inside the code
 files.</p>
-<pre class="r"><code>folder_path = &quot;PATH TO THE CSV AND RDS FILES&quot; #change accordingly
-data_files = list.files(path=folder_path, pattern = &quot;.csv&quot;, full.names = FALSE)
-extension = &quot;.csv&quot;
-
-# creating xlsx workbook to store the results
-wb = openxlsx::createWorkbook()
-distance_matrix = matrix(0, nrow = length(data_files), ncol = length(data_files))
-min_angle_matrix = matrix(0, nrow = length(data_files), ncol = length(data_files))
-
-# pair-wise Sinkhorn distance computation
-i = 1
-while (i &lt;= length(data_files)) {
-  # nrow=8 because we will be rotating the fascicles in every 45 degree, that gives 8 orientations.
-  sinkhorn_info = data.frame(matrix(0, nrow = 8, ncol = length(data_files)))
-
-  j = i+1
-  while (j &lt;= length(data_files)) {
-    cat(&quot;Fascicle pair: &quot;, i, &quot; &quot;, j, &quot;\n&quot;)
-    
-    #constructing the i-th point pattern
-    file_name_1 = strsplit(data_files[i], &quot;.csv&quot;)[[1]]
-    print(file_name_1)
-    
-    axon_locations_1 = unique(read.csv(paste(folder_path, file_name_1, extension, sep=&quot;&quot;)))
-    retrieved_contour_1 = readRDS(paste(folder_path, file_name_1, &quot;.rds&quot;, sep=&quot;&quot;))
-    
-    axon_pp_1 = ppp(x=axon_locations_1$X, y=axon_locations_1$Y, checkdup=F, window=retrieved_contour_1)
-    if(scaling == 1){
-        print(&quot;scaled&quot;)
-        axon_pp_1 = rescale.ppp(axon_pp_1, s=axon_pp_1$window$yrange[2]) #scaling
-    }
-    axon_pp_1 = shift.ppp(axon_pp_1, origin = &quot;centroid&quot;) #shifting origin
-    axon_pp_1 = as.ppp(axon_pp_1)
-    
-    #constructing the j-th point pattern
-    file_name_2 = strsplit(data_files[j], &quot;.csv&quot;)[[1]]
-    print(file_name_2)
-    
-    axon_locations_2 = unique(read.csv(paste(folder_path, file_name_2, extension, sep=&quot;&quot;)))
-    retrieved_contour_2 = readRDS(paste(folder_path, file_name_2, &quot;.rds&quot;, sep=&quot;&quot;))
-    
-    axon_pp_2 = ppp(x=axon_locations_2$X, y=axon_locations_2$Y, checkdup=F, window=retrieved_contour_2)
-    if(scaling == 1){
-        print(&quot;scaled&quot;)
-        axon_pp_2 = rescale.ppp(axon_pp_2, s=axon_pp_2$window$yrange[2]) #scaling
-    }
-    axon_pp_2 = shift.ppp(axon_pp_2, origin = &quot;centroid&quot;) #shifting origin
-    axon_pp_2 = as.ppp(axon_pp_2)
-    
-    col_info = c()
-    row_info = c()
-    
-    #loop for rotating the i-th point pattern
-    angle_of_rotation = 45 # in degree
-    theta = 0
-    while(theta &lt; 360){
-      cat(&quot;theta: &quot;, theta, &quot;\n&quot;)
-      row_info[length(row_info) + 1] = theta
-      
-      axon_pp_1_rotated = rotate.ppp(axon_pp_1, angle = theta*pi/180, centre = &quot;centroid&quot;)
-      
-      #saving a plot
-      svglite(paste(plot_dest_path, paste(file_name_1, theta, &quot;deg rotated&quot;, sep = &quot; &quot;), &quot;_pp.svg&quot;, sep=&quot;&quot;), 
-              width = 10, height = 10)
-      plot(axon_pp_1_rotated, pch=21, bg=&quot;black&quot;, cex=0.7, main=paste(file_name_1, theta, &quot;deg rotated&quot;, 
-                                                                      sep = &quot; &quot;))
-      dev.off()
-      
-      #constructing images of the spatial feature based on the input
-      result_map = constructMap(pp1=axon_pp_1_rotated, pp2=axon_pp_2, type=analysis_type)
-      map_1 = result_map[[1]]
-      map_2 = result_map[[2]]
-
-      #saving a plot
-      jpeg(paste(plot_dest_path, file_name_1,&quot;_&quot;, theta, &quot;_&quot;, analysis_type, &quot;.jpeg&quot;, sep=&quot;&quot;),
-         width = 10, height = 10, units = &quot;in&quot;, res=900)
-      image(map_1, main=&quot;&quot;, col=colorRampPalette(brewer.pal(9, &quot;YlOrRd&quot;))(9), box=FALSE)
-      dev.off()
-      #saving a plot
-      jpeg(paste(plot_dest_path, file_name_2,&quot;_&quot;, analysis_type, &quot;.jpeg&quot;, sep=&quot;&quot;),
-         width = 10, height = 10, units = &quot;in&quot;, res=900)
-      image(map_2, main=&quot;&quot;, col=colorRampPalette(brewer.pal(9, &quot;YlOrRd&quot;))(9), box=FALSE)
-      dev.off()
-
-      r_1 = nrow(map_1)
-      c_1 = ncol(map_1)
-      
-      r_2 = nrow(map_2)
-      c_2 = ncol(map_2)
-      
-      #constructing cost/ distance matrix 
-      m1 = seq(0,1,length.out=c_1)
-      m2 = seq(0,1,length.out=r_1)
-      
-      n1 = seq(0,1,length.out=c_2)
-      n2 = seq(0,1,length.out=r_2)
-      
-      expand_m &lt;- data.frame(expand.grid(m1,rev(m2)))
-      expand_n &lt;- data.frame(expand.grid(n1,rev(n2)))
-      
-      costm &lt;- proxy::dist(expand_m, expand_n, method = &quot;Euclidean&quot;)
-      costm &lt;- `dim&lt;-`(c(costm), dim(costm))
-      
-      #flattening the images
-      a &lt;- matrix(map_1, r_1*c_1, 1, byrow = T)
-      b &lt;- matrix(map_2, r_2*c_2, 1, byrow = T)
-      
-      cat(r_1, &quot;*&quot;, c_1, &quot; &quot;, r_2, &quot;*&quot;, c_2, &quot;\n&quot;)
-      cat(dim(a), &quot;, &quot;, dim(b), &quot;, &quot;, dim(costm), &quot;\n&quot;)
-      
-      #using the function from Barycenter package, tic-toc computes the runtime
-      tic(&quot;Barycenter::Sinkhorn&quot;)
-      skh_bary = Barycenter::Sinkhorn(a, b, costm, lambda = as.numeric(lambda)) 
-                                                    #default regularization param (lambda) is 1.
-      toc()
-      cat(skh_bary$Distance, &quot;\n&quot;)
-      
-      #storing the distance
-      col_info[length(col_info) + 1] = skh_bary$Distance
-      
-      theta = theta + angle_of_rotation
-    }
-    
-    sinkhorn_info[, j] = col_info
-    j = j+1
-  }
-  
-  #including min, max, avg, variance and min index for all the sinkhorn distance per fascicle
-  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, min)
-  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, max)
-  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, mean)
-  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = apply(sinkhorn_info[1:8, ], 2, var)
-  sinkhorn_info[nrow(sinkhorn_info) + 1, ] = row_info[apply(sinkhorn_info[1:8, ], 2, which.min)]
-  
-  rownames(sinkhorn_info) = c(row_info, &quot;min&quot;, &quot;max&quot;, &quot;avg&quot;, &quot;var&quot;, &quot;argmin&quot;)
-  colnames(sinkhorn_info) = c(1:length(sinkhorn_info))
-  
-  addWorksheet(wb, sheetName = paste(&quot;Sheet&quot;, i, sep=&quot;&quot;))
-  writeData(wb, sheet = paste(&quot;Sheet&quot;, i, sep=&quot;&quot;), x=sinkhorn_info, rowNames = TRUE)
-  
-  distance_matrix[i, ] = apply(sinkhorn_info[1:8, ], 2, min)
-  min_angle_matrix[i, ] = row_info[apply(sinkhorn_info[1:8, ], 2, which.min)]
-  
-  cat(&quot;\n&quot;)
-  i=i+1
-}
-
-#storing the results
-addWorksheet(wb, sheetName = &quot;Distance matrix&quot;)
-writeData(wb, sheet = &quot;Distance matrix&quot;, x=distance_matrix, rowNames = FALSE, colNames = FALSE)
-
-addWorksheet(wb, sheetName = &quot;Min angle matrix&quot;)
-writeData(wb, sheet = &quot;Min angle matrix&quot;, x=min_angle_matrix, rowNames = FALSE, colNames = FALSE)
-
-openxlsx::saveWorkbook(wb, file =paste(plot_dest_path, analysis_type, scaling, &quot;_&quot;, lambda,&quot;_all_result.xlsx&quot;, sep=&quot;&quot;), overwrite = TRUE)</code></pre>
+<div id="configuration-of-the-interaction-distance" class="section level2">
+<h2>Configuration of the interaction distance</h2>
+<p><strong>Code: LfunctAnova2.R</strong></p>
+<p>The nerve cross-sections under consideration can vary a lot size,
+resulting into quite different ranges of interaction in the constructed
+point patterns even after scaling. We find out a range of interaction
+distance which is common in all the point patterns by investigating
+their inhomogeneous L-function characteristics. We also figure out a
+particular interaction distance, to be used for computations related to
+<em>local</em> inhomogeneity and anisotropy, using analysis of variance
+that can moderately separate the inhomogeneous L-function
+characteristics between the vagus and pelvic samples.</p>
+<p>This R file requires no command-line argument, the last line of the
+outputs shows the configured interaction distance.</p>
+<pre class="r"><code>&gt; Rscript --no-save LfunctAnova2.R</code></pre>
+<p><strong>Note:</strong> This pre-processing step is completely
+dependent on the set of nerve cross-sections under consideration. In
+case of addition or removal of any cross-section, the interaction
+distance needs to be recomputed.</p>
+</div>
+<div id="modification-for-local-inhomogeneity-and-anisotropy" class="section level2">
+<h2>Modification for local inhomogeneity and anisotropy</h2>
+<p><strong>Code: Kinhomsector.R, LocalKSector.R</strong></p>
+<p>The R <em>spatstat</em> package provides several separate functions
+to compute the inhomogeneous, anisotropic and local versions of the K-
+and L-functions. We combine several of them to meet our requirement of
+analysis. These R files are sourced during subsequent computations.</p>
+</div>
+<div id="computation-of-sinkhorn-distance" class="section level2">
+<h2>Computation of Sinkhorn distance</h2>
+<p>The R code files for the computation of the Sinkhorn distance between
+nerve cross-sections require the command line arguments to be passed in
+the following order:</p>
+<pre class="r"><code>&gt; Rscript --no-save code_file_name analysis_type scaling lambda version</code></pre>
+<ul>
+<li><p><strong>analysis_type:</strong> We analyze the spatial point
+patterns in terms of basic spatial intensity (<em>“basic_density”</em>)
+, local inhomogeneous L-function (<em>“local_linhom”</em>), local
+inhomogeneous L-function with horizontal sector
+(<em>“local_linhom_sector_horizontal”</em>) and local inhomogeneous
+L-function with vertical sector
+(<em>“local_linhom_sector_vertical”</em>). The horizontal and vertical
+sectors covers 15 degree around the horizontal and vertical axes
+respectively.</p></li>
+<li><p><strong>scaling:</strong> <em>0</em> - if the spatial point
+patterns are not to be scaled, <em>1</em> - if the spatial point
+patterns are to be scaled. We use the scaled point patterns.</p></li>
+<li><p><strong>lambda:</strong> The tunable entropic regularizer
+parameter for Sinkhorn distance computation.</p></li>
+<li><p><strong>version:</strong> <em>“complete”</em> - to use the
+complete input set, <em>“demo”</em> - to use the small subset of input
+for quick demonstration.</p></li>
+</ul>
+<div id="computation-based-on-spatial-point-patterns" class="section level3">
+<h3>Computation based on spatial point patterns</h3>
+<p><strong>Code: T4transportSpatialIntensity.R,
+T4transportSpatialFeature.R</strong></p>
+</div>
+<div id="computation-based-on-images-of-the-spatial-features" class="section level3">
+<h3>Computation based on images of the spatial features</h3>
+<p><strong>Code: BarycenterSpatialIntensity.R,
+BarycenterSpatialFeature.R</strong></p>
+</div>
+</div>
+</div>
+<div id="output-and-visualization" class="section level1">
+<h1>Output and visualization</h1>
 </div>
 <div id="references" class="section level1 unnumbered">
 <h1 class="unnumbered">References</h1>
