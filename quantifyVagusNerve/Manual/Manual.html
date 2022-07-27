@@ -1788,16 +1788,61 @@ for quick demonstration.</p></li>
 <h3>Computation based on spatial point patterns</h3>
 <p><strong>Code: T4transportSpatialIntensity.R,
 T4transportSpatialFeature.R</strong></p>
+<p>The R package <em>T4transport</em> is used for computing Sinkhorn
+distance based on the spatial point patterns directly. At first, the
+Sinkhorn distance between every pair of point patterns for basic spatial
+intensity is computed, assuming each point in the point pattern carry an
+uniform weight. While computing distance between a pair of point
+patterns, one pattern is kept fixed and the other one is rotated by
+every 45 degree. The orientation that gives the smallest Sinkhorn
+distance is recorded as the orientation to be used for computations of
+other spatial features.</p>
+<pre class="r"><code>&gt; Rscript --no-save T4transportSpatialIntensity.R &quot;basic_density&quot; 1 1.0 &quot;demo&quot;</code></pre>
+<p>The Sinkhorn distance between every pair of point pattern for every
+orientation, their minimum, maximum, mean and variance and the Sinkhorn
+distance matrix - everything is saved as <em>.xlsx</em> file, along with
+the plots of the point patterns and their corresponding density maps,
+inside <strong>spatial-neuro/quantifyVagusNerve/Plots/</strong>
+directory. The optimal orientations are saved in
+<strong>spatial-neuro/quantifyVagusNerve/Data/Supporting Files/Angle of
+Rotation/</strong> directory as <em>.xlsx</em> file.</p>
+<p>Then, the Sinkhorn distance for other spatial features can be
+computed using the pre-computed orientations, where each point in the
+point pattern carries weight equal to the value of the spatial feature.
+The results are recorded in
+<strong>spatial-neuro/quantifyVagusNerve/Plots/</strong> directory in a
+similar way.</p>
+<pre class="r"><code>&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom&quot; 1 1.0 &quot;demo&quot;
+&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom_sector_horizontal&quot; 1 1.0 &quot;demo&quot;
+&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom_sector_vertical&quot; 1 1.0 &quot;demo&quot;</code></pre>
 </div>
 <div id="computation-based-on-images-of-the-spatial-features" class="section level3">
 <h3>Computation based on images of the spatial features</h3>
 <p><strong>Code: BarycenterSpatialIntensity.R,
 BarycenterSpatialFeature.R</strong></p>
+<p>The R package <em>Barycenter</em> is used for computing Sinkhorn
+distance based on the images of the spatial features of the point
+patterns, rather than the point patterns themselves. The codes are run
+and the results are stored as before.</p>
+<pre class="r"><code>&gt; Rscript --no-save BarycenterSpatialIntensity.R &quot;basic_density&quot; 1 0.5 &quot;demo&quot;
+
+&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom&quot; 1 0.5 &quot;demo&quot;
+&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom_sector_horizontal&quot; 1 0.5 &quot;demo&quot;
+&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom_sector_vertical&quot; 1 0.5 &quot;demo&quot;</code></pre>
 </div>
 </div>
 </div>
 <div id="output-and-visualization" class="section level1">
 <h1>Output and visualization</h1>
+<p><strong>Code: VisualizeMDS.R</strong></p>
+<p>The directory
+<strong>spatial-neuro/quantifyVagusNerve/Plots/</strong> will contain
+the output plots and files in separate subdirectories. The
+<em>.xlsx</em> files saved here contains the Sinkhorn distance matrices
+and we can visualize the nerve samples in the Sinkhorn space of the
+corresponding spatial features by applying multi-dimensional scaling on
+them.</p>
+<pre class="r"><code>&gt; Rscript --no-save VisualizeMDS.R</code></pre>
 </div>
 <div id="references" class="section level1 unnumbered">
 <h1 class="unnumbered">References</h1>
