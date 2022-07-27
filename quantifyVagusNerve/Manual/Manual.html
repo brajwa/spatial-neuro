@@ -1764,7 +1764,7 @@ analysis. These R files are sourced during subsequent computations.</p>
 <p>The R code files for the computation of the Sinkhorn distance between
 nerve cross-sections require the command line arguments to be passed in
 the following order:</p>
-<pre class="r"><code>&gt; Rscript --no-save code_file_name analysis_type scaling lambda version</code></pre>
+<pre class="r"><code>&gt; Rscript --no-save code_file_name analysis_type scaling lambda version intr_dist</code></pre>
 <ul>
 <li><p><strong>analysis_type:</strong> We analyze the spatial point
 patterns in terms of basic spatial intensity (<em>“basic_density”</em>)
@@ -1783,6 +1783,8 @@ parameter for Sinkhorn distance computation.</p></li>
 <li><p><strong>version:</strong> <em>“complete”</em> - to use the
 complete input set, <em>“demo”</em> - to use the small subset of input
 for quick demonstration.</p></li>
+<li><p><strong>intr_dist:</strong> The interaction distance computed in
+LfunctAnova2.R</p></li>
 </ul>
 <div id="computation-based-on-spatial-point-patterns" class="section level3">
 <h3>Computation based on spatial point patterns</h3>
@@ -1797,7 +1799,7 @@ patterns, one pattern is kept fixed and the other one is rotated by
 every 45 degree. The orientation that gives the smallest Sinkhorn
 distance is recorded as the orientation to be used for computations of
 other spatial features.</p>
-<pre class="r"><code>&gt; Rscript --no-save T4transportSpatialIntensity.R &quot;basic_density&quot; 1 1.0 &quot;demo&quot;</code></pre>
+<pre class="r"><code>&gt; Rscript --no-save T4transportSpatialIntensity.R &quot;basic_density&quot; 1 1.0 &quot;demo&quot; 0.0352</code></pre>
 <p>The Sinkhorn distance between every pair of point pattern for every
 orientation, their minimum, maximum, mean and variance and the Sinkhorn
 distance matrix - everything is saved as <em>.xlsx</em> file, along with
@@ -1812,9 +1814,9 @@ point pattern carries weight equal to the value of the spatial feature.
 The results are recorded in
 <strong>spatial-neuro/quantifyVagusNerve/Plots/</strong> directory in a
 similar way.</p>
-<pre class="r"><code>&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom&quot; 1 1.0 &quot;demo&quot;
-&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom_sector_horizontal&quot; 1 1.0 &quot;demo&quot;
-&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom_sector_vertical&quot; 1 1.0 &quot;demo&quot;</code></pre>
+<pre class="r"><code>&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom&quot; 1 1.0 &quot;demo&quot;  0.0352
+&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom_sector_horizontal&quot; 1 1.0 &quot;demo&quot;  0.0352
+&gt; Rscript --no-save T4transportSpatialFeature.R &quot;local_linhom_sector_vertical&quot; 1 1.0 &quot;demo&quot;  0.0352</code></pre>
 </div>
 <div id="computation-based-on-images-of-the-spatial-features" class="section level3">
 <h3>Computation based on images of the spatial features</h3>
@@ -1824,11 +1826,11 @@ BarycenterSpatialFeature.R</strong></p>
 distance based on the images of the spatial features of the point
 patterns, rather than the point patterns themselves. The codes are run
 and the results are stored as before.</p>
-<pre class="r"><code>&gt; Rscript --no-save BarycenterSpatialIntensity.R &quot;basic_density&quot; 1 0.5 &quot;demo&quot;
+<pre class="r"><code>&gt; Rscript --no-save BarycenterSpatialIntensity.R &quot;basic_density&quot; 1 0.5 &quot;demo&quot;  0.0352
 
-&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom&quot; 1 0.5 &quot;demo&quot;
-&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom_sector_horizontal&quot; 1 0.5 &quot;demo&quot;
-&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom_sector_vertical&quot; 1 0.5 &quot;demo&quot;</code></pre>
+&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom&quot; 1 0.5 &quot;demo&quot;  0.0352
+&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom_sector_horizontal&quot; 1 0.5 &quot;demo&quot;  0.0352
+&gt; Rscript --no-save BarycenterSpatialFeature.R &quot;local_linhom_sector_vertical&quot; 1 0.5 &quot;demo&quot;  0.0352</code></pre>
 </div>
 </div>
 </div>
