@@ -292,10 +292,7 @@ summaryStat <- function(branch_info_path){
   
 }
 
-analyzeGanglia <- function(sample_id, parent, branch_info_path){
-  branch_info_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Inputs\\Branch Information\\In Micron\\4598_Branches_micron.csv"
-  output_folder_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Outputs\\Simulated thingys\\"
-  
+analyzeGanglia <- function(sample_id, parent, branch_info_path, output_folder_path){
   data_struct_list = constructDataStruct(branch_info_path)
   
   branch.all = data_struct_list[[1]]
