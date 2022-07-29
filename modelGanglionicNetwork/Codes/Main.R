@@ -21,6 +21,9 @@ main <- function(){
     #### choose one of the ganglionic network samples with file chooser below
     setwd(paste(parent, "Data/Branch Information (in um)/", sep=""))
     path_to_branch_info = file.choose()
+    
+    #### extract which sample we will be working on from the file name (the data files are to be saved in a particular format)
+    
         
     #2
     ganglia_info_list = analyzeGanglia(path_to_branch_info)
