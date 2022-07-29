@@ -34,7 +34,7 @@ main <- function(){
     #### Step:2
     
     #### analyzing the extracted information for generating a spatial model (hardcore-Strauss process) for the ganglia
-    ganglia_info_list = analyzeGanglia(sample_id, parent, path_to_branch_info)
+    ganglia_info_list = analyzeGanglia(sample_id, parent, path_to_branch_info, output_folder_path)
     
     Beta = ganglia_info_list[[1]]
     Gamma = ganglia_info_list[[2]]
