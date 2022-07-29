@@ -23,10 +23,18 @@ main <- function(){
     path_to_branch_info = file.choose()
     
     #### extract which sample we will be working on from the file name (the data files are to be saved in a particular format)
+    sample_id = strsplit(path_to_branch_info, "\\\\")[[1]]
+    sample_id = sample_id[length(sample_id)]
+    sample_id = (strsplit(sample_id, "_")[[1]])[1]
     
+    #### creating an output folder for the working sample
+    output_folder_path = paste(parent, "Outputs/", sample_id, "/", sep="")
+    if (!dir.exists(output_folder_path)) {dir.create(output_folder_path, recursive=TRUE)}
         
-    #2
-    ganglia_info_list = analyzeGanglia(path_to_branch_info)
+    #### Step:2
+    
+    #### analyzing the extracted information for generating a spatial model (hardcore-Strauss process) for the ganglia
+    ganglia_info_list = analyzeGanglia(sample_id, parent, path_to_branch_info)
     
     Beta = ganglia_info_list[[1]]
     Gamma = ganglia_info_list[[2]]
