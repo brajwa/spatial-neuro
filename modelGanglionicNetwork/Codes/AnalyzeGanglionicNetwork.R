@@ -1,6 +1,8 @@
+#################################################
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 
 
+###############################################################################################################
 # Computes the angle of an edge with the horizontal x axis in degree; the input parameter x has four components;
 # the coordinates of the end points of the edge: x1, y1, x2, y2.
 calcAngle <- function(x){
@@ -12,6 +14,7 @@ calcAngle <- function(x){
 }
 
 
+#######################################################################################
 # Computes the Euclidean Distance between the two nodes of an edge aka the edge length; 
 # the input parameter x has four components; the coordinates of the end points of the edge: x1, y1, x2, y2.
 calcDist <- function(x){
@@ -19,6 +22,7 @@ calcDist <- function(x){
 }
 
 
+####################################################################################
 # computes the distribution of angle and/or length for original or synthetic network
 # parameter: data is a matrix with 2 columns; column 1 has the angle; column 2 has the length
 # parameter: mode is an integer; either 1/2/3; 1 for angle, 2 for length; 3 for both
@@ -46,104 +50,105 @@ computeKDE <- function(data, mode){
 }
 
 
-constructDataStruct <- function(branch_info_path){
-
-  path_tokens = strsplit(branch_info_path, "\\.")
-  file_extension = path_tokens[[1]][length(path_tokens[[1]])]
-  
-  branch = data.frame()
-  if(file_extension == "csv"){
-    branch = read.csv(branch_info_path)
-  }
-  else if(file_extension == "xlsx"){
-    branch = read.xlsx(branch_info_path)
-  }
-  else{
-    stop("Invalid input file type! Has to be csv or xlsx.\n")
-  }
-  
-  # if the length is 1, it is not really  a branch, removing them
-  branch.adj = branch[which(branch$Branch.length!=1),]
-  
-  # constructing a dataframe with the branch nodes; consider y coordinates are negated beforehand
-  branch.sim = data.frame(x1=branch.adj$V1.x, y1=branch.adj$V1.y, x2=branch.adj$V2.x, y2=branch.adj$V2.y)
-  
-  # removing duplicate branches
-  temp = which(branch.sim[,1]!=branch.sim[,3] &  branch.sim[,2]!=branch.sim[,4])
-  branch.sim = branch.sim[temp,]
-  
-  # create a unique id for each of the branches so, we can find the vertices
-  branch.id = matrix(data=factor(as.numeric(as.matrix(branch.sim))), ncol=4)
-  branch.id = data.frame(P1=paste(branch.id[,1],"-",branch.id[,2], sep=""), P2=paste(branch.id[,3],"-",branch.id[,4], sep=""))
-  branch.id = c(as.matrix(branch.id)) %>% factor() #%>% unclass()
-  levels(branch.id)  = 1:length(levels(branch.id))
-  branch.id = data.frame(matrix(ncol=2, data=unclass(branch.id)))
-  
-  # put together all info and extract position of all the vertices
-  branch.all = data.frame(branch.sim, branch.id); colnames(branch.all) <- c("x1","y1","x2","y2","n1","n2")
-  
-  # one_deg=unique(which(table(c(branch.all$n1, branch.all$n2))==1))
-  # temp1 = branch.all[ ! branch.all$n1 %in% one_deg, ]
-  # temp1 = temp1[ ! temp1$n2 %in% one_deg, ]
-  # branch.all = rbind(temp1)
-  
-  branch.xy = data.frame(x=c(branch.all$x1, branch.all$x2), y=c(branch.all$y1, branch.all$y2), n =c(branch.all$n1, branch.all$n2) )
-  branch.xy = distinct(branch.xy)
-  
-  # normalize the branch length to [0,1] for convenience only
-  #branch.xy[,1:2] <- range01(as.vector(branch.xy[,1:2]))
-  
-  # ordered by the vertex number
-  branch.xy.ord = branch.xy[order(branch.xy$n),]
-  
-  # Create point and line patterns using spatstat library
-  
-  # create a point pattern
-  branch.ppp = ppp(x=branch.xy.ord$x, y=branch.xy.ord$y, window=owin(xrange=c(min(branch.xy.ord$x), max(branch.xy.ord$x)), yrange=c(min(branch.xy.ord$y), max(branch.xy.ord$y))))
-  branch.ppp = unique.ppp(branch.ppp)
-  
-  # plot the nodes
-  #plot(branch.ppp, cex=1, pch=20, main="", bg=1)
-  # create a line pattern
-  branch.lin = linnet(branch.ppp, edges=as.matrix(branch.all[,5:6]))
-  # plot the branches
-  #plot(branch.lin, add=T)
-  
-  # Create the graph representation, nodes' color and shape represent their degree
-  g1  = graph_from_data_frame(branch.all[,5:6], directed=FALSE)
-  # Location information is taken from the processed branches
-  #plot(g1, vertex.size=2*degree(g1), vertex.label=NA, vertex.shape="circle", layout=as.matrix(branch.xy[,1:2]), vertex.color=degree(g1))
-  
-  # create a list representing degree for every node an use it in spatstat pattern
-  degs = (degree(g1))
-  ord = order(as.numeric(names(degs)))
-  degs = degs[ord]
-  
-  # marks(branch.ppp) = factor(degs)
-  # branch.ppp$markformat = "factor"
-
-  # Create point pattern on linear network to store the information
-  # There are some problems with this approach. 
-  # represent the data as point patterns on linear network BEWARE: if there are any unconnected
-  # nodes, they will be removed! Consequently, the numbering of vertices changes and the colors are
-  # going to be wrong It is technically not a bug: the lpp format is used to represent points on the
-  # network ONLY
-  branch.lpp = lpp(branch.ppp, branch.lin )
-  
-  return(list(branch.all, branch.ppp, branch.lpp, g1))
-  
+#########################################################################################
+constructDataStruct <- function(sample_id, parent, branch_info_path, output_folder_path){
+    #### extracting branch information file type. usually saved as .csv, checking for .xlsx in case.
+    path_tokens = strsplit(branch_info_path, "\\.")
+    file_extension = path_tokens[[1]][length(path_tokens[[1]])]
+    
+    branch = data.frame()
+    
+    if(file_extension == "csv"){
+        branch = read.csv(branch_info_path)
+    }
+    else if(file_extension == "xlsx"){
+        branch = read.xlsx(branch_info_path)
+    }
+    else{
+        stop("Invalid input file type! Has to be csv or xlsx.\n")
+    }
+    
+    #### checking Branch.length column: if the length is 1, it is not really  a branch, removing them
+    branch.adj = branch[which(branch$Branch.length!=1),]
+    
+    hardcoreStrauss_model_param = mean(branch.adj$Branch.length)
+    
+    #### constructing a dataframe with the branch nodes, consider y coordinates are negated beforehand.
+    branch.sim = data.frame(x1=branch.adj$V1.x, y1=branch.adj$V1.y, x2=branch.adj$V2.x, y2=branch.adj$V2.y)
+    
+    #### removing duplicate branches
+    temp = which(branch.sim[,1]!=branch.sim[,3] &  branch.sim[,2]!=branch.sim[,4])
+    branch.sim = branch.sim[temp,]
+    
+    #### create a unique id for each of the branches so, we can find the vertices
+    branch.id = matrix(data=factor(as.numeric(as.matrix(branch.sim))), ncol=4)
+    branch.id = data.frame(P1=paste(branch.id[,1],"-",branch.id[,2], sep=""), P2=paste(branch.id[,3],"-",branch.id[,4], sep=""))
+    branch.id = c(as.matrix(branch.id)) %>% factor() #%>% unclass()
+    levels(branch.id)  = 1:length(levels(branch.id))
+    branch.id = data.frame(matrix(ncol=2, data=unclass(branch.id)))
+    
+    #### put together all info and extract position of all the vertices
+    branch.all = data.frame(branch.sim, branch.id); colnames(branch.all) <- c("x1","y1","x2","y2","n1","n2")
+    
+    branch.xy = data.frame(x=c(branch.all$x1, branch.all$x2), y=c(branch.all$y1, branch.all$y2), n =c(branch.all$n1, branch.all$n2) )
+    branch.xy = distinct(branch.xy)
+    
+    #### uncomment if required: normalize the branch length to [0,1] for convenience only
+    #branch.xy[,1:2] = range01(as.vector(branch.xy[,1:2]))
+    
+    #### ordered by the vertex number
+    branch.xy.ord = branch.xy[order(branch.xy$n),]
+    
+    #### creating point and line patterns using spatstat library
+    #### creating a point pattern
+    branch.ppp = ppp(x=branch.xy.ord$x, y=branch.xy.ord$y, window=owin(xrange=c(min(branch.xy.ord$x), max(branch.xy.ord$x)), yrange=c(min(branch.xy.ord$y), max(branch.xy.ord$y))))
+    branch.ppp = unique.ppp(branch.ppp)
+    
+    #### plot the nodes
+    #plot(branch.ppp, cex=1, pch=20, main="", bg=1)
+    
+    #### creating a line pattern
+    branch.lin = linnet(branch.ppp, edges=as.matrix(branch.all[,5:6]))
+    
+    #### plot the branches
+    #plot(branch.lin, add=T)
+    
+    #### creating the graph representation, nodes' color and shape represent their degree
+    g1  = graph_from_data_frame(branch.all[,5:6], directed=FALSE)
+    
+    #### Location information is taken from the processed branches
+    #plot(g1, vertex.size=2*degree(g1), vertex.label=NA, vertex.shape="circle", layout=as.matrix(branch.xy[,1:2]), vertex.color=degree(g1))
+    
+    #### creating a list representing degree for every node an use it in spatstat pattern
+    degs = (degree(g1))
+    ord = order(as.numeric(names(degs)))
+    degs = degs[ord]
+    
+    #### required sometimes
+    #marks(branch.ppp) = factor(degs)
+    #branch.ppp$markformat = "factor"
+    
+    #### Create point pattern on linear network to store the information
+    #### There are some problems with this approach. 
+    #### represent the data as point patterns on linear network BEWARE: if there are any unconnected
+    #### nodes, they will be removed! Consequently, the numbering of vertices changes and the colors are
+    #### going to be wrong It is technically not a bug: the lpp format is used to represent points on the
+    #### network ONLY
+    branch.lpp = lpp(branch.ppp, branch.lin )
+    
+    return(list(branch.all, branch.ppp, branch.lpp, g1, hardcoreStrauss_model_param))
 }
 
-summaryStat <- function(branch_info_path){
-  branch_info_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Inputs\\Branch Information\\2475P_Trimmed.csv"
-  output_folder_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Outputs\\Summary Statistics\\"
-  
+
+##########################################
+summaryStat <- function(sample_id, parent, branch_info_path, output_folder_path){
   data_struct_list = constructDataStruct(branch_info_path)
   
   branch.all = data_struct_list[[1]]
   branch.ppp = data_struct_list[[2]]
   branch.lpp = data_struct_list[[3]]
   g1 = data_struct_list[[4]]
+  hardcoreStrauss_model_param = data_struct_list[[5]]
   
   stats = createWorkbook() 
   doc = read_pptx()
@@ -292,111 +297,61 @@ summaryStat <- function(branch_info_path){
   
 }
 
+
+####################################################################################
 analyzeGanglia <- function(sample_id, parent, branch_info_path, output_folder_path){
-  data_struct_list = constructDataStruct(branch_info_path)
-  
-  branch.all = data_struct_list[[1]]
-  branch.ppp = data_struct_list[[2]]
-  branch.lpp = data_struct_list[[3]]
-  g1 = data_struct_list[[4]]
-  
-  print(summary(branch.ppp))
-  
-  ltest= envelope(branch.ppp, Lest)
-  ggplot(data = ltest, aes(r)) + 
+    #### constructing spatial data structures for subsequent analysis
+    data_struct_list = constructDataStruct(sample_id, parent, branch_info_path, output_folder_path)
     
-    geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
-    geom_line(aes(y=lo-r, colour="CSR lower bound"), size=2) +
-    geom_line(aes(y=hi-r, colour="CSR upper bound"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    #### the returned values
+    branch.all = data_struct_list[[1]]  #data frame with all information
+    branch.ppp = data_struct_list[[2]]  #point pattern object (ganglia)
+    branch.lpp = data_struct_list[[3]]  #line pattern object (ganglionic network)
+    g1 = data_struct_list[[4]]          #graph of the ganglionic network
+    hardcoreStrauss_model_param = data_struct_list[[5]] #model parameter
     
-    geom_line(aes(y=obs-r, colour="observed"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) +  
+    #### summary of the constructed point pattern
+    print(summary(branch.ppp))
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance [pixels]") + ylab("L Function")
-  
-  # plot the pattern
-  par(mar=c(0,0,0,0), oma=c(0,0,0,0))
-  plot(branch.lpp, main="", pch=20, cex=1)
-  # plot(branch.lpp, main="", pch=21, cex=1, bg=c(1:length(table(degree(g1)))))
-  
-  #--------------------points----------------------------
-  ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(2.218501986))  # mean(branch.adj$Branch.length)
-  ganglia_model
-  #summary(ganglia_model)
-  
-  param_model = rmhmodel(ganglia_model)
-  
-  Beta = param_model$par$beta
-  Gamma = param_model$par$gamma
-  R = param_model$par$r
-  H = param_model$par$hc
-  window = branch.ppp$window
-  
-  #testing purpose
-  set.seed(Sys.time())
-  g = generateGangliaCenters(Beta, Gamma, R, H, window=window, process_type=3, with_model=1, fitted_model=ganglia_model)
-  plotGeneratedGanglia(g)
+    #### inspecting the L-function behavior of the point pattern, change Linhom to Lest if homogeneous version is preferred
+    ltest= envelope(branch.ppp, Linhom)
+    
+    #### plot the L-function
+    ggplot(data = ltest, aes(r)) + 
+        geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
+        
+        geom_line(aes(y=lo-r, colour="CSR lower bound"), size=2) +
+        geom_line(aes(y=hi-r, colour="CSR upper bound"), size=2) +
+        
+        geom_line(aes(y=obs-r, colour="observed"), size=2) + 
 
-  ganglia_ppp = g
-
-  ltest= envelope(g, Lest)
-  ggplot(data = ltest, aes(r)) +
-
-    geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
-    geom_line(aes(y=lo-r, colour="CSR lower bound"), size=2) +
-    geom_line(aes(y=hi-r, colour="CSR upper bound"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) +
-
-    geom_line(aes(y=obs-r, colour="simulated"), size=2) +
-    #geom_point(aes(y=obs, colour="observed")) +
-
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(),
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) +
-    xlab("Distance [pixels]") + ylab("L Function")
-  
-  stats = createWorkbook() 
-  doc = read_pptx()
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(code = plot(ganglia_ppp, main=file_name, cex=1, pch=20, bg=1)), location = ph_location_fullsize())
-  
-  ltest= envelope(ganglia_ppp, Lest)
-  ggobj = ggplot(data = ltest, aes(r)) + 
+        theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+              legend.text=element_text(size=30),
+              axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+              axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+        
+        xlab("Interaction distance") + ylab("Besag's centered L-Function")
     
-    geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
-    geom_line(aes(y=lo-r, colour="csr lower bound"), size=2) +
-    geom_line(aes(y=hi-r, colour="csr upper bound"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    #### plot the line pattern
+    par(mar=c(0,0,0,0), oma=c(0,0,0,0))
+    plot(branch.lpp, main="", pch=20, cex=1)
+
+    #### spatial model of the point pattern (ganglia)
+    ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(hardcoreStrauss_model_param))  #mean(branch.adj$Branch.length)
+    #print(ganglia_model)
+
+    #### extracting the model parameters
+    param_model = rmhmodel(ganglia_model)
     
-    geom_line(aes(y=obs-r, colour="simulated"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) +  
+    Beta = param_model$par$beta     #stationary intensity parameter (not required in our case)
+    Gamma = param_model$par$gamma   #interaction parameter
+    R = param_model$par$r           #interaction distance
+    H = param_model$par$hc          #hardcore distance
+    window = branch.ppp$window
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance") + ylab("L Function")+
-    ggtitle(file_name)
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  print(doc, target = paste(output_folder_path, "Simulated_PPP.pptx", sep=""))
-  
-  write.csv(data.frame(x=ganglia_ppp$x, y=ganglia_ppp$y), 
-            "D://Summer 2019//R codes//Research1.0InterganglionicNetwork2021//Outputs//Simulated thingys//ganglia_coord.csv", 
-            row.names = F)
-  
-  
-  return(list(Beta, Gamma, R, H, window, ganglia_model))
+    return(list(Beta, Gamma, R, H, window, ganglia_model))
 }
+
 
 analyzeBranch <- function(branch_info_path){
   
