@@ -162,7 +162,7 @@ summaryStat <- function(sample_id, parent, branch_info_path, output_folder_path)
     
     #### slide for network
     doc = add_slide(doc, "Blank", "Office Theme")
-    doc = ph_with(doc, dml(code = plot(branch.lpp, main=sample_id, cex=0.5, pch=21, bg=c(1,2,3,4,5,6,7,8,"white","forestgreen","tan3"))), location = ph_location_fullsize())
+    doc = ph_with(doc, dml(code = plot(branch.lpp, main=sample_id, cex=0.5, pch=21)), location = ph_location_fullsize())
     
     #### computing summary statistics and adding slides for them
     
@@ -259,7 +259,7 @@ summaryStat <- function(sample_id, parent, branch_info_path, output_folder_path)
                       axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
                       axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
                 xlab("Interaction distance") + ylab(" Besag's centered L Function")+
-                ggtitle(file_name)
+                ggtitle(sample_id)
     
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
@@ -267,8 +267,12 @@ summaryStat <- function(sample_id, parent, branch_info_path, output_folder_path)
     addWorksheet(stats, "Lest")
     writeData(stats, sheet = "Lest", x = ltest)
     
-    saveWorkbook(stats, paste(output_folder_path, "Summary Statistics/", sample_id, "_STAT_Values.xlsx", sep=""), overwrite = T)
-    print(doc, target = paste(output_folder_path, "Summary Statistics/", sample_id, "_STAT_Figures.pptx", sep=""))
+    #### creating a directory to save the summary statistics related files
+    sum_stat_path = paste(output_folder_path, "Summary Statistics/", sep="")
+    if (!dir.exists(sum_stat_path)) {dir.create(sum_stat_path, recursive=TRUE)}
+    
+    saveWorkbook(stats, paste(sum_stat_path, sample_id, "_STAT_Values.xlsx", sep=""), overwrite = T)
+    print(doc, target = paste(sum_stat_path, sample_id, "_STAT_Figures.pptx", sep=""))
 
 }
 
