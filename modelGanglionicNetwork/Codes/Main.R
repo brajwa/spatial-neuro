@@ -96,9 +96,10 @@ main <- function(){
     
     #### Step:4
     
+    #### analyzing the extracted information for generating a network model for the ganglionic network
+    branch_info_list = analyzeBranch(sample_id, parent, path_to_branch_info, output_folder_path)
     
-    branch_info_list = analyzeBranch(path_to_branch_info)
-    
+    #### returned values
     branch_all = branch_info_list[[1]]
     orgKDE_angle = branch_info_list[[2]]
     orgKDE_length = branch_info_list[[3]]
