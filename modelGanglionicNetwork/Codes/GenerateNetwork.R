@@ -228,7 +228,8 @@ rejectionSampling <- function(ganglia_ppp, network_extra, g2_degree, orgKDE_angl
 }
 
 generateNetworkEdges <- function(ganglia_ppp, branch.all, orgKDE_angle, orgKDE_length, orgKDE_both,
-                                 meshedness, network_density, compactness){
+                                 meshedness, network_density, compactness,
+                                 sample_id, output_folder_path){
   
   triangulation_info_list = deterministicEdges(ganglia_ppp, branch.all)
   
