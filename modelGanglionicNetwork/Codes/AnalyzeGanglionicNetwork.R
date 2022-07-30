@@ -344,8 +344,7 @@ analyzeBranch <- function(sample_id, parent, branch_info_path, output_folder_pat
     g1 = data_struct_list[[4]]          #graph of the ganglionic network
     hardcoreStrauss_model_param = data_struct_list[[5]] #model parameter
   
-    #### creating .pptx file to store the plots and workbook for the data
-    stats = createWorkbook() 
+    #### creating .pptx file to store the plots
     doc = read_pptx()
     
     par(mar=c(0,0,0,0), oma=c(0,0,0,0))
