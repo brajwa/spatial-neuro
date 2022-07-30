@@ -8,6 +8,11 @@ for(lib in install_lib) install.packages(lib, dependencies=TRUE)
 sapply(load_lib, require, character=TRUE)
 
 
+#### source the functions from other files
+source("AnalyzeGanglionicNetwork.R")
+source("GenerateGangliaCenters.R")
+
+
 main <- function(){
     #### Step:1
     
@@ -51,7 +56,8 @@ main <- function(){
     #### generate ganglia with the fitted spatial model
     set.seed(Sys.time())
     
-    ganglia_ppp = generateGangliaCenters(Beta, Gamma, R, H, window=window, process_type=3, with_model=1, fitted_model=ganglia_model)
+    ganglia_ppp = generateGangliaCenters(Beta, Gamma, R, H, window=window, process_type=3, 
+                                         with_model=1, fitted_model=ganglia_fitted_model)
     plotGeneratedGanglia(ganglia_ppp)
     
     #### creating workbook and .pptx to store the statistics and plots of the generated ganglia
@@ -79,10 +85,13 @@ main <- function(){
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
     
-    print(doc, target = paste(output_folder_path, "Simulated Ganglia/", sample_id, "_Simulated_PP.pptx", sep=""))
+    #### creating a directory to save the simulated ganglia related files
+    sim_ganglia_path = paste(output_folder_path, "Simulated Ganglia/", sep="")
+    if (!dir.exists(sim_ganglia_path)) {dir.create(sim_ganglia_path, recursive=TRUE)}
     
+    print(doc, target = paste(sim_ganglia_path, sample_id, "_Simulated_PP.pptx", sep=""))
     write.csv(data.frame(x=ganglia_ppp$x, y=ganglia_ppp$y),
-            paste(output_folder_path, "Simulated Ganglia/", sample_id, "_Simulated_PP_coord.csv", sep=""),
+            paste(sim_ganglia_path, sample_id, "_Simulated_PP_coord.csv", sep=""),
             row.names = F)
     
     #### Step:4
