@@ -100,17 +100,22 @@ main <- function(){
     branch_info_list = analyzeBranch(sample_id, parent, path_to_branch_info, output_folder_path)
     
     #### returned values
-    branch_all = branch_info_list[[1]]
-    orgKDE_angle = branch_info_list[[2]]
-    orgKDE_length = branch_info_list[[3]]
-    orgKDE_both = branch_info_list[[4]]
+    branch_all = branch_info_list[[1]]      # data frame with all branch features
+    
+    orgKDE_angle = branch_info_list[[2]]    # density estimation of edge angle
+    orgKDE_length = branch_info_list[[3]]   # density estimation of the edge length
+    orgKDE_both = branch_info_list[[4]]     # both
+    
     meshedness = branch_info_list[[5]]
     network_density = branch_info_list[[6]]
     compactness = branch_info_list[[7]]
     
-    network_info_list = generateNetworkEdges(g, branch_all, orgKDE_angle, orgKDE_length, orgKDE_both,
-                                           meshedness, network_density, compactness)
+    #### generating ganglionic network based on the network densities
+    network_info_list = generateNetworkEdges(ganglia_ppp, branch_all, orgKDE_angle, orgKDE_length, orgKDE_both,
+                                           meshedness, network_density, compactness,
+                                           sample_id, output_folder_path)
     
+    #### returned values
     n = network_info_list[[1]] 
     g2_lin = network_info_list[[2]]
     EMD = network_info_list[[3]]
