@@ -24,27 +24,27 @@ calcDist <- function(x){
 
 ####################################################################################
 # computes the distribution of angle and/or length for original or synthetic network
-# parameter: data is a matrix with 2 columns; column 1 has the angle; column 2 has the length
-# parameter: mode is an integer; either 1/2/3; 1 for angle, 2 for length; 3 for both
+# parameter: data is a matrix with 3 columns; column 1 has the angle; column 2 has the length; column 3 has the degree-based weight
+# parameter: mode is an integer deciding which data columns to use
 computeKDE <- function(data, mode){
   if(mode == 1){
-    data = as.matrix(data[, 1])
+    data = as.matrix(data[, 1])     # edge angle
     return(kde(x=data))
   }
   if(mode == 2){
-    data = as.matrix(data[, 2])
+    data = as.matrix(data[, 2])     # edge length
     return(kde(x=data))
   }
   if(mode == 3){
-    data = as.matrix(data[, 1:2])
+    data = as.matrix(data[, 1:2])   # both angle and length
     return(kde(x=data))
   }
   if(mode == 4){
-    data = as.matrix(data[, 3])
+    data = as.matrix(data[, 3])     # degree-based weight
     return(kde(x=data, h=0.01))
   }
   if(mode == 5){
-    data = as.matrix(data[, 1:3])
+    data = as.matrix(data[, 1:3])   # all
     return(kde(x=data))
   }
 }
@@ -334,131 +334,122 @@ analyzeGanglia <- function(sample_id, parent, branch_info_path, output_folder_pa
 
 #############################################
 analyzeBranch <- function(sample_id, parent, branch_info_path, output_folder_path){
+    #### constructing spatial data structures for subsequent analysis
+    data_struct_list = constructDataStruct(sample_id, parent, branch_info_path, output_folder_path)
+    
+    #### the returned values
+    branch.all = data_struct_list[[1]]  #data frame with all information
+    branch.ppp = data_struct_list[[2]]  #point pattern object (ganglia)
+    branch.lpp = data_struct_list[[3]]  #line pattern object (ganglionic network)
+    g1 = data_struct_list[[4]]          #graph of the ganglionic network
+    hardcoreStrauss_model_param = data_struct_list[[5]] #model parameter
   
-  branch_info_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Inputs\\Branch Information\\2475P_Trimmed.csv"
-  output_folder_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Outputs\\Network Figures\\"
-  
-  data_struct_list = constructDataStruct(branch_info_path)
-  
-  branch.all = data_struct_list[[1]]
-  branch.ppp = data_struct_list[[2]]
-  branch.lpp = data_struct_list[[3]]
-  g1 = data_struct_list[[4]]
-  
-  stats = createWorkbook() 
-  doc = read_pptx()
-  
-  path_tokens = strsplit(branch_info_path, '\\\\')
-  file_name_ext = path_tokens[[1]][length(path_tokens[[1]])]
-  name_tokens = strsplit(file_name_ext, '.csv')
-  file_name = name_tokens[[1]][length(name_tokens[[1]])]
-  
-  par(mar=c(0,0,0,0), oma=c(0,0,0,0))
-  plot(branch.lpp, main="", pch=21, cex=1)
-  # plot(branch.lpp, main="", pch=21, cex=1, bg=c(1:length(table(degree(g1)))))
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(code = plot(branch.lpp, main="", pch=20, cex=1)), location = ph_location_fullsize())
-  
-  
-  # extracting information about connectivity
-  table_degree = table(degree(g1))
-  table_degree
-  
-  degree_frame = as.data.frame(degree(g1))
-  colnames(degree_frame)[colnames(degree_frame) == 'degree(g1)'] = 'deg'
-  
-  ggobj = ggplot(degree_frame, aes(x=deg)) + 
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+ 
-    geom_density(alpha=1, colour="black", size=1.5) +
-    scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
-    labs(x = "Degree of the vertices", y = "Density", color = "")
+    #### creating .pptx file to store the plots and workbook for the data
+    stats = createWorkbook() 
+    doc = read_pptx()
+    
+    par(mar=c(0,0,0,0), oma=c(0,0,0,0))
+    plot(branch.lpp, main="", pch=21, cex=1)
 
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  # calculating the edge probability p from the degree distribution
-  # to use while generating ER random graph G(n, p)
-  num_nodes = 0
-  sum = 0
-  for(i in 1:length(table_degree)){
-    num_nodes = num_nodes + table_degree[[i]]
-    sum = sum + (i * table_degree[[i]])
-  }
-  edge_probability = divide_by(sum, num_nodes^2)
-  edge_probability
-  
-  # clustering coeff and avg path length
-  
-  # Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
-  # This is sometimes also called the clustering coefficient.
-  cluster_coeff = transitivity(g1, type = "global")
-  cluster_coeff
-
-  #--------------------branches-----------------------------------
-  # calculate the edge angle (in degree) and plot the distribution
-  # not scaled
-  branch.all$angle = (apply(branch.all, 1, function(x) calcAngle(x)))
-  ggobj = ggplot(branch.all, aes(x=angle)) + 
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 3)+
-    geom_density(alpha=1, colour="black", size=1.5) +
-     labs(x = "Edge angle", y = "Density", color = "")
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  # calculate the edge length and plot the distribution
-  # not scaled
-  branch.all$euclid = (apply(branch.all, 1, function(x) calcDist(x)))
-  ggobj = ggplot(branch.all, aes(x=euclid)) + 
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 7)+
-    geom_density(alpha=1, colour="black", size=1.5) +
-     labs(x = "Edge length (Euclidean)", y = "Density", color = "")
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-
-  # check if the edge angle and length are correlated; they both are standardized value
-  plot(branch.all$angle, branch.all$euclid)
-
-  # visualize the bivariate distribution of an original network
-  den3d = kde2d(branch.all$angle, branch.all$euclid)
-  persp(den3d, theta = -45, phi = 30, xlab="Edge angle", ylab="Edge length",
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(code = plot(branch.lpp, main="", pch=20, cex=1)), location = ph_location_fullsize())
+    
+    #### extracting information about connectivity
+    table_degree = table(degree(g1))
+    cat("Degree table:\n", table_degree, "\n")
+    
+    degree_frame = as.data.frame(degree(g1))
+    colnames(degree_frame)[colnames(degree_frame) == 'degree(g1)'] = 'deg'
+    
+    ggobj = ggplot(degree_frame, aes(x=deg)) + 
+                geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+ 
+                geom_density(alpha=1, colour="black", size=1.5) +
+                scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
+                labs(x = "Degree of the vertices", y = "Density", color = "")
+    
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
+    
+    #### calculating the edge probability p from the degree distribution
+    #### to use while generating ER random graph G(n, p)
+    num_nodes = 0
+    sum = 0
+    for(i in 1:length(table_degree)){
+        num_nodes = num_nodes + table_degree[[i]]
+        sum = sum + (i * table_degree[[i]])
+    }
+    edge_probability = divide_by(sum, num_nodes^2)
+    print(edge_probability)
+    
+    #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+    #### This is sometimes also called the clustering coefficient.
+    cluster_coeff = transitivity(g1, type = "global")
+    print(cluster_coeff)
+    
+    #### calculate the edge angle (in degree) and plot the distribution
+    #### not scaled
+    branch.all$angle = (apply(branch.all, 1, function(x) calcAngle(x)))
+    
+    ggobj = ggplot(branch.all, aes(x=angle)) + 
+                geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 3)+
+                geom_density(alpha=1, colour="black", size=1.5) +
+                labs(x = "Edge angle", y = "Density", color = "")
+    
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
+    
+    #### calculate the edge length and plot the distribution
+    #### not scaled
+    branch.all$euclid = (apply(branch.all, 1, function(x) calcDist(x)))
+    
+    ggobj = ggplot(branch.all, aes(x=euclid)) + 
+                geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 7)+
+                geom_density(alpha=1, colour="black", size=1.5) +
+                labs(x = "Edge length (Euclidean)", y = "Density", color = "")
+    
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
+    
+    #### check if the edge angle and length are correlated; they both are standardized value
+    plot(branch.all$angle, branch.all$euclid)
+    
+    #### visualize the bivariate distribution of the network's edge angle and length
+    den3d = kde2d(branch.all$angle, branch.all$euclid)
+    persp(den3d, theta = -45, phi = 30, xlab="Edge angle", ylab="Edge length",
         ticktype = "detailed", shade = 0.75, col="lightblue")
-  
-  #print(doc, target = paste(output_folder_path, file_name, "_Network_Figures.pptx", sep=""))
-  
-  # alpha, gamma, psi
-  N = branch.ppp$n
-  E = length(branch.all$x1)
-  A = (branch.ppp$window$xrange[2]-branch.ppp$window$xrange[1])*(branch.ppp$window$yrange[2]-branch.ppp$window$yrange[1])
-  L = sum(branch.all$euclid)
-  
-  meshedness = (E-N+1)/((2*N)-5)
-  network_density = E/((3*N)-6)
-  compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
-  
-  meshedness
-  network_density
-  compactness
-  
-  branch.all$weight = apply(branch.all, 1, function(x) computeEdgeWeight(degree(g1), x))
-  branch.all$weight = range01(branch.all$weight)
-  
-  # compute the univariate angle density distribution; orgKDE holds the kernel density estimation;
-  # orgKDE2 holds the same info in a convenient way to be used if  calculating the Earth Mover's Distance
-  # data <- as.matrix(branch.all[, 7]) # column 7 has the angle
-  # orgKDE <- kde(x=data)
-  # predictionOrg <- predict(orgKDE, x=data)
-  # orgKDE2 <- as.matrix(data.frame(z=predictionOrg, angle=orgKDE$x[, 1]))
-  
-  data = branch.all[, 7:9] # column 7 has angle, 8 has length, 9 has weight
-  
-  orgKDE_angle = computeKDE(data, 1) # 1: angle, 2: length, 3: both
-  orgKDE_length = computeKDE(data, 2) # 1: angle, 2: length, 3: both
-  orgKDE_both = computeKDE(data, 3) # 1: angle, 2: length, 3: both
-  
-  return(list(branch.all, orgKDE_angle, orgKDE_length, orgKDE_both, meshedness, network_density, compactness))
+    
+    #### creating a directory to save the branch characteristics
+    branch_char_path = paste(output_folder_path, "Branch Characteristics/", sep="")
+    if (!dir.exists(branch_char_path)) {dir.create(branch_char_path, recursive=TRUE)}
+    
+    print(doc, target = paste(branch_char_path, sample_id, "_Branch_Figures.pptx", sep=""))
+    
+    #### alpha, gamma, psi
+    N = branch.ppp$n
+    E = length(branch.all$x1)
+    A = (branch.ppp$window$xrange[2]-branch.ppp$window$xrange[1])*(branch.ppp$window$yrange[2]-branch.ppp$window$yrange[1])
+    L = sum(branch.all$euclid)
+    
+    meshedness = (E-N+1)/((2*N)-5)
+    network_density = E/((3*N)-6)
+    compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
+    
+    cat("meshedness: ", meshedness, "\n")
+    cat("network_density: ", network_density, "\n")
+    cat("compactness: ", compactness, "\n")
+    
+    #### assigning a weight to each edge based on the degree of its end nodes
+    branch.all$weight = apply(branch.all, 1, function(x) computeEdgeWeight(degree(g1), x))
+    branch.all$weight = range01(branch.all$weight)
+    
+    #### compute the univariate or bivariate density distribution of the edge angle and/ or edge length 
+    #### orgKDE holds the kernel density estimation
+    data = branch.all[, 7:9] # column 7 has angle, 8 has length, 9 has weight
+    
+    orgKDE_angle = computeKDE(data, 1) # 1: angle, 2: length, 3: both
+    orgKDE_length = computeKDE(data, 2) # 1: angle, 2: length, 3: both
+    orgKDE_both = computeKDE(data, 3) # 1: angle, 2: length, 3: both
+    
+    return(list(branch.all, orgKDE_angle, orgKDE_length, orgKDE_both, meshedness, network_density, compactness))
 
 }
