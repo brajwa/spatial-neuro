@@ -49,8 +49,8 @@ main <- function(){
     #### Step:3
     
     #### generate ganglia with the fitted spatial model
-    #testing purpose
     set.seed(Sys.time())
+    
     g = generateGangliaCenters(Beta, Gamma, R, H, window=window, process_type=3, with_model=1, fitted_model=ganglia_model)
     plotGeneratedGanglia(g)
     
