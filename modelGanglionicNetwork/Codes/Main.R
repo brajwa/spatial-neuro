@@ -51,64 +51,43 @@ main <- function(){
     #### generate ganglia with the fitted spatial model
     set.seed(Sys.time())
     
-    g = generateGangliaCenters(Beta, Gamma, R, H, window=window, process_type=3, with_model=1, fitted_model=ganglia_model)
-    plotGeneratedGanglia(g)
+    ganglia_ppp = generateGangliaCenters(Beta, Gamma, R, H, window=window, process_type=3, with_model=1, fitted_model=ganglia_model)
+    plotGeneratedGanglia(ganglia_ppp)
     
-    ganglia_ppp = g
-    
-    ltest= envelope(g, Lest)
-    ggplot(data = ltest, aes(r)) +
-        
-        geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
-        geom_line(aes(y=lo-r, colour="CSR lower bound"), size=2) +
-        geom_line(aes(y=hi-r, colour="CSR upper bound"), size=2) +
-        #geom_point(aes(y=theo, colour="csr")) +
-        
-        geom_line(aes(y=obs-r, colour="simulated"), size=2) +
-        #geom_point(aes(y=obs, colour="observed")) +
-        
-        theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(),
-              legend.text=element_text(size=30),
-              axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-              axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) +
-        xlab("Distance [pixels]") + ylab("L Function")
-    
+    #### creating workbook and .pptx to store the statistics and plots of the generated ganglia
     stats = createWorkbook() 
     doc = read_pptx()
     
     doc = add_slide(doc, "Blank", "Office Theme")
-    doc = ph_with(doc, dml(code = plot(ganglia_ppp, main=file_name, cex=1, pch=20, bg=1)), location = ph_location_fullsize())
+    doc = ph_with(doc, dml(code = plot(ganglia_ppp, main=sample_id, cex=1, pch=20, bg=1)), location = ph_location_fullsize())
     
-    ltest= envelope(ganglia_ppp, Lest)
+    ltest= envelope(ganglia_ppp, Linhom)
     ggobj = ggplot(data = ltest, aes(r)) + 
-        
         geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
         geom_line(aes(y=lo-r, colour="csr lower bound"), size=2) +
         geom_line(aes(y=hi-r, colour="csr upper bound"), size=2) +
-        #geom_point(aes(y=theo, colour="csr")) + 
-        
+
         geom_line(aes(y=obs-r, colour="simulated"), size=2) + 
-        #geom_point(aes(y=obs, colour="observed")) +  
-        
+
         theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
               legend.text=element_text(size=30),
               axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
               axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-        xlab("Distance") + ylab("L Function")+
-        ggtitle(file_name)
+        xlab("Interaction distance") + ylab("Besag's centered L Function")+
+        ggtitle(sample_id)
     
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
     
-    print(doc, target = paste(output_folder_path, "Simulated_PPP.pptx", sep=""))
+    print(doc, target = paste(output_folder_path, "Simulated Ganglia/", sample_id, "_Simulated_PP.pptx", sep=""))
     
-    # write.csv(data.frame(x=ganglia_ppp$x, y=ganglia_ppp$y), 
-    #         "D://Summer 2019//R codes//Research1.0InterganglionicNetwork2021//Outputs//Simulated thingys//ganglia_coord.csv", 
-    #         row.names = F)
+    write.csv(data.frame(x=ganglia_ppp$x, y=ganglia_ppp$y),
+            paste(output_folder_path, "Simulated Ganglia/", sample_id, "_Simulated_PP_coord.csv", sep=""),
+            row.names = F)
+    
+    #### Step:4
     
     
-    
-    #4
     branch_info_list = analyzeBranch(path_to_branch_info)
     
     branch_all = branch_info_list[[1]]
