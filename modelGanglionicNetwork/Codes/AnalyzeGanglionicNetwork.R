@@ -142,159 +142,134 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
 
 ##########################################
 summaryStat <- function(sample_id, parent, branch_info_path, output_folder_path){
-  data_struct_list = constructDataStruct(branch_info_path)
-  
-  branch.all = data_struct_list[[1]]
-  branch.ppp = data_struct_list[[2]]
-  branch.lpp = data_struct_list[[3]]
-  g1 = data_struct_list[[4]]
-  hardcoreStrauss_model_param = data_struct_list[[5]]
-  
-  stats = createWorkbook() 
-  doc = read_pptx()
-  
-  path_tokens = strsplit(branch_info_path, '\\\\')
-  file_name_ext = path_tokens[[1]][length(path_tokens[[1]])]
-  name_tokens = strsplit(file_name_ext, '.csv')
-  file_name = name_tokens[[1]][length(name_tokens[[1]])]
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(code = plot(branch.ppp, main=file_name, cex=1, pch=20)), location = ph_location_fullsize())
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(code = plot(branch.lpp, main=file_name, cex=0.5, pch=21, bg=c(1,2,3,4,5,6,7,8,"white","forestgreen","tan3"))), location = ph_location_fullsize())
-  
-  gtest =envelope(branch.ppp, Gest)
-  
-  ggobj = ggplot(data = gtest, aes(r)) + 
+    #### constructing spatial data structures for subsequent analysis
+    data_struct_list = constructDataStruct(sample_id, parent, branch_info_path, output_folder_path)
     
-    geom_line(aes(y=theo, colour="csr"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    #### the returned values
+    branch.all = data_struct_list[[1]]
+    branch.ppp = data_struct_list[[2]]
+    branch.lpp = data_struct_list[[3]]
+    g1 = data_struct_list[[4]]
+    hardcoreStrauss_model_param = data_struct_list[[5]]
     
-    geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+    #### creating .pptx file to store the plots and workbook for the statistics
+    stats = createWorkbook() 
+    doc = read_pptx()
     
-    geom_line(aes(y=obs, colour="observed"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) + 
+    #### slide for point pattern
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(code = plot(branch.ppp, main=sample_id, cex=1, pch=20)), location = ph_location_fullsize())
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance [pixels]") + ylab("Nearest Neighbor Function G") +
-    ggtitle(file_name)
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  addWorksheet(stats, "Gest")
-  writeData(stats, sheet = "Gest", x = gtest)
-  
-  ftest = envelope(branch.ppp, Fest)
-  
-  ggobj = ggplot(data = ftest, aes(r)) + 
+    #### slide for network
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(code = plot(branch.lpp, main=sample_id, cex=0.5, pch=21, bg=c(1,2,3,4,5,6,7,8,"white","forestgreen","tan3"))), location = ph_location_fullsize())
     
-    geom_line(aes(y=theo, colour="csr"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    #### computing summary statistics and adding slides for them
     
-    geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+    #### G-function
+    gtest = envelope(branch.ppp, Gest)
     
-    geom_line(aes(y=obs, colour="observed"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) + 
+    ggobj = ggplot(data = gtest, aes(r)) + 
+                geom_line(aes(y=theo, colour="csr"), size=2) +
+                geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+                geom_line(aes(y=obs, colour="observed"), size=2) + 
+                theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+                      legend.text=element_text(size=30),
+                      axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+                      axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+                xlab("Interaction distance") + ylab("Nearest Neighbor Function G") +
+                ggtitle(sample_id)
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance [pixels]") + ylab("Empty-space Function F")+
-    ggtitle(file_name)
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  addWorksheet(stats, "Fest")
-  writeData(stats, sheet = "Fest", x = ftest)
-  
-  jtest = envelope(branch.ppp, Jest)
-  
-  ggobj = ggplot(data = jtest, aes(r)) + 
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
     
-    geom_line(aes(y=theo, colour="csr"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    addWorksheet(stats, "Gest")
+    writeData(stats, sheet = "Gest", x = gtest)
     
-    geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+    #### F-function
+    ftest = envelope(branch.ppp, Fest)
     
-    geom_line(aes(y=obs, colour="observed"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) + 
+    ggobj = ggplot(data = ftest, aes(r)) + 
+                geom_line(aes(y=theo, colour="csr"), size=2) +
+                geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+                geom_line(aes(y=obs, colour="observed"), size=2) + 
+                theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+                      legend.text=element_text(size=30),
+                      axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+                      axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+                xlab("Interaction distance") + ylab("Empty-space Function F")+
+                ggtitle(sample_id)
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance [pixels]") + ylab("Summary Function J")+
-    ggtitle(file_name)
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  addWorksheet(stats, "Jest")
-  writeData(stats, sheet = "Jest", x = jtest)
-  
-  ktest = envelope(branch.ppp, Kest)
-  
-  ggobj = ggplot(data = ktest, aes(r)) + 
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
     
-    geom_line(aes(y=theo, colour="csr"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    addWorksheet(stats, "Fest")
+    writeData(stats, sheet = "Fest", x = ftest)
     
-    geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+    #### J-function
+    jtest = envelope(branch.ppp, Jest)
     
-    geom_line(aes(y=obs, colour="observed"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) + 
+    ggobj = ggplot(data = jtest, aes(r)) + 
+                geom_line(aes(y=theo, colour="csr"), size=2) +
+                geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+                geom_line(aes(y=obs, colour="observed"), size=2) + 
+                theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+                      legend.text=element_text(size=30),
+                      axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+                      axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+                xlab("Interaction distance") + ylab("Summary Function J")+
+                ggtitle(sample_id)
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance [pixels]") + ylab("K Function")+
-    ggtitle(file_name)
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  addWorksheet(stats, "Kest")
-  writeData(stats, sheet = "Kest", x = ktest)
-  
-  # ltest = data.frame(r=ktest$r, obs=sqrt(ktest$obs/pi)-ktest$r, theo=sqrt(ktest$theo/pi)-ktest$r, lo=sqrt(ktest$lo/pi)-ktest$r,
-  #                    hi=sqrt(ktest$hi/pi)-ktest$r)
-  
-  ltest= envelope(branch.ppp, Lest)
-  
-  ggobj = ggplot(data = ltest, aes(r)) + 
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
     
-    geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
-    geom_line(aes(y=lo-r, colour="csr lower bound"), size=2) +
-    geom_line(aes(y=hi-r, colour="csr upper bound"), size=2) +
-    #geom_point(aes(y=theo, colour="csr")) + 
+    addWorksheet(stats, "Jest")
+    writeData(stats, sheet = "Jest", x = jtest)
     
-    geom_line(aes(y=obs-r, colour="observed"), size=2) + 
-    #geom_point(aes(y=obs, colour="observed")) +  
+    #### Ripley's K-function
+    ktest = envelope(branch.ppp, Kest)
     
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
-          legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-    xlab("Distance [pixels]") + ylab("L Function")+
-    ggtitle(file_name)
-  
-  doc = add_slide(doc, "Blank", "Office Theme")
-  doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
-  
-  addWorksheet(stats, "Lest")
-  writeData(stats, sheet = "Lest", x = ltest)
-  
-  saveWorkbook(stats, paste(output_folder_path, file_name, "_STAT_Values.xlsx"), overwrite = T)
-  print(doc, target = paste(output_folder_path, file_name, "_STAT_Figures_2.pptx", sep=""))
-  
+    ggobj = ggplot(data = ktest, aes(r)) + 
+                geom_line(aes(y=theo, colour="csr"), size=2) +
+                geom_ribbon(aes(ymin=lo, ymax=hi), alpha = 0.3)+
+                geom_line(aes(y=obs, colour="observed"), size=2) + 
+                theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+                      legend.text=element_text(size=30),
+                      axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+                      axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+                xlab("Interaction distance") + ylab("K Function")+
+                ggtitle(sample_id)
+    
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
+    
+    addWorksheet(stats, "Kest")
+    writeData(stats, sheet = "Kest", x = ktest)
+    
+    #### Besag's centered inhomogeneous L-function
+    ltest= envelope(branch.ppp, Linhom)
+    
+    ggobj = ggplot(data = ltest, aes(r)) + 
+                geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
+                geom_line(aes(y=lo-r, colour="csr lower bound"), size=2) +
+                geom_line(aes(y=hi-r, colour="csr upper bound"), size=2) +
+                geom_line(aes(y=obs-r, colour="observed"), size=2) + 
+                theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+                      legend.text=element_text(size=30),
+                      axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+                      axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+                xlab("Interaction distance") + ylab(" Besag's centered L Function")+
+                ggtitle(file_name)
+    
+    doc = add_slide(doc, "Blank", "Office Theme")
+    doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
+    
+    addWorksheet(stats, "Lest")
+    writeData(stats, sheet = "Lest", x = ltest)
+    
+    saveWorkbook(stats, paste(output_folder_path, "Summary Statistics/", sample_id, "_STAT_Values.xlsx", sep=""), overwrite = T)
+    print(doc, target = paste(output_folder_path, "Summary Statistics/", sample_id, "_STAT_Figures.pptx", sep=""))
+
 }
 
 
