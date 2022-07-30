@@ -328,7 +328,8 @@ analyzeGanglia <- function(sample_id, parent, branch_info_path, output_folder_pa
 }
 
 
-analyzeBranch <- function(branch_info_path){
+#############################################
+analyzeBranch <- function(sample_id, parent, branch_info_path, output_folder_path){
   
   branch_info_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Inputs\\Branch Information\\2475P_Trimmed.csv"
   output_folder_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Outputs\\Network Figures\\"
