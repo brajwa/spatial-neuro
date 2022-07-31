@@ -127,13 +127,6 @@ main <- function(){
     "At this point we have the simulated ganglia (the simulated point pattern) and the network (the simulated graph).
     Next step is to put them together and generate some neuron loints around the ganglia to give it somewhat realistic essence.
     The intensity profile for the neurons is generated manually in Fiji and saved to be used in the next steps."
-    
-    #6
-    
-    #7
-    "Done in the generateNeuronCenters function"
-    
-    #8
 }
 
 
