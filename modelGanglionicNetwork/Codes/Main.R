@@ -123,8 +123,10 @@ main <- function(){
     plot(g2_lin)
     print(EMD)
     
-    #5
-    "The intensity profile for the neurons is generated manually in Fiji and provided to the next step."
+    #### Step:5
+    "At this point we have the simulated ganglia (the simulated point pattern) and the network (the simulated graph).
+    Next step is to put them together and generate some neuron loints around the ganglia to give it somewhat realistic essence.
+    The intensity profile for the neurons is generated manually in Fiji and saved to be used in the next steps."
     
     #6
     
