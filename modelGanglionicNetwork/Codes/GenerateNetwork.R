@@ -263,7 +263,7 @@ generateNetworkEdges <- function(ganglia_ppp, branch.all, orgKDE_angle, orgKDE_l
                                     triKDE_angle, triKDE_length, triKDE_both, meshedness, network_density, compactness,
                                     sample_id, output_folder_path)
     
-    # check if the distribution under consideration covers the targeted distribution
+    #### observe if the distribution under consideration covers the targeted distribution
     par(mar=c(5, 2, 1, 1))
     plot(density(branch.all$angle), col="red", lty=2, xlab="Edge angle", ylab="Density", main="", xlim=c(-100,250), ylim=c(0, 0.02))
     lines(density(network_extra1$anglecomp), col="blue")
@@ -279,45 +279,37 @@ generateNetworkEdges <- function(ganglia_ppp, branch.all, orgKDE_angle, orgKDE_l
          col=c("red", "blue", "black"), 
          lty=c(2, 1, 3))
     
-    # visualize the bivariate distribution of the trimmed triangulation
+    #### visualize the bivariate distribution of the trimmed triangulation
     den3d = kde2d(network_extra$anglecomp, network_extra$euclidDist)
     persp(den3d, theta = -45, phi = 30, xlab="angle", ylab="edge len",
         ticktype = "detailed", shade = 0.75, col="lightblue")
     
-    # create a graph from trimmed Delaunay triangulation
+    #### create a graph from sampled Delaunay triangulation
     g2 = make_empty_graph() %>% add_vertices(ganglia_ppp$n)
     g2 = add_edges(as.undirected(g2), as.vector(t(as.matrix(network_extra[,5:6]))))
     
-    # display as corresponding ppp, linnet and the daughter points
+    #### display as corresponding ppp and linnet
     g2_lin = linnet(ganglia_ppp, edges=as.matrix(network_extra[, 5:6]))
     
     par(mar=c(0,0,0,0), oma=c(0,0,0,0))
     plot(ganglia_ppp, cex=1, pch=20, main="", bg=1)
     plot(g2_lin, add=T)
     
-    output_folder_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Outputs\\Simulated thingys\\"
+    #### creating .pptx file to store the plots
     doc = read_pptx()
     
     degree_frame_2 = as.data.frame(degree(g2))
     colnames(degree_frame_2)[colnames(degree_frame_2) == 'degree(g2)'] = 'deg'
     
     ggplot(degree_frame_2, aes(x=deg)) +
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+
-    geom_density(alpha=1, colour="black", size=1.5) +
-    scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
-    labs(x = "Degree of the vertices", y = "Density", color = "")
+        geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+
+        geom_density(alpha=1, colour="black", size=1.5) +
+        scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
+        labs(x = "Degree of the vertices", y = "Density", color = "")
     
     ggplot(network_extra, aes(x=weight)) +
-    geom_density(alpha=1, colour="black", size=1.5) +
-    labs(x = "weight of the edges", y = "Density", color = "")
-    
-    # output_folder_path = "D:\\Summer 2019\\R codes\\Research1.0InterganglionicNetwork2021\\Inputs\\Intensity Profile\\"
-    # doc = read_pptx()
-    # doc = add_slide(doc, "Blank", "Office Theme")
-    # doc = ph_with(doc, dml(code = ({plot(ganglia_ppp$window)})), location = ph_location_fullsize())
-    # doc = add_slide(doc, "Blank", "Office Theme")
-    # doc = ph_with(doc, dml(code = ({plot(g2_lin)})), location = ph_location_fullsize())
-    # print(doc, target = paste(output_folder_path, "Simulated_net.pptx", sep=""))
+        geom_density(alpha=1, colour="black", size=1.5) +
+        labs(x = "weight of the edges", y = "Density", color = "")
     
     marked_g2  = graph_from_data_frame(network_extra[,5:6], directed=FALSE)
     degs = degree(marked_g2)
@@ -330,6 +322,7 @@ generateNetworkEdges <- function(ganglia_ppp, branch.all, orgKDE_angle, orgKDE_l
     marked_g2_lin = linnet(marked_ganglia_ppp, edges=as.matrix(network_extra[, 5:6]))
     
     branch.lpp = lpp(marked_ganglia_ppp, marked_g2_lin )
+    
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(code = plot(branch.lpp, main="Simulated Network", cex=1, pch=21, bg=c(1,2,3,4,5,6,7,8,"white","forestgreen","tan3"))), location = ph_location_fullsize())
     
@@ -339,49 +332,49 @@ generateNetworkEdges <- function(ganglia_ppp, branch.all, orgKDE_angle, orgKDE_l
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(code =({plot(density(branch.all$angle), col="red", lty=2, lwd=2, xlab="Edge angle (degree)", ylab="Density", main="",
                                       cex.lab=2, cex.axis=2, cex.main=2, cex.sub=2, xlim=c(-50, 250), ylim=c(0,0.015))
-    lines(density(network_extra1$anglecomp), lwd=2, col="blue")
-    lines(density(network_extra$anglecomp), lwd=2, col="black", lty=6)
-    legend(x=80, y=0.015, legend=c("Real ENS", "Delaunay triangulation", "Simulated network"),
-           cex=2, col=c("red", "blue", "black"),
-           lty=c(2, 1, 6))})), location = ph_location_fullsize())
+                                    lines(density(network_extra1$anglecomp), lwd=2, col="blue")
+                                    lines(density(network_extra$anglecomp), lwd=2, col="black", lty=6)
+                                    legend(x=80, y=0.015, legend=c("Real ENS", "Delaunay triangulation", "Simulated network"),
+                                           cex=2, col=c("red", "blue", "black"),
+                                           lty=c(2, 1, 6))})), location = ph_location_fullsize())
     
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(code = ({plot(density(branch.all$euclid), col="red", lty=2, lwd=2, xlab="Edge length", ylab="Density", main="",
                                        cex.lab=2, cex.axis=2, cex.main=2, cex.sub=2)
-                                 lines(density(network_extra1$euclidDist), lwd=2, col="blue")
-                                 lines(density(network_extra$euclidDist), lwd=2, col="black", lty=6)
-                                 legend(x=240, y=0.006, legend=c("Real ENS", "Delaunay triangulation", "Simulated network"),
+                                    lines(density(network_extra1$euclidDist), lwd=2, col="blue")
+                                    lines(density(network_extra$euclidDist), lwd=2, col="black", lty=6)
+                                    legend(x=240, y=0.006, legend=c("Real ENS", "Delaunay triangulation", "Simulated network"),
                                         cex=2, col=c("red", "blue", "black"),
                                         lty=c(2, 1, 6))})), location = ph_location_fullsize())
     
+    #### creating a directory to save the simulated network related files
+    sim_net_path = paste(output_folder_path, "Simulated Network/", sep="")
+    if (!dir.exists(sim_net_path)) {dir.create(sim_net_path, recursive=TRUE)}
     
-    print(doc, target = paste(output_folder_path, "Final_Simulated.pptx", sep=""))
+    print(doc, target = paste(sim_net_path, sample_id, "_Final_Network_Simulated.pptx", sep=""))
     
     write.csv(data.frame(x1=network_extra$x1, y1=network_extra$y1, x2=network_extra$x2, y2=network_extra$y2), 
-            "D://Summer 2019//R codes//Research1.0InterganglionicNetwork2021//Outputs//Simulated thingys//edge_coord.csv", 
+            paste(sim_net_path, sample_id, "_Simulated_edge_coord.csv", sep=""), 
             row.names = F)
     
-    # compute EMD between the original ENS and the simulated network
+    #### compute EMD between the original ENS and the simulated network
     
-    # compute the univariate angle density distribution; orgKDE holds the kernel density estimation;
-    # orgKDE2 holds the same info in a convenient way to be used while calculating the Earth Mover's Distance
+    #### orgKDE holds the kernel density estimation;
+    #### orgKDE2 holds the same info in a convenient way to be used while calculating the Earth Mover's Distance
     data = branch.all[, 7:8]
     orgKDE = computeKDE(data, 3)
     predictionOrg = predict(orgKDE, x=data) 
     orgKDE2 = as.matrix(data.frame(z=predictionOrg, angle=orgKDE$x[, 1], edgelen=orgKDE$x[, 2]))
     
-    # triKDE holds the kernel density estimation;
-    # triKDE2 holds the same info in a convenient way to be used if calculating the Earth Mover's Distance
+    #### triKDE holds the kernel density estimation;
+    #### triKDE2 holds the same info in a convenient way to be used if calculating the Earth Mover's Distance
     triData = data.frame(angle=network_extra$anglecomp, edgelen=network_extra$euclidDist)
     triKDE = computeKDE(triData, 3)
     predictionTri = predict(triKDE, x=triData)
     triKDE2 = as.matrix(data.frame(z=predictionTri, angle=triData[, 1], edgelen=triData[, 2]))
     
-    
     EMD = emd(A=orgKDE2, B=triKDE2, dist="euclidean")
     cat("Earth Mover's Distance: ", EMD, "\n")
     
     return(list(network_extra, g2_lin, EMD))
-    
-
 }
