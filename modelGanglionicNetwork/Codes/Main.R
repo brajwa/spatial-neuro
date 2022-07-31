@@ -22,7 +22,7 @@ main <- function(){
     folder = folder[[1]][length(folder[[1]])]
     parent = strsplit(dir, folder)
     
-    #### the TIF images of the ganglionic networks are prepocessed in Fiji (ImageJ) and the network information is extracted as .csv files
+    #### the TIF images of the ganglionic networks are preprocessed in Fiji (ImageJ) and the network information is extracted as .csv files
     #### choose one of the ganglionic network samples with file chooser below
     setwd(paste(parent, "Data/Branch Information (in um)/", sep=""))
     path_to_branch_info = file.choose()
