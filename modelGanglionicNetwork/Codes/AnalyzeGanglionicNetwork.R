@@ -409,7 +409,7 @@ analyzeBranch <- function(sample_id, parent, branch_info_path, output_folder_pat
     doc = add_slide(doc, "Blank", "Office Theme")
     doc = ph_with(doc, dml(ggobj = ggobj), location = ph_location_fullsize())
     
-    #### check if the edge angle and length are correlated; they both are standardized value
+    #### observe if the edge angle and length are correlated; they both are standardized value
     plot(branch.all$angle, branch.all$euclid)
     
     #### visualize the bivariate distribution of the network's edge angle and length
