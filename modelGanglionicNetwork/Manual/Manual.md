@@ -227,6 +227,10 @@ centers from either of basic hardcore, basic Strauss or hardcore-Strauss
 process with their required parameters. Finally, the function returns
 the simulated realization as a point pattern object.
 
+The coordinates of the generated ganglia centers are saved as *.csv*
+file in the corresponding sample’s output subdirectory in
+**spatial-neuro/modelGanglionicNetwork/Outputs/**.
+
 ## Generating ENS network
 
 **Code:GenerateNetwork.R**
@@ -286,6 +290,10 @@ estimates of edge angle and length to visualize the goodness of the edge
 sampling algorithm, and computes the earth mover’s distance (EMD)
 between the given ENS and the simulated networks.
 
+The coordinates of the end vertices of the edges of the generated
+network are saved as *.csv* file in the corresponding sample’s output
+subdirectory in **spatial-neuro/modelGanglionicNetwork/Outputs/**.
+
 ## Putting everything together
 
 **Code: Main.R**
@@ -314,11 +322,15 @@ parameter (*g_val*), interaction distance (*r_val*) and hardcore
 distance (*h_val*). Then inhomogeneity is incorporated by thinning the
 generated point pattern with the intensity profile.
 
+The coordinates of the generated neuron centers are saved as *.csv* file
+in the corresponding sample’s output subdirectory in
+**spatial-neuro/modelGanglionicNetwork/Outputs/**.
+
 # Visualization
 
-Finally, the previously generated ganglia centers (*ganglia_ppp*), the
-ENS network (*g2_lin*) and the currently generated neuron centers are
-plotted together to complete the modeling process.
+The saved generated ganglia centers, the ENS network and the generated
+neuron centers can plotted together (using Fiji or R functionalities) to
+construct a complete visualization of the simulated ganglionic network.
 
 # References
 

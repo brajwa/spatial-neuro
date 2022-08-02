@@ -100,6 +100,8 @@ We analyze the ENS network to figure out its structural characteristics, which i
 
 While analyzing the ENS ganglia, we fitted the ganglia point point pattern to a hardcore-Strauss process. Given that fitted model or the parameters of the model, the following function **generateGangliaCenters** can generate simulated realizations of ENS ganglia centers. If the parameter *with_model=1*, the function generates ganglia centers directly from the model. If *with_model=0*, it depends on the value of the parameter *process_type* in generating ganglia centers from either of basic hardcore, basic Strauss or hardcore-Strauss process with their required parameters. Finally, the function returns the simulated realization as a point pattern object.
 
+The coordinates of the generated ganglia centers are saved as *.csv* file in the corresponding sample's output subdirectory in **spatial-neuro/modelGanglionicNetwork/Outputs/**.
+
 ## Generating ENS network
 **Code:GenerateNetwork.R**
 
@@ -121,6 +123,8 @@ The function **predictKDE** computes the probability for the chosen edge during 
 
 The functions **deterministicEdges** and **rejectionSampling** described above are called from this function **generateNetworkEdges** to execute the ENS network generation process. **generateNetworkEdges** creates the final network object (*g2_lin*), plots the corresponding kernel density estimates of edge angle and length to visualize the goodness of the edge sampling algorithm, and computes the earth mover's distance (EMD) between the given ENS and the simulated networks.
 
+The coordinates of the end vertices of the edges of the generated network are saved as *.csv* file in the corresponding sample's output subdirectory in **spatial-neuro/modelGanglionicNetwork/Outputs/**.
+
 ## Putting everything together
 **Code: Main.R**
 
@@ -133,9 +137,11 @@ At this point, we have a simulated realization of the ENS ganglia centers and a 
 
 Initially, the location of the neurons are generated with a homogeneous hardcore-Strauss process of given intensity (*b_val*), interaction parameter (*g_val*), interaction distance (*r_val*) and hardcore distance (*h_val*). Then inhomogeneity is incorporated by thinning the generated point pattern with the intensity profile. 
 
+The coordinates of the generated neuron centers are saved as *.csv* file in the corresponding sample's output subdirectory in **spatial-neuro/modelGanglionicNetwork/Outputs/**.
+
 
 # Visualization
 
-Finally, the previously generated ganglia centers (*ganglia_ppp*), the ENS network (*g2_lin*) and the currently generated neuron centers are plotted together to complete the modeling process.
+The saved generated ganglia centers, the ENS network and the generated neuron centers can plotted together (using Fiji or R functionalities) to construct a complete visualization of the simulated ganglionic network.
 
 # References
