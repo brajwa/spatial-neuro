@@ -16,6 +16,7 @@ knitr::opts_chunk$set(out.width = 10)
 
 We construct a generative network model to describe the architecture of the enteric nervous system (ENS) in the colon that works on the data from images of human and mouse tissue samples obtained through confocal microscopy.
 
+
 # Data
 
 The directory **spatial-neuro/modelGanglionicNetwork/Data/** contains the following subdirectories:
@@ -56,356 +57,55 @@ The directory **spatial-neuro/modelGanglionicNetwork/Data/** contains the follow
 
 * **Supporting Files:** Some additional information of the ENS samples, such as sample ID, sample location and condition, age group and sex, and the scaling of the *.tif* images are saved in this subdirectory.
 
-## Libraries and software versions
 
- Afterwards, we analyze the ENS ganglia and ganglionic neurons as point patterns and the ENS network as linear network or graph objects. We use R libraries *spatstat* and *igraph* for this purpose, along with other necessary libraries. In our experiments we used *Fiji v1.53h* and *R version 4.0.2* in RStudio. 
+# Codes
 
-# Analyzing ENS characteristics
+The directory **spatial-neuro/modelGanglionicNetwork/Codes/** contains the R code files. We utilize the R packages *spatstat* and *igraph* for this purpose, along with other necessary libraries. In our experiments we used *Fiji v1.53h* and *R version 4.0.2* in RStudio. The R files can be run using RStudio or Linux terminal.
 
-## Constructing suitable data structures
+## Analyzing ENS characteristics
+**Code: AnalyzeGanglionicNetwork.R**
 
-We construct a few suitable data structures to store the ENS network information extracted from the images, that will be useful in the subsequent stages of the code. The function *constructDataStruct* takes as input the full path to the *.csv* file that has the ENS network information (*branch_info_path*), and returns a dataframe object (*branch_all*), a point pattern object (*branch_ppp*), a point pattern on a linear network object (*branch_lpp*) and a graph object (*g1*). Note that, if you store the ENS network information in any format other than *.csv* (i.e. *.xlsx*), do not forget to modify the corresponding line in following code segment accordingly. 
+### Constructing suitable data structures
 
-```{r eval=FALSE}
+We construct a few suitable data structures to store the ENS network information extracted from the images, that will be useful in the subsequent stages of the code. The function **constructDataStruct** takes as input the name of the ENS sample under consideration (*sample_id*), the path to the parent directory of the codes (*parent*), the path to the corresponding sample's output directory (*output_folder_path*) and the path to the *.csv* file that has the ENS network information (*branch_info_path*), and returns a dataframe object (*branch_all*), a point pattern object (*branch_ppp*), a point pattern on a linear network object (*branch_lpp*) and a graph object (*g1*). 
 
-constructDataStruct <- function(branch_info_path){
+**Note:** The ENS network information are stores in *.csv* format and the file names are preceded with the sample ID. Any other format or naming convension will require modification in the codes.
 
-  branch = data.frame()
-  branch = read.csv(branch_info_path) # change here if needed.
-  
-  # removing the branches with length 1 (too small)
-  branch_adj = branch[which(branch$Branch.length!=1),]
-  
-  # constructing a dataframe with the branch ends (vertices). 
-  # consider y coordinates are negated beforehand.
-  branch_sim = data.frame(x1=branch_adj$V1.x, y1=branch_adj$V1.y, x2=branch_adj$V2.x, 
-                          y2=branch_adj$V2.y)
-  
-  # removing duplicate branches
-  temp = which(branch_sim[,1]!=branch_sim[,3] &  branch_sim[,2]!=branch_sim[,4])
-  branch_sim = branch_sim[temp,]
-  
-  # creating a unique id for each of the branches so we can find the vertices
-  branch_id = matrix(data=factor(as.numeric(as.matrix(branch_sim))), ncol=4)
-  branch_id = data.frame(P1=paste(branch_id[,1],"-",branch_id[,2], sep=""), 
-                         P2=paste(branch_id[,3],"-",branch_id[,4], sep=""))
-  branch_id = c(as.matrix(branch_id)) %>% factor() #%>% unclass()
-  levels(branch_id)  = 1:length(levels(branch_id))
-  branch_id = data.frame(matrix(ncol=2, data=unclass(branch_id)))
-  
-  # putting together all info and extract position of all the vertices
-  branch_all = data.frame(branch_sim, branch_id); colnames(branch_all) <- 
-    c("x1","y1","x2","y2","n1","n2")
-  
-  branch_xy = data.frame(x=c(branch_all$x1, branch_all$x2), 
-                         y=c(branch_all$y1, branch_all$y2), 
-                         n =c(branch_all$n1, branch_all$n2) )
-  branch_xy = distinct(branch_xy)
-  
-  # ordering by the vertex number
-  branch_xy_ord = branch_xy[order(branch_xy$n),]
-  
-  # creating point and line patterns
-  
-  # creating a point pattern
-  branch_ppp = ppp(x=branch_xy_ord$x, y=branch_xy_ord$y, 
-                   window=owin(xrange=c(min(branch_xy_ord$x), max(branch_xy_ord$x)), 
-                               yrange=c(min(branch_xy_ord$y), max(branch_xy_ord$y))))
-  branch_ppp = unique.ppp(branch_ppp)
-  # plot the point pattern
-  plot(branch_ppp, cex=1, pch=20, main="", bg=1)
-  
-  # creating a line pattern
-  branch_lin = linnet(branch_ppp, edges=as.matrix(branch_all[,5:6]))
-  # plot the branches
-  plot(branch_lin, add=T)
-  
-  # creating the graph representation
-  g1  = graph_from_data_frame(branch_all[,5:6], directed=FALSE)
-  
-  # creating a list representing degree for every vertex and use it in the point pattern
-  degs = (degree(g1))
-  ord = order(as.numeric(names(degs)))
-  degs = degs[ord]
-  
-  # COMMENT IN THE NEXT TWO LINES IF REQUIRED
-  # including the degree of the vertices as mark in the point pattern
-  # marks(branch_ppp) = factor(degs)
-  # branch_ppp$markformat = "factor"
+### Summary statistics
 
-  # creating point pattern on linear network to store the information
-  branch_lpp = lpp(branch_ppp, branch_lin )
-  
-  return(list(branch_all, branch_ppp, branch_lpp, g1))
-}
+To understand the spatial organization of the ganglionic point patterns, summary statistics such as - G, F, J, K, L functions are quite useful. The following function **summaryStat** demonstrates the summary statistics analysis for a given ganglionic point pattern. The function **summaryStat** takes as input the name of the ENS sample under consideration (*sample_id*), the path to the parent directory of the codes (*parent*), the path to the corresponding sample's output directory (*output_folder_path*) and the path to the *.csv* file that has the ENS network information (*branch_info_path*), and plots the corresponding statistics as output.
 
-```
+### Analyzing ENS ganglia
 
-![The left pannel shows the spatial point pattern of the ganglia centers. The right pannel shows the  corresponding spatial network with the vertices colored according to their degrees (labels on the left).](4.jpg){}
+We fit the ganglionic point pattern to an inhomogeneous hardcore-Strauss process. The function **analyzeGanglia** takes as input the name of the ENS sample under consideration (*sample_id*), the path to the parent directory of the codes (*parent*), the path to the corresponding sample's output directory (*output_folder_path*) and the path to the *.csv* file that has the ENS network information (*branch_info_path*), and returns the fitted model (*ganglia_model*) along with its parameters: intensity (*Beta*), interaction parameter (*Gamma*), interaction distance (*R*), hardcore distance (*H*) and point pattern window (*window*).
 
-## Summary statistics
+The library function **spatstat::ppm** has an *interaction* parameter. In our case that parameter is the desired model object **StraussHard()**, and we need to provide it with an interaction distance of our preference. In the case of hardcore-Strauss process, interaction distance *R* and interaction parameter *Gamma* are irregular parameters, which can be determined by biological knowledge or by analyzing the profile Akaike information criterion (AIC) of the point pattern for a range of irregular parameters (See [@baddeley2015spatial] Chapter 13.6.3 for details).
 
-To understand the spatial organization of a point pattern, summary statistics such as - G, F, J, K, L functions are quite useful. The following function *summaryStat* demonstrates the L-function analysis for a given ENS ganglia point pattern. The other summary statistics functions can be analyzed in the exact same manner. The function *summaryStat* takes as input the full path to the *.csv* file that has the ENS network information (*branch_info_path*), and plots the corresponding L-function statistics as output.
+### Analyzing ENS network
 
-```{r eval=FALSE}
-summaryStat <- function(branch_info_path){
-  # constructing suitable data structures
-  data_struct_list = constructDataStruct(branch_info_path)
-  
-  branch_all = data_struct_list[[1]]
-  branch_ppp = data_struct_list[[2]]
-  branch_lpp = data_struct_list[[3]]
-  g1 = data_struct_list[[4]]
-  
-  # computing L-function statistics and plotting with complete spatial randomness (CSR) 
-  # for comparison
-  ltest= envelope(branch_ppp, Lest)
-  ggplot(data = ltest, aes(r)) + 
-    
-    geom_ribbon(aes(ymin=lo-r, ymax=hi-r), alpha = 0.3)+
-    geom_line(aes(y=lo-r, colour="csr lower bound"), size=2) +
-    geom_line(aes(y=hi-r, colour="csr upper bound"), size=2) +
-    
-    geom_line(aes(y=obs-r, colour="observed"), size=2) + 
-    
-    theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), 
-          legend.title=element_blank(), legend.text=element_text(size=30),
-          axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
-          axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
-          xlab("Distance") + ylab("L Function")
-}
-```
+We analyze the ENS network to figure out its structural characteristics, which is very crucial for the next step in modeling - generating ENS network on top of a simulated point pattern instance. We focus on the degree of the vertices, the angle (in degree) and the length of the edges. The function **analyzeBranch** computes these characteristics values for the given ENS network and constructs their kernel density estimates. It takes as input the name of the ENS sample under consideration (*sample_id*), the path to the parent directory of the codes (*parent*), the path to the corresponding sample's output directory (*output_folder_path*) and the path to the *.csv* file that has the ENS network information (*branch_info_path*), and returns a dataframe object (*branch_all*) containing all the feature values for each of the edges of the ENS network, three kernel density estimates (*orgKDE_angle*, *orgKDE_length* and *orgKDE_both*) containing the kernel density estimates of the edge angle, edge length and both of the given ENS network respectively, meshedness, compactness and density of the given ENS network (*meshedness*, *compactness*, *network_density*). The function **analyzeBranch**  uses a few helping functions that are also included below.
 
-![The L-function plot characterizing the spatial arrangement of the ganglia centers. The shaded area between upper (teal) and lower (orange) bounds represents the range of values expected from complete spatial randomness; hence this plot indicates a prominent level of non-random spatial organization in the observed point pattern (black) up to a certain distance (pixels).](5.jpg){}
+* The function **range01** simply 0-1 normalizes a given vector.
 
-In the observed L-function plot, the shaded area represents complete spatial randomness (CSR), and the region below and above 0 represents spatial inhibition and attraction respectively. 
+* The function **calcAngle** computes the angle of an edge with the horizontal x axis in degree. The input parameter *x* has four components - the coordinates of the end points of the edge *x1*, *y1*, *x2*, *y2*.
 
-## Analyzing ENS ganglia
+* The function **calcDist** computes the Euclidean distance between the two nodes of an edge. The input parameter *x* has four components - the coordinates of the end points of the edge *x1*, *y1*, *x2*, *y2*.
 
-We fit the ENS ganglia point pattern to inhomogeneous hardcore-Strauss process. The function *analyzeGanglia* takes as input the full path to the *.csv* file that has the ENS network information (*branch_info_path*), and returns the fitted model (*ganglia_model*) along with its parameters: intensity (*Beta*), interaction parameter (*Gamma*), interaction distance (*R*), hardcore distance (*H*) and point pattern window (*window*).
+* The function **computeKDE** computes the distribution of angle and/or length of the ENS network. It takes as input a matrix *data* with column 1 that has the angle and column 2 that has the length of the edges, and an integer *mode* that is either 1/2/3 (1 for angle, 2 for length, 3 for both).
 
-The function *spatstat::ppm* takes the *interaction* parameter, where we need to provide *StraussHard()* with an interaction distance of our preference. In the case of hardcore-Strauss process, interaction distance *R* and interaction parameter *Gamma* are irregular parameters, which can be determined by biological knowledge or by analyzing the profile Akaike information criterion (AIC) of the point pattern for a range of irregular parameters (See [@baddeley2015spatial] Chapter 13.6.3 for details).
+* The function **computeEdgeWeight** assigns a weight to each edge of the ENS network based on the degree of its two end vertices.
 
-```{r eval=FALSE}
-
-analyzeGanglia <- function(branch_info_path){
-  data_struct_list = constructDataStruct(branch_info_path)
-  
-  branch_all = data_struct_list[[1]]
-  branch_ppp = data_struct_list[[2]]
-  branch_lpp = data_struct_list[[3]]
-  g1 = data_struct_list[[4]]
-  
-  # checking the summary of the point pattern
-  print(summary(branch_ppp))
-  
-  # figuring out R
-  # ltest = envelope(branch_ppp, Lest, nsim=39)
-  # from = min(nndist(branch_ppp))
-  # to = max(ltest$r)
-  # 
-  # range_R = data.frame(r=seq(from, to, by=0.05))
-  # p = profilepl(s=range_R, f=StraussHard, branch_ppp~x+y, aic=TRUE, rbord = from)
-  # ganglia_model = as.ppm(p)
-
-  # approach without AIC analysis
-  # fitting hardcore-Strauss model and extracting parameters
-  # provide the correct parameter to StraussHard function
-  ganglia_model = ppm(branch_ppp ~ x+y, interaction = StraussHard(220.40)) 
-  
-  param_model = rmhmodel(ganglia_model)
-  Beta = param_model$par$beta
-  Gamma = param_model$par$gamma
-  R = param_model$par$r
-  H = param_model$par$hc
-  window = branch_ppp$window
-
-  return(list(Beta, Gamma, R, H, window, ganglia_model))
-}
-
-```
-
-## Analyzing ENS network
-
-We analyze the ENS network under consideration to figure out its structural characteristics, which is very crucial for the next step in modeling - generating ENS network on top of a simulated point pattern instance. We focus on the degree of the vertices, the angle (in degree) and the length of the edges. The function *analyzeBranch* computes these characteristics values for the given ENS network and constructs their kernel density estimates. It takes as input the full path to the *.csv* file that has the ENS network information (*branch_info_path*), and returns a dataframe object (*branch_all*) containing all the feature values for each of the edges of the ENS network, three kernel density estimates (*orgKDE_angle*, *orgKDE_length* and *orgKDE_both*) containing the kernel density estimates of the edge angle, edge length and both of the given ENS network respectively, meshedness, compactness and density of the given ENS network (*meshedness*, *compactness*, *network_density*). The function *analyzeBranch*  uses a few helping functions that are also included below.
-
-```{r eval=FALSE}
-
-analyzeBranch <- function(branch_info_path){
-  data_struct_list = constructDataStruct(branch_info_path)
-  
-  branch_all = data_struct_list[[1]]
-  branch_ppp = data_struct_list[[2]]
-  branch_lpp = data_struct_list[[3]]
-  g1 = data_struct_list[[4]]
-  
-  # plotting the ENS network
-  par(mar=c(0,0,0,0), oma=c(0,0,0,0))
-  plot(branch_lpp, main="", pch=21, cex=1)
-  
-  # extracting information about connectivity
-  table_degree = table(degree(g1))
-  degree_frame = as.data.frame(degree(g1))
-  colnames(degree_frame)[colnames(degree_frame) == 'degree(g1)'] = 'deg'
-  
-  ggplot(degree_frame, aes(x=deg)) + 
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+ 
-    geom_density(alpha=1, colour="black", size=1.5) +
-    scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
-    labs(x = "Degree of the vertices", y = "Density", color = "")
-  
-  # clustering coeff
-  # Transitivity measures the probability that the adjacent vertices of a vertex are 
-  # connected. This is sometimes also called the clustering coefficient.
-  cluster_coeff = transitivity(g1, type = "global")
-
-  # calculating the edge angle (in degree) and plotting the distribution
-  branch_all$angle = (apply(branch_all, 1, function(x) calcAngle(x)))
-  ggplot(branch_all, aes(x=angle)) + 
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 3)+
-    geom_density(alpha=1, colour="black", size=1.5) +
-     labs(x = "Edge angle", y = "Density", color = "")
-  
-  # calculating the edge length and plotting the distribution
-  branch_all$euclid = (apply(branch_all, 1, function(x) calcDist(x)))
-  ggplot(branch_all, aes(x=euclid)) + 
-    geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 7)+
-    geom_density(alpha=1, colour="black", size=1.5) +
-     labs(x = "Edge length (Euclidean)", y = "Density", color = "")
-
-  # visualize the bivariate distribution of edge angle and length of an original network
-  den3d = kde2d(branch_all$angle, branch_all$euclid)
-  persp(den3d, theta = -45, phi = 30, xlab="Edge angle", ylab="Edge length",
-        ticktype = "detailed", shade = 0.75, col="lightblue")
-  
-  # computing some network characteristics: meshedness, density and compactness
-  N = branch_ppp$n
-  E = length(branch_all$x1)
-  A = (branch_ppp$window$xrange[2]-branch_ppp$window$xrange[1])*
-    (branch_ppp$window$yrange[2]-branch_ppp$window$yrange[1])
-  L = sum(branch_all$euclid)
-  
-  meshedness = (E-N+1)/((2*N)-5)
-  network_density = E/((3*N)-6)
-  compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
-  
-  # assigning some weight to each edge of the ENS network based on the degree of its 
-  # two end vertices, this weight will be helpful in the network generation stage
-  branch_all$weight = apply(branch_all, 1, function(x) computeEdgeWeight(degree(g1), x))
-  branch_all$weight = range01(branch_all$weight)
-  
-  data = branch_all[, 7:9] # column 7 has angle, 8 has length, 9 has weight
-  # computing the kernel density estimates
-  orgKDE_angle = computeKDE(data, 1) # 1: angle, 2: length, 3: both
-  orgKDE_length = computeKDE(data, 2) # 1: angle, 2: length, 3: both
-  orgKDE_both = computeKDE(data, 3) # 1: angle, 2: length, 3: both
-  
-  return(list(branch_all, orgKDE_angle, orgKDE_length, orgKDE_both, meshedness, 
-              network_density, compactness))
-
-}
-
-```
-
-The function *range01* simply 0-1 normalizes a given vector.
-
-```{r eval=FALSE}
-range01 <- function(x){(x-min(x))/(max(x)-min(x))}
-```
-
-The function *calcAngle* computes the angle of an edge with the horizontal x axis in degree. The input parameter *x* has four components - the coordinates of the end points of the edge *x1*, *y1*, *x2*, *y2*.
-
-```{r eval=FALSE}
-calcAngle <- function(x){
-  nom = x[4]-x[2]
-  denom = x[3]-x[1]
-  angle = as.numeric(atan(nom/denom))*180/pi
-  
-  return((angle) %% 180)
-}
-```
-
-The function *calcDist* computes the Euclidean distance between the two nodes of an edge. The input parameter *x* has four components - the coordinates of the end points of the edge *x1*, *y1*, *x2*, *y2*.
-
-```{r eval=FALSE}
-calcDist <- function(x){
-  return(sqrt( ((x[1]-x[3])^2) + ((x[2]-x[4])^2) ) )
-}
-```
-
-The function *computeKDE* computes the distribution of angle and/or length of the ENS network. It takes as input a matrix *data* with column 1 that has the angle and column 2 that has the length of the edges, and an integer *mode* that is either 1/2/3 (1 for angle, 2 for length, 3 for both).
-
-```{r eval=FALSE}
-computeKDE <- function(data, mode){
-  if(mode == 1){
-    data = as.matrix(data[, 1])
-    return(kde(x=data))
-  }
-  if(mode == 2){
-    data = as.matrix(data[, 2])
-    return(kde(x=data))
-  }
-  if(mode == 3){
-    data = as.matrix(data[, 1:2])
-    return(kde(x=data))
-  }
-}
-```
-
-The function *computeEdgeWeight* assigns a weight to each edge of the ENS network based on the degree of its two end vertices.
-
-```{r eval=FALSE}
-computeEdgeWeight <- function(g2_degree, x){
-  return(g2_degree[x[5]] + g2_degree[x[6]])
-}
-```
-
-![The left pannel shows the distribution of the edge angle (degree) and the right pannel shows distribution of the edge length (pixels) in the spatial network.](6.jpg){}
-
-# Generating ganglia centers
+## Generating ganglia centers
+**Code:GenerateGangliaCenters.R**
 
 While analyzing the ENS ganglia, we fitted the ganglia point point pattern to a hardcore-Strauss process. Given that fitted model or the parameters of the model, the following function *generateGangliaCenters* can generate simulated realizations of ENS ganglia centers. If the parameter *with_model=1*, the function generates ganglia centers directly from the model. If *with_model=0*, it depends on the value of the parameter *process_type* in generating ganglia centers from either of basic hardcore, basic Strauss or hardcore-Strauss process with their required parameters. Finally, the function returns the simulated realization as a point pattern object.
 
-```{r eval=FALSE}
-
-generateGangliaCenters <- function(intensity, interaction, interact_radius, hardcore_dist, 
-                                   window, process_type=3, with_model=0, fitted_model){
-  
-  if(with_model == 0){
-    if(process_type == 1){
-      ganglia_centers = rHardcore(beta=intensity, R=hardcore_dist, W=window)
-      return(ganglia_centers)
-    }
-    else if(process_type == 2){
-      ganglia_centers = rStrauss(beta=intensity, gamma=interaction, R=interact_radius, 
-                                 W=window)
-      return(ganglia_centers)
-    }
-    else if(process_type == 3){
-      ganglia_centers = rStraussHard(beta=intensity, gamma=interaction, R=interact_radius, 
-                                     H=hardcore_dist, W=window)
-      return(ganglia_centers)
-    }
-    else{
-      stop("Invalid input for point process type!\n")
-    }
-  }
-  
-  if(with_model == 1){
-    ganglia_centers = rmh.ppm(model = fitted_model, w=window)
-    return(ganglia_centers)
-  }
-}
-
-```
-
-![The left pannel shows the ganglia centers simulated from the non-stationary hybrid hardcore-Struass model. The right pannel shows the L-function plot characterizing the spatial arrangement of the simulated ganglia. The shaded area between upper (teal) and lower (orange) bounds represents the range of values expected from complete spatial randomness, indicating a significant level of non-random spatial organization in the simulated point pattern (black) up to a certain distance (pixels). The trend in the L-function is similar to the real ENS.](7.jpg){}
-
-# Generating ENS network
+## Generating ENS network
+**Code:**
 
 We generate simulated realizations of the ENS network on top of the realization of ENS ganglia centers that is simulated above maintaining statistical similarity with the given ENS network properties. We choose Dealunay triangulation as the initial deterministic connection model. Then rejection sampling of network edges is incorporated as a random connection model, based on the kernel density estimations of the ENS network characteristis.
 
-## Deterministic connection model
+### Deterministic connection model
 
 The function *deterministicEdges* takes as input the simulated realization of the ENS ganglia centers (*ganglia_ppp*) and the dataframe object containing the given ENS network characteristics (*branch_all*). It constructs the Delaunay triangluation on *ganglia_ppp* and suitable data structures for the next edge sampling step (*network_extra*). It also computes the kernel density estimations of the edge angle, length and both for the triangulation. The function returns all these computed objects.
 
@@ -476,7 +176,7 @@ deterministicEdges <- function(ganglia_ppp, branch_all){
 }
 ```
 
-## Random edge sampling process
+### Random edge sampling process
 
 The function *rejectionSampling* takes as input the simulated realization of the ENS ganglia centers (*ganglia_ppp*), the kernel density estimates of the edge angle, length and both of the given ENS network (*orgKDE_angle*, *orgKDE_length*, *orgKDE_both*), meshedness, network_density, compactness of the given ENS network and the structural properties of the initial triangulation (*network_extra*, *g2_degree*, *triKDE_angle*, *triKDE_length*, *triKDE_both*). The rejection sampling process picks an edge from the triangulation based on the weights assigned to them ralted to the degree of the end vertices. It keeps the edge if it violates connectivity constraints or the kernel density estimates are in good terms, and rejects it otherwise. The process also considers some addition checkings based on meshedness, network_density, compactness and dissection artifact. A helping function *predictKDE* computes the probability for the chosen edge given the kernel density estimation of the real ENS network.
 
@@ -612,7 +312,7 @@ predictKDE <- function(kde, data, mode){
 }
 ```
 
-## ENS network
+### ENS network
 
 The functions *deterministicEdges* and *rejectionSampling* described above are called from this function *generateNetworkEdges* to execute the ENS network generation process. *generateNetworkEdges* creates the final netowrk object (*g2_lin*), plots the corresponding kernel density estimates of edge angle and length to visualize the goodness of the edge sampling algorithm, and computes the earth mover's distance (EMD) between the given ENS and the simulated networks.
 
