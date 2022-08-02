@@ -4,14 +4,7 @@ title: Generative Modeling of the Enteric Nervous System Employing Point Pattern
 author: "Abida Sanjana Shemonti"
 date: "August 2, 2022"
 output:
-  html_document:
-    toc: yes
-    toc_depth: '2'
-    df_print: paged
-  pdf_document:
-    toc: yes
-    toc_depth: 2
-    highlight: tango
+  rmarkdown::github_document
 bibliography: paper-list.bib
 ---
 
@@ -21,49 +14,51 @@ knitr::opts_chunk$set(out.width = 10)
 
 # Introduction
 
-We describe a generative network model of the architecture of the enteric nervous system (ENS) in the colon that can work on the data from images of human and mouse tissue samples obtained through confocal microscopy.
+We construct a generative network model to describe the architecture of the enteric nervous system (ENS) in the colon that works on the data from images of human and mouse tissue samples obtained through confocal microscopy.
+
+# Data
+
+The directory **spatial-neuro/modelGanglionicNetwork/Data/** contains the following subdirectories:
+
+* **TIF Images:** This subdirectory contains ENS images (*.tif*) of the tissue samples collected from human colon with 3 color channels.
+
+* **Branch Information (in um):** There are *.csv* files in this subdirectory. We use an open source image processing package Fiji [@schindelin2012fiji] based on ImageJ2 for processing the ENS images and extracting data from them. The extracted information contain the 2D coordinates of the end vertices of the ENS network, the network branch (edge) lengths (actual and Euclidean) etc. All distances are measured in microns. We describe the image processing steps done in Fiji for segmenting the ENS images here. Note that, the parameter values mentioned here for different filters are subjected to change. We tried to tune them to the values that worked for our images mostly. 
+
+    + We load the *.tif* image into Fiji and flatten it. *Images > Overlay > Flatten*.
+
+    + We set the appropriate pixel to micron scale in *Analyze > Set Scale*.
+
+    + If the entire image is not ideal for analysis, we crop out the region of interest (ROI) and make it an 8-bit image. *Images > Type > 8-bit*.
+
+    + Despeckle. *Process > Noise > Despeckle*. Subtract Background with rolling ball radius 50 pixels. *Process > Subtract Background...*
+
+    + Enhance local contrast with block size 199. *Process > Enhance Local Contrast (CLAHE)*. This step can take a few moments.
+
+    + We apply the fast Fourier transformation (FFT) based bandpass filter with large structures down to 150 pixels and small structures up to 50 pixels. *Process > FFT > Bandpass Filter*.
+
+    + At this point, we need to include an additional plugin to Fiji called MorphoLibJ. You may need to download its *.jar* to the Fiji plugins folder. Check out the source on git (https://github.com/ijpb/MorphoLibJ). *Plugins > MorphoLibJ > Segmentation > Morphological Segmentation*. We run the process with Input Image *Border Image* and Watershed Segmentation tolerance 20. This step can take a few moments. We create image with Watershed Lines. This gives us the segmented image of the ENS network.
+
+    + We set the settings to Black Background in *Process > Binary > Options...* and invert the image. *Edit > Invert*.
+
+    + *Analyze > Skeleton > Analyze Skeleton* gives us a table named *Branch information* with all the extracted numerical information about the ENS network that we need. We save this table in *.csv* format. 
+    
+    **Note:** Fiji processes the images considering the top-left corner as the origin. So, before using the extracted coordinates in R codes, you MUST negate the y-coordinates, otherwise you will get a vertically flipped image.
+
+* **Neuron Intensity Profiles:** This subdirectory contains images (*.jpg*) of the intensity profile of the ganlionic neurons. These images are for visualization purpose and are used at the end of the model generation to create an overall picture of the simulated ganglionic network. We create a binary image of the simulated ganglionic network and process it in Fiji to construct an intensity profile for the ganglionic neurons. We invert the binary image (white network on black background) and may need to crop as required. We apply 3 image processing actions.
+
+    + Dilation. *Process > Binary > Dilate*.
+
+    + Euclidean distance mapping. *Process > Binary > Distance Map*.
+
+    + Binarization. *Process > Binary > Make Binary*.
+
+    The crucial thing is that we need to tune to a reasonable combination of these 3 actions to get our desired intensity profile. This process can be quite subjective to individuals and prior biological knowledge. In our experiments we used a large number of dilation (10 to 15 times), followed by distance mapping and binarization twice or thrice, and we finished with a contrast enhancement.
+
+* **Supporting Files:** Some additional information of the ENS samples, such as sample ID, sample location and condition, age group and sex, and the scaling of the *.tif* images are saved in this subdirectory.
 
 ## Libraries and software versions
 
-We use an open source image processing package Fiji [@schindelin2012fiji] based on ImageJ2 for processing the ENS microscopy images and extracting data from them. Afterwards, we analyze the ENS ganglia and ganglionic neurons as point patterns and the ENS network as linear network or graph objects. We use R libraries *spatstat* and *igraph* for this purpose, along with other necessary libraries. In our experiments we used *Fiji v1.53h* and *R version 4.0.2* in RStudio. We divide the entire generative modeling process into a few steps and guide through the R functions implementing those steps with a working example below.
-
-```{r eval=FALSE}
-load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", 
-             "tidyverse", "ggnetwork", "ggplot2", "poweRlaw", "imager", "viridis", 
-             "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", 
-             "dismo", "lctools", "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", 
-             "readxl", "OneR", "MASS", "RColorBrewer")
-
-install_lib = load_lib[!load_lib %in% installed.packages()]
-for(lib in install_lib) install.packages(lib, dependencies=TRUE)
-sapply(load_lib, require, character=TRUE)
-```
-
-# Segmenting ENS image
-
-We have the ENS microscopy images in *.tif* format with 3 color channels. We process the *.tif* image in Fiji and extract numerical information that can be used in subsequent analyses. The extracted information contain the 2D coordinates of the end vertices of the ENS network, the network branch (edge) lengths (actual and Euclidean) etc. All distances are measured in microns. We describe the image processing steps done in Fiji for segmenting the ENS images here. Note that, the parameter values mentioned here for different filters are subjected to change. We tried to tune them to the values that worked for our images mostly. 
-
-* We load the *.tif* image into Fiji and flatten it. *Images > Overlay > Flatten*.
-
-* We set the appropriate pixel to micron scale in *Analyze > Set Scale*.
-
-* If the entire image is not ideal for analysis, we crop out the region of interest (ROI) and make it an 8-bit image. *Images > Type > 8-bit*.
-
-* Despeckle. *Process > Noise > Despeckle*. Subtract Background with rolling ball radius 50 pixels. *Process > Subtract Background...*
-
-* Enhance local contrast with block size 199. *Process > Enhance Local Contrast (CLAHE)*. This step can take a few moments.
-
-* We apply the fast Fourier transformation (FFT) based bandpass filter with large structures down to 150 pixels and small structures up to 50 pixels. *Process > FFT > Bandpass Filter*.
-
-* At this point, we need to include an additional plugin to Fiji called MorphoLibJ. You may need to download its *.jar* to the Fiji plugins folder. Check out the source on git (https://github.com/ijpb/MorphoLibJ). *Plugins > MorphoLibJ > Segmentation > Morphological Segmentation*. We run the process with Input Image *Border Image* and Watershed Segmentation tolerance 20. This step can take a few moments. We create image with Watershed Lines. This gives us the segmented image of the ENS network.
-
-* We set the settings to Black Background in *Process > Binary > Options...* and invert the image. *Edit > Invert*.
-
-* *Analyze > Skeleton > Analyze Skeleton* gives us a table named *Branch information* with all the extracted numerical information about the ENS network that we need. We save this table in *.csv* format. Remember that, Fiji processes the images considering the top-left corner as the origin. So, before using the extracted coordinates in R codes, you MUST negate the y-coordinates, otherwise you will get a vertically flipped image.
-
-![The left pannel shows an example of flattened multichannel z-stacks of the myenteric plexus of ENS sample 2475-P, labeled with HuC/D (purple) and nNOS (green). The ROI is marked with a yellow rectangle. The right pannel shows the segmented image constructed following the procedure described above.](2.jpg){}
-
-![A snapshot of the *.csv* file containing the extracted information from the segmented image.](3.jpg){}
+ Afterwards, we analyze the ENS ganglia and ganglionic neurons as point patterns and the ENS network as linear network or graph objects. We use R libraries *spatstat* and *igraph* for this purpose, along with other necessary libraries. In our experiments we used *Fiji v1.53h* and *R version 4.0.2* in RStudio. 
 
 # Analyzing ENS characteristics
 
@@ -709,17 +704,6 @@ generateNetworkEdges <- function(ganglia_ppp, branch.all, orgKDE_angle, orgKDE_l
 
 ![The Delaunay triangulation constructed with the simulated ganglia centers as the vertices; the vertices are colored according to their degrees (labels on the left). Three different realizations of simulated ENS network for the same underlying ganglia centers; the vertices are colored according to their degrees (labels on the left). The distribution of the edge angle (degree) and edge length (pixels) of the real ENS network, intermediate triangulation, and the three simulated networks.](8.jpg){}
 
-# Constructing intensity profile for ganglionic neurons
-
-We create a binary image of the simulated ENS network from the immediate previous step and process it in Fiji to construct an intensity profile for the ganglionic neurons. We invert the binary image (white network on black background) and may need to crop as required. We apply 3 image processing actions.
-
-* Dilation. *Process > Binary > Dilate*.
-
-* Euclidean distance mapping. *Process > Binary > Distance Map*.
-
-* Binarization. *Process > Binary > Make Binary*.
-
-The crucial thing is that we need to tune to a reasonable combination of these 3 actions to get our desired intensity profile. This process can be quite subjective to individuals and prior biological knowledge. In our experiments we used a large number of dilation (10 to 15 times), followed by distance mapping and binarization twice or thrice, and we finished with a contrast enhancement.
 
 # Generating neuron centers
 
