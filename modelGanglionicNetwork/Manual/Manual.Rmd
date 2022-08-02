@@ -4,7 +4,14 @@ title: Generative Modeling of the Enteric Nervous System Employing Point Pattern
 author: "Abida Sanjana Shemonti"
 date: "August 2, 2022"
 output:
-  rmarkdown::github_document
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+    highlight: tango
 bibliography: paper-list.bib
 ---
 
