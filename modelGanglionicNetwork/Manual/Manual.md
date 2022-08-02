@@ -6,9 +6,10 @@ August 2, 2022
 
 # Introduction
 
-We construct a generative network model to describe the architecture of
-the enteric nervous system (ENS) in the colon that works on the data
-from images of human and mouse tissue samples obtained through confocal
+We construct a generative model employing spatial point pattern analysis
+and graph theoratic approaches to describe the architecture of the
+enteric nervous system (ENS) in the colon that works on the data from
+images of human and mouse tissue samples obtained through confocal
 microscopy.
 
 # Data
@@ -25,11 +26,12 @@ the following subdirectories:
     images and extracting data from them. The extracted information
     contain the 2D coordinates of the end vertices of the ENS network,
     the network branch (edge) lengths (actual and Euclidean) etc. All
-    distances are measured in microns. We describe the image processing
-    steps done in Fiji for segmenting the ENS images here. Note that,
-    the parameter values mentioned here for different filters are
-    subjected to change. We tried to tune them to the values that worked
-    for our images mostly.
+    distances are measured in microns.
+
+    We describe the image processing steps done in Fiji for segmenting
+    the ENS images here. Note that, the parameter values mentioned here
+    for different filters are subjected to change. We tried to tune them
+    to the values that worked for our images mostly.
 
     -   We load the *.tif* image into Fiji and flatten it. *Images \>
         Overlay \> Flatten*.
@@ -188,6 +190,7 @@ each of the edges of the ENS network, three kernel density estimates
 kernel density estimates of the edge angle, edge length and both of the
 given ENS network respectively, meshedness, compactness and density of
 the given ENS network (*meshedness*, *compactness*, *network_density*).
+
 The function **analyzeBranch** uses a few helping functions that are
 also included below.
 
@@ -301,8 +304,8 @@ subdirectory in **spatial-neuro/modelGanglionicNetwork/Outputs/**.
 We have described all the R functions implemented for the generative
 modeling. We write a **main** function to call these functions
 sequentially with proper parameters, maintain correct folder and file
-paths and construct the intensity profile of the neurons in Fiji BEFORE
-moving to the neuron generation part.
+paths and construct the intensity profile of the neurons in Fiji
+**before** moving to the neuron generation part.
 
 ## Generating neuron centers
 
