@@ -60,18 +60,16 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     
     if(file_extension == "csv"){
         branch = read.csv(branch_info_path)
-    }
-    else if(file_extension == "xlsx"){
+    }else if(file_extension == "xlsx"){
         branch = read.xlsx(branch_info_path)
-    }
-    else{
+    }else{
         stop("Invalid input file type! Has to be csv or xlsx.\n")
     }
     
     #### checking Branch.length column: if the length is 1, it is not really  a branch, removing them
     branch.adj = branch[which(branch$Branch.length!=1),]
     
-    hardcoreStrauss_model_param = mean(branch.adj$Branch.length)
+    hardcoreStrauss_model_param = mean(branch.adj$Euclidean.distance)
     
     #### constructing a dataframe with the branch nodes, consider y coordinates are negated beforehand.
     branch.sim = data.frame(x1=branch.adj$V1.x, y1=branch.adj$V1.y, x2=branch.adj$V2.x, y2=branch.adj$V2.y)
@@ -354,7 +352,7 @@ analyzeGanglia <- function(sample_id, parent, branch_info_path, output_folder_pa
     
 
     #### spatial model of the point pattern (ganglia), comment in any one of the follwing
-    ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(hardcoreStrauss_model_param))  #mean(branch.adj$Branch.length)
+    ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(hardcoreStrauss_model_param))  #mean(branch.adj$Euclidean.distance)
     #ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(parameters(p)$r))  #interaction distance from AIC analysis
     #ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard())  #manual 
     
