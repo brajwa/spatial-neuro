@@ -149,6 +149,7 @@ rejectionSampling <- function(ganglia_ppp, network_extra, g2_degree, orgKDE_angl
   dist_to_boundary = bdist.points(ganglia_ppp)
   
   while (TRUE) {
+    cat("noChange: ", noChange, "\n")  
     if(noChange == 200){    # if the network has not been changed for 200 iterations
       break
     }
@@ -161,7 +162,9 @@ rejectionSampling <- function(ganglia_ppp, network_extra, g2_degree, orgKDE_angl
     mesh = (E-N+1)/((2*N)-5)
     n_density = E/((3*N)-6)
     compact = 1- ((4*A)/(L-(2*sqrt(A)))^2)
-    cat(mesh, " ", n_density, " ", compact, "\n")
+    
+    cat(meshedness, " ", network_density, " ", compactness, "\n")
+    cat(mesh, " ", n_density, " ", compact, "\n\n")
     
     if(mesh <= meshedness || n_density <= network_density || compact <= compactness){   # if network is getting too sparse
       break
@@ -171,7 +174,8 @@ rejectionSampling <- function(ganglia_ppp, network_extra, g2_degree, orgKDE_angl
     i = sample.int(length(network_extra[, 1]), 1, prob = network_extra$weight)
     
     if(network_extra$accepted[i] == 1){     # if the samples edge has already been accepted skip to the next sampling
-      next
+        noChange = noChange + 1
+        next
     }
     
     cat("index: ", i, " current num of edges: ", length(network_extra[, 1]), "\n")
@@ -187,6 +191,7 @@ rejectionSampling <- function(ganglia_ppp, network_extra, g2_degree, orgKDE_angl
       if(dist_to_boundary[network_extra[i, ]$ind1] > 35 && dist_to_boundary[network_extra[i, ]$ind2] > 35){     # we allow the degree of the nodes close to the boundary to be lower than the rest
         cat("Edge not removed [degree constraint]...\n\n")
         network_extra$accepted[i] = 1
+        noChange = noChange + 1
         next
       }
     }

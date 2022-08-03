@@ -314,9 +314,50 @@ analyzeGanglia <- function(sample_id, parent, branch_info_path, output_folder_pa
     #### plot the line pattern
     par(mar=c(0,0,0,0), oma=c(0,0,0,0))
     plot(branch.lpp, main="", pch=20, cex=1)
+    
+    epsilon = 0.01
+    init_r = min(nndist(branch.ppp)) + epsilon
+    
+    #### figuring out R
+    range_R = data.frame(r=seq(init_r, max(ltest$r), by=0.5))
+    p = profilepl(s=range_R, f=StraussHard, branch.ppp~1, aic=FALSE, rbord = init_r)
+    
+    #### -AIC and Gamma values
+    p_info = data.frame(r=p$param$r, aic=p$prof, gamma=exp(p$allcoef$Interaction))
+    
+    #### -AIC plot
+    ggplot(data = p_info) + 
+        geom_point(aes(x=r, y=aic), size=1.5) +
+        geom_line(aes(x=r, y=aic), size=1) +
+        
+        geom_vline(xintercept = parameters(p)$r, size=1, lty=2, colour="red") +
+        
+        theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+              legend.text=element_text(size=30),
+              axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+              axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+        xlab(expression(paste("Distance, r (", mu, "m)"))) + ylab("-AIC")
+    
+    #### Gamma plot
+    ggplot(data = p_info) + 
+        geom_point(aes(x=r, y=gamma), size=1.5) +
+        geom_line(aes(x=r, y=gamma), size=1) +
+        
+        geom_vline(xintercept = parameters(p)$r, size=1, lty=2, colour="red") +
+        geom_hline(yintercept = 1, size=0.5, colour="black") +
+        
+        theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=20), legend.title=element_blank(), 
+              legend.text=element_text(size=30),
+              axis.text.x = element_text(size = 30), axis.text.y = element_text(size = 30),
+              axis.title.x = element_text(size = 30), axis.title.y = element_text(size = 30)) + 
+        xlab(expression(paste("Distance, r (", mu, "m)"))) + ylab(expression(paste("Interaction parameter, ", gamma)))
+    
 
-    #### spatial model of the point pattern (ganglia)
+    #### spatial model of the point pattern (ganglia), comment in any one of the follwing
     ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(hardcoreStrauss_model_param))  #mean(branch.adj$Branch.length)
+    #ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard(parameters(p)$r))  #interaction distance from AIC analysis
+    #ganglia_model = ppm(branch.ppp ~ x+y, interaction = StraussHard())  #manual 
+    
     #print(ganglia_model)
 
     #### extracting the model parameters

@@ -9,7 +9,7 @@ generateGangliaCenters <- function(intensity, interaction, interact_radius, hard
                                    with_model=0, fitted_model){
   
   if(with_model == 0){
-      
+        print("generating ganglia centers with parameters...")
         if(process_type == 1){
           ganglia_centers = rHardcore(beta=intensity, R=hardcore_dist, W=window)
           return(ganglia_centers)
@@ -28,6 +28,7 @@ generateGangliaCenters <- function(intensity, interaction, interact_radius, hard
   }
   
   if(with_model == 1){
+        print("generating ganglia centers with model...")
         ganglia_centers = rmh.ppm(model = fitted_model, w=window)
         return(ganglia_centers)
   }

@@ -11,6 +11,7 @@ sapply(load_lib, require, character=TRUE)
 #### source the functions from other files
 source("AnalyzeGanglionicNetwork.R")
 source("GenerateGangliaCenters.R")
+source("GenerateNetwork.R")
 
 
 main <- function(){
@@ -37,6 +38,9 @@ main <- function(){
     if (!dir.exists(output_folder_path)) {dir.create(output_folder_path, recursive=TRUE)}
         
     #### Step:2
+    
+    #### explore the summary stat of the ganglionic point pattern
+    summaryStat(sample_id, parent, path_to_branch_info, output_folder_path)
     
     #### analyzing the extracted information for generating a spatial model (hardcore-Strauss process) for the ganglia
     ganglia_info_list = analyzeGanglia(sample_id, parent, path_to_branch_info, output_folder_path)
