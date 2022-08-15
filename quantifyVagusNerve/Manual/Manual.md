@@ -57,7 +57,7 @@ the codes from Linux terminal are mentioned inside the code files.
 
 **Code: LfunctAnova2.R**
 
-The nerve cross-sections under consideration can vary a lot size,
+The nerve cross-sections under consideration can vary a lot in size,
 resulting into quite different ranges of interaction in the constructed
 point patterns even after scaling. We find out a range of interaction
 distance which is common in all the point patterns by investigating
