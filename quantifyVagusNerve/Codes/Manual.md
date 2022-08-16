@@ -133,7 +133,7 @@ distance is recorded as the orientation to be used for computations of
 other spatial features.
 
 ``` r
-source("T4transportSpatialIntensity.R", local = knitr::knit_global())
+system("Rscript --no-save T4transportSpatialIntensity.R basic_density 1 1.0 demo  0.0352")
 ```
 
 The Sinkhorn distance between every pair of point pattern for every
