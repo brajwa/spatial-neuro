@@ -71,7 +71,7 @@ This R file requires no command-line argument, the last line of the
 outputs shows the configured interaction distance.
 
 ``` r
-> Rscript --no-save LfunctAnova2.R
+system("Rscript --no-save LfunctAnova2.R")
 ```
 
 **Note:** This pre-processing step is completely dependent on the set of
@@ -94,7 +94,7 @@ nerve cross-sections require the command line arguments to be passed in
 the following order:
 
 ``` r
-> Rscript --no-save code_file_name analysis_type scaling lambda version intr_dist
+Rscript --no-save code_file_name analysis_type scaling lambda version intr_dist
 ```
 
 -   **analysis_type:** We analyze the spatial point patterns in terms of
@@ -152,9 +152,15 @@ results are recorded in **spatial-neuro/quantifyVagusNerve/Plots/**
 directory in a similar way.
 
 ``` r
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom" 1 1.0 "demo"  0.0352
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_horizontal" 1 1.0 "demo"  0.0352
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_vertical" 1 1.0 "demo"  0.0352
+system("Rscript --no-save T4transportSpatialFeature.R local_linhom 1 1.0 demo  0.0352")
+```
+
+``` r
+system("Rscript --no-save T4transportSpatialFeature.R local_linhom_sector_horizontal 1 1.0 demo  0.0352")
+```
+
+``` r
+system("Rscript --no-save T4transportSpatialFeature.R local_linhom_sector_vertical 1 1.0 demo  0.0352")
 ```
 
 ### Computation based on images of the spatial features
@@ -167,11 +173,19 @@ the point patterns themselves. The codes are run and the results are
 stored as before.
 
 ``` r
-> Rscript --no-save BarycenterSpatialIntensity.R "basic_density" 1 0.5 "demo"  0.0352
+system("Rscript --no-save BarycenterSpatialIntensity.R basic_density 1 0.5 demo  0.0352")
+```
 
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom" 1 0.5 "demo"  0.0352
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_horizontal" 1 0.5 "demo"  0.0352
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_vertical" 1 0.5 "demo"  0.0352
+``` r
+system("Rscript --no-save BarycenterSpatialFeature.R local_linhom 1 0.5 demo  0.0352")
+```
+
+``` r
+system("Rscript --no-save BarycenterSpatialFeature.R local_linhom_sector_horizontal 1 0.5 demo  0.0352")
+```
+
+``` r
+system("Rscript --no-save BarycenterSpatialFeature.R local_linhom_sector_vertical 1 0.5 demo  0.0352")
 ```
 
 # Output and visualization
@@ -185,7 +199,7 @@ the nerve samples in the Sinkhorn space of the corresponding spatial
 features by applying multi-dimensional scaling on them.
 
 ``` r
-> Rscript --no-save VisualizeMDS.R
+system("Rscript --no-save VisualizeMDS.R")
 ```
 
 # References
