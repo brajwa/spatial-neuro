@@ -57,6 +57,8 @@ if(grepl("demo", chosen_file, fixed = TRUE)){
 df = cbind(df, sample_info)
 
 #### visualize
+svglite(paste(chosen_file, "_MDS.svg", sep=""), width = 10, height = 10)
+
 ggplot(data = df, aes(x = x, y = y, shape=Nerve, colour = Nerve, label=Sample_ID_Avr)) +
   geom_point(size = 4) +
   geom_text_repel(size=3.5, max.overlaps = Inf, show.legend = F) +
@@ -71,6 +73,6 @@ ggplot(data = df, aes(x = x, y = y, shape=Nerve, colour = Nerve, label=Sample_ID
   xlab(expression(paste("MDS dimension 1"))) + ylab("MDS dimension 2")+
   ggtitle("Visualizing the Sinkhorn space")
 
-
+dev.off()
 
 
