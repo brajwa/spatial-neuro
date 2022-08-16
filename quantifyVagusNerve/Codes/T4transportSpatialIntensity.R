@@ -22,10 +22,10 @@ if(length(args) != 11){
   return()
 } else{
   analysis_type = args[7]
-  scaling = args[8]
-  lambda  = args[9]
+  scaling = as.numeric(args[8])
+  lambda  = as.numeric(args[9])
   version = args[10]
-  intr_dist = args[11]
+  intr_dist = as.numeric(args[11])
 }
 
 print(analysis_type)
