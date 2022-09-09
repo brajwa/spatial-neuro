@@ -80,42 +80,51 @@ constructMap <- function(pp1, pp2, type){
     pp_density_map_2 = density(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025)
     X_2 = t(pp_density_map_2$v)
     
+    D_1 = pp_density_map_1
+    D_2 = pp_density_map_2
+    
   }else if(type=="local_linhom"){
     pp1_l = localLinhom(pp1, rvalue = intr_dist, verbose=FALSE)
     marks(pp1) = pp1_l
     
-    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
+    D_1 = Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025)
+    X_1 = t((D_1)$v)
     
     pp2_l = localLinhom(pp2, rvalue = intr_dist, verbose=FALSE)
     marks(pp2) = pp2_l
     
-    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
+    D_2 = Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025)
+    X_2 = t((D_2)$v)
     
   }else if(type=="local_linhom_sector_horizontal"){
     pp1_l = localLinhomsector(pp1, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(pp1) = pp1_l
     
-    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025))$v)
+    D_1 = Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025)
+    X_1 = t((D_1)$v)
     
     pp2_l = localLinhomsector(pp2, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(pp2) = pp2_l
     
-    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.025))$v)
+    D_2 = Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.025)
+    X_2 = t((D_2)$v)
     
   }else if(type=="local_linhom_sector_vertical"){
     pp1_l = localLinhomsector(pp1, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(pp1) = pp1_l
     
-    X_1 = t((Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.025))$v)
+    D_1 = Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.025)
+    X_1 = t((D_1)$v)
     
     pp2_l = localLinhomsector(pp2, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(pp2) = pp2_l
     
-    X_2 = t((Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025))$v)
+    D_2 = Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025)
+    X_2 = t((D_2)$v)
     
   }else{
     print("Invalid argument!")
-    return(list(NULL, NULL))
+    return(list(NULL, NULL, NULL, NULL))
   }
   
   X_1 = processMap1(X_1)
@@ -140,7 +149,7 @@ constructMap <- function(pp1, pp2, type){
     X_1 = (padding(as.matrix(X_1), new_rows = nrow(X_1), new_cols = c_2, fill_value = 10^(-20)))$data
   }
   
-  return(list(X_1, X_2))
+  return(list(X_1, X_2, D_1, D_2))
   
 }
 
@@ -221,13 +230,15 @@ while (i <= length(data_files)) {
     result_map = constructMap(pp1=axon_pp_1_rotated, pp2=axon_pp_2, type=analysis_type)
     map_1 = result_map[[1]]
     map_2 = result_map[[2]]
+    dens_1 = result_map[[3]]
+    dens_2 = result_map[[4]]
     
     jpeg(paste(plot_dest_path, file_name_1,"_", theta, "_", analysis_type, ".jpeg", sep=""),
          width = 10,
          height = 10,
          units = "in",
          res=900)
-    image(map_1, main="", col=colorRampPalette(brewer.pal(9, "YlOrRd"))(9), box=FALSE)
+    image(dens_1, main="", col=colorRampPalette(brewer.pal(9, "YlOrRd"))(9), box=FALSE)
     dev.off()
     
     jpeg(paste(plot_dest_path, file_name_2,"_", analysis_type, ".jpeg", sep=""),
@@ -235,7 +246,7 @@ while (i <= length(data_files)) {
          height = 10,
          units = "in",
          res=900)
-    image(map_2, main="", col=colorRampPalette(brewer.pal(9, "YlOrRd"))(9), box=FALSE)
+    image(dens_2, main="", col=colorRampPalette(brewer.pal(9, "YlOrRd"))(9), box=FALSE)
     dev.off()
     
     #===============================================
