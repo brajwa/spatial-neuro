@@ -22,3 +22,23 @@ chosen_file = file.choose()
 
 m = openxlsx::read.xlsx(xlsxFile = chosen_file, sheet = "Distance matrix", colNames = FALSE)
 m = as.matrix(m)
+
+vv = m[1:18, 1:18]
+vv = vv[upper.tri(vv, diag = TRUE)]
+vv_label = rep("Vagus-Vagus", length(vv))
+
+pp = m[19:29, 19:29]
+pp = pp[upper.tri(pp, diag = TRUE)]
+pp_label = rep("Pelvic-Pelvic", length(pp))
+
+vp = c(m[1:18, 19:29])
+vp_label = rep("Vagus-Pelvic", length(vp))
+
+d1 = data.frame(distance=vv, group=vv_label)
+d2 = data.frame(distance=pp, group=pp_label)
+d3 = data.frame(distance=vp, group=vp_label)
+
+d = rbind(d1, d2, d3)
+
+ggplot(d, aes(x = distance, colour = group)) +
+  geom_density()
