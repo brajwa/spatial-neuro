@@ -64,14 +64,15 @@ ggplot(data = df, aes(x = x, y = y, shape=Nerve, colour = Nerve, label=Sample_ID
   geom_text_repel(size=3.5, max.overlaps = Inf, show.legend = F) +
   
   theme_bw()+
-  theme(legend.position="top", plot.title = element_text(hjust = 0.5, size=28), legend.title=element_blank(),
-        legend.text=element_text(size=28),
-        axis.text.x = element_text(size = 24), axis.text.y = element_text(size = 24),
-        axis.title.x = element_text(size = 28), axis.title.y = element_text(size = 28),
-        panel.grid.major = element_line(color="gray"),
-        panel.grid.minor = element_line(color="gray")) +
-  xlab(expression(paste("MDS dimension 1"))) + ylab("MDS dimension 2")+
-  ggtitle("Visualizing the Sinkhorn space")
+  theme(legend.position="top",  legend.title=element_blank(), legend.text=element_text(size=10),
+        plot.title = element_text(hjust = 0.5, size=12),
+        axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 12),
+        panel.background = element_rect(fill='white', colour='black'),
+        panel.grid.major = element_line(color = "grey", size=0.25, linetype=2)) +
+  
+  xlab(expression(paste("Dimension 1"))) + ylab("Dimension 2")+
+  ggtitle("Sinkhorn space")
 
 dev.off()
 
