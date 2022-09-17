@@ -57,22 +57,28 @@ if(grepl("demo", chosen_file, fixed = TRUE)){
 df = cbind(df, sample_info)
 
 #### visualize
-svglite(paste(chosen_file, "_MDS.svg", sep=""), width = 10, height = 10)
+svglite(paste(chosen_file, "_MDS.svg", sep=""), width = 4.64, height = 3.99)
 
-ggplot(data = df, aes(x = x, y = y, shape=Nerve, colour = Nerve, label=Sample_ID_Avr)) +
-  geom_point(size = 4) +
-  geom_text_repel(size=3.5, max.overlaps = Inf, show.legend = F) +
+ggplot(data = df, aes(x = x, y = y, label=Image_ID)) +
+  geom_point(size = 1.5, shape=21, colour="grey40", aes(fill = Nerve)) +
   
+  geom_text_repel(size=2.5,
+                  segment.size=0.2, segment.color="grey40",
+                  arrow = arrow(length = unit(0.01, "npc"), type = "open", ends = "first"),
+                  max.overlaps = Inf) +
   theme_bw()+
-  theme(legend.position="top",  legend.title=element_blank(), legend.text=element_text(size=10),
+  theme(legend.position="top",  legend.title=element_blank(), legend.text=element_text(size=10), 
+        legend.box.margin=margin(-10,-10,-10,-10),
         plot.title = element_text(hjust = 0.5, size=12),
+        plot.subtitle = element_text(hjust = 0.5),
         axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10),
         axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 12),
         panel.background = element_rect(fill='white', colour='black'),
         panel.grid.major = element_line(color = "grey", size=0.25, linetype=2)) +
   
   xlab(expression(paste("Dimension 1"))) + ylab("Dimension 2")+
-  ggtitle("Sinkhorn space")
+  labs(title = expression("Sinkhorn Space of Spatial Intensity, "*lambda*italic(" = 1.0")),
+       subtitle = "Analysis: Spatial Point Pattern")
 
 dev.off()
 
