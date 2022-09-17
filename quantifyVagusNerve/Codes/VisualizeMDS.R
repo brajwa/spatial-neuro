@@ -77,7 +77,7 @@ ggplot(data = df, aes(x = x, y = y, label=Image_ID)) +
         panel.grid.major = element_line(color = "grey", size=0.25, linetype=2)) +
   
   xlab(expression(paste("Dimension 1"))) + ylab("Dimension 2")+
-  labs(title = expression("Sinkhorn Space of Spatial Intensity, "*lambda*italic(" = 1.0")),
+  labs(title = expression("Sinkhorn Space of Spatial Intensity, "*lambda*italic(" = 1.0")),    # the titles needs changing for different runs
        subtitle = "Analysis: Spatial Point Pattern")
 
 dev.off()
