@@ -53,6 +53,17 @@ can be run using RStudio terminal or Linux terminal. Here we demonstrate
 with the RStudio terminal commands. The changes required (if any) to run
 the codes from Linux terminal are mentioned inside the code files.
 
+## Computation of the scaling factor
+
+**Code: ScalingFactorComputation.R**
+
+The nerve cross-sections are scaled with the largest range along the
+y-axis.
+
+``` r
+> Rscript --no-save ScalingFactorComputation.R
+```
+
 ## Configuration of the interaction distance
 
 **Code: LfunctAnova2.R**
@@ -133,7 +144,7 @@ distance is recorded as the orientation to be used for computations of
 other spatial features.
 
 ``` r
-source("T4transportSpatialIntensity.R", local = knitr::knit_global())
+> Rscript --no-save T4transportSpatialIntensity.R "basic_density" 1 0.01 "demo"  0.0046
 ```
 
 The Sinkhorn distance between every pair of point pattern for every
@@ -152,9 +163,9 @@ results are recorded in **spatial-neuro/quantifyVagusNerve/Plots/**
 directory in a similar way.
 
 ``` r
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom" 1 1.0 "demo"  0.0352
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_horizontal" 1 1.0 "demo"  0.0352
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_vertical" 1 1.0 "demo"  0.0352
+> Rscript --no-save T4transportSpatialFeature.R "local_linhom" 1 0.01 "demo"  0.0046
+> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_horizontal" 1 0.01 "demo"  0.0046
+> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_vertical" 1 0.01 "demo"  0.0046
 ```
 
 ### Computation based on images of the spatial features
@@ -167,12 +178,16 @@ the point patterns themselves. The codes are run and the results are
 stored as before.
 
 ``` r
-> Rscript --no-save BarycenterSpatialIntensity.R "basic_density" 1 0.5 "demo"  0.0352
+> Rscript --no-save BarycenterSpatialIntensity.R "basic_density" 1 0.01 "demo"  0.0046
 
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom" 1 0.5 "demo"  0.0352
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_horizontal" 1 0.5 "demo"  0.0352
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_vertical" 1 0.5 "demo"  0.0352
+> Rscript --no-save BarycenterSpatialFeature.R "local_linhom" 1 0.01 "demo"  0.0046
+> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_horizontal" 1 0.01 "demo"  0.0046
+> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_vertical" 1 0.01 "demo"  0.0046
 ```
+
+There is another code file in the directory named
+*BarycenterSpatialIntensity_2.R* that helps in running the codes with
+input files in batches.
 
 # Output and visualization
 

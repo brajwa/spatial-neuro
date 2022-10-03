@@ -32,6 +32,15 @@ The directory **spatial-neuro/quantifyVagusNerve/Data/** contains the following 
 # Codes
 The directory **spatial-neuro/quantifyVagusNerve/Codes/** contains the R code files. We utilize the R packages *spatstat* for spatial point pattern analysis, *T4transport* and *Barycenter* for optimal transportation problems extensively, along with the others. The R files can be run using RStudio terminal or Linux terminal. Here we demonstrate with the RStudio terminal commands. The changes required (if any) to run the codes from Linux terminal are mentioned inside the code files.
 
+## Computation of the scaling factor
+**Code: ScalingFactorComputation.R**
+
+The nerve cross-sections are scaled with the largest range along the y-axis.
+
+```{r eval=FALSE}
+> Rscript --no-save ScalingFactorComputation.R
+```
+
 ## Configuration of the interaction distance 
 **Code: LfunctAnova2.R**
 
@@ -70,15 +79,15 @@ The R code files for the computation of the Sinkhorn distance between nerve cros
 
 The R package *T4transport* is used for computing Sinkhorn distance based on the spatial point patterns directly. At first, the Sinkhorn distance between every pair of point patterns for basic spatial intensity is computed, assuming each point in the point pattern carry an uniform weight. While computing distance between a pair of point patterns, one pattern is kept fixed and the other one is rotated by every 45 degree. The orientation that gives the smallest Sinkhorn distance is recorded as the orientation to be used for computations of other spatial features.
 ```{r eval=FALSE}
-> Rscript --no-save T4transportSpatialIntensity.R "basic_density" 1 1.0 "demo"  0.0352
+> Rscript --no-save T4transportSpatialIntensity.R "basic_density" 1 0.01 "demo"  0.0046
 ```
 The Sinkhorn distance between every pair of point pattern for every orientation, their minimum, maximum, mean and variance and the Sinkhorn distance matrix - everything is saved as *.xlsx* file, along with the plots of the point patterns and their corresponding density maps, inside **spatial-neuro/quantifyVagusNerve/Plots/** directory. The optimal orientations are saved in **spatial-neuro/quantifyVagusNerve/Data/Supporting Files/Angle of Rotation/** directory as *.xlsx* file. 
 
 Then, the Sinkhorn distance for other spatial features can be computed using the pre-computed orientations, where each point in the point pattern carries weight equal to the value of the spatial feature. The results are recorded in **spatial-neuro/quantifyVagusNerve/Plots/** directory in a similar way.
 ```{r eval=FALSE}
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom" 1 1.0 "demo"  0.0352
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_horizontal" 1 1.0 "demo"  0.0352
-> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_vertical" 1 1.0 "demo"  0.0352
+> Rscript --no-save T4transportSpatialFeature.R "local_linhom" 1 0.01 "demo"  0.0046
+> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_horizontal" 1 0.01 "demo"  0.0046
+> Rscript --no-save T4transportSpatialFeature.R "local_linhom_sector_vertical" 1 0.01 "demo"  0.0046
 ```
 
 ### Computation based on images of the spatial features
@@ -86,12 +95,14 @@ Then, the Sinkhorn distance for other spatial features can be computed using the
 
 The R package *Barycenter* is used for computing Sinkhorn distance based on the images of the spatial features of the point patterns, rather than the point patterns themselves. The codes are run and the results are stored as before.
 ```{r eval=FALSE}
-> Rscript --no-save BarycenterSpatialIntensity.R "basic_density" 1 0.5 "demo"  0.0352
+> Rscript --no-save BarycenterSpatialIntensity.R "basic_density" 1 0.01 "demo"  0.0046
 
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom" 1 0.5 "demo"  0.0352
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_horizontal" 1 0.5 "demo"  0.0352
-> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_vertical" 1 0.5 "demo"  0.0352
+> Rscript --no-save BarycenterSpatialFeature.R "local_linhom" 1 0.01 "demo"  0.0046
+> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_horizontal" 1 0.01 "demo"  0.0046
+> Rscript --no-save BarycenterSpatialFeature.R "local_linhom_sector_vertical" 1 0.01 "demo"  0.0046
 ```
+
+There is another code file in the directory named *BarycenterSpatialIntensity_2.R* that helps in running the codes with input files in batches.
 
 # Output and visualization
 **Code: VisualizeMDS.R**
