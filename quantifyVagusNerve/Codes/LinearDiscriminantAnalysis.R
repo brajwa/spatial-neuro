@@ -3,7 +3,7 @@ load.lib = c("deldir", "spatstat", "spatstat.utils", "magrittr", "dplyr", "igrap
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
              "officer", "rvg", "oce", "OneR", "RandomFieldsUtils", "RandomFields", "Cairo", "knitr", "scorepeak", "Rcpp", "emdist",
              "RImageJROI", "svglite", "transport", "Barycenter", "T4transport", "wvtool", "adimpro", "reshape2", "proxy", "RColorBrewer", "tictoc",
-             "ggrepel", "scatterplot3d", "car", "e1071", "rgl", "this.path")
+             "ggrepel", "scatterplot3d", "car", "e1071", "rgl", "this.path", "fpc", "GGally")
 
 install.lib = load.lib[!load.lib %in% installed.packages()]
 for(lib in install.lib) install.packages(lib, dependencies=TRUE)
@@ -37,10 +37,10 @@ isSymmetric(d)
 diag(d)
 
 #### multi-dimensional scaling to map entities into the Sinkhorn space of spatial features
-dd= cmdscale(d)
+dd= cmdscale(d, k=4)
 
 #### creating data frame with all data
-df=data.frame(x=dd[,1], y=dd[,2])
+df=data.frame(x=dd[,1], y=dd[,2], z=dd[,3], u=dd[, 4])
 
 #### the sample id, nerve, nerve location and sex info of the fascicles are saved in the following xlsx file,
 #### in sequence of the the files processed
@@ -56,38 +56,26 @@ if(grepl("demo", chosen_file, fixed = TRUE)){
 #### including the biological information
 df = cbind(df, sample_info)
 
-#### visualize
-svglite(paste(chosen_file, "_MDS_2.svg", sep=""), width = 4.64, height = 3.99)
+lda = fpc::discrcoord(xd = df[, 1:4], clvecd = as.numeric(factor(df[, 7])))
 
-ggplot(data = df, aes(x = x, y = y, label=Image_ID)) +
-  geom_point(size = 1.5, shape=21, colour="grey40", aes(fill = Nerve)) +
-  
-  geom_text_repel(size=2.5, 
-                  segment.size=0.2, segment.color="grey40",
-                  arrow = arrow(length = unit(0.01, "npc"), type = "open", ends = "first"),
-                  max.overlaps = Inf) +
-  
-  #stat_ellipse(type="t", aes(colour=Nerve)) +
-  
-  theme_bw()+
+lda_df = data.frame(lda$proj)
+names(lda_df) = c("LD1","LD2","LD3", "LD4")
+plot(lda_df, col=as.numeric(factor(df[, 7])))
+
+#### visualize
+svglite(paste(chosen_file, "_LDA_4.svg", sep=""), width = 7, height = 7)
+
+ggpairs(lda_df, aes(colour=df[, 7]))+
   theme(legend.position="top",  legend.title=element_blank(), legend.text=element_text(size=10), 
         legend.box.margin=margin(-10,-10,-10,-10),
-        plot.title = element_text(hjust = 0.5, size=12),
-        plot.subtitle = element_text(hjust = 0.5, size=10),
-        axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10),
-        axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size=10),
+        plot.subtitle = element_text(hjust = 0.5, size=9),
+        axis.text.x = element_text(size = 9), axis.text.y = element_text(size = 9),
+        axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
         panel.background = element_rect(fill='white', colour='black'),
-        panel.grid.major = element_line(color = "grey", size=0.25, linetype=2)) +
-  
-  xlab(expression(paste("Dimension 1"))) + ylab("Dimension 2")+
-  
-  # labs(title = "Sinkhorn Space of Spatial Features",    # the titles needs changing for different runs
-  #      subtitle = "Analysis: Spatial Point Pattern")
-  #labs(subtitle=expression("no sector"))
-  # labs(title = "Local inhomogeneous L-function",    # the titles needs changing for different runs
-  #      subtitle = expression("vertical sector (90±15)"*degree))
-  labs(title = expression("Sinkhorn Space of Spatial Feature, "*~lambda*italic(" = 0.01")),    # the titles needs changing for different runs
-       subtitle = "Analysis: Image of Spatial Feature")
+        panel.grid.major = element_line(color = "grey", size=0.25, linetype=2))
+  # labs(title = "",    # the titles needs changing for different runs
+  #      subtitle = )
 
 dev.off()
 

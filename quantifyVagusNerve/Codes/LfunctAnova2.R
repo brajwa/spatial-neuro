@@ -42,7 +42,8 @@ for (file_name in data_files) {
   
   axon_pp = ppp(x=axon_locations$X, y=axon_locations$Y, checkdup=F, window = retrieved_contour)
   
-  axon_pp = rescale.ppp(axon_pp, s=axon_pp$window$yrange[2])
+  #axon_pp = rescale.ppp(axon_pp, s=axon_pp$window$yrange[2])
+  axon_pp = rescale.ppp(axon_pp, s=320153.4)  #pre-computed maximum y-range of all the fascicles
   axon_pp = shift.ppp(axon_pp, origin = "centroid")
   
   pp_list[[length(pp_list) + 1]] = axon_pp

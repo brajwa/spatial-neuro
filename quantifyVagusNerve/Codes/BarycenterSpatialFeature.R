@@ -74,10 +74,10 @@ constructMap <- function(pp1, pp2, type){
   # the eps value determines the number of columns in the density map matrix
   
   if(type=="basic_density"){
-    pp_density_map_1 = density(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025) 
+    pp_density_map_1 = density(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.01) 
     X_1 = t(pp_density_map_1$v)
     
-    pp_density_map_2 = density(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025)
+    pp_density_map_2 = density(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.01)
     X_2 = t(pp_density_map_2$v)
     
     D_1 = pp_density_map_1
@@ -87,39 +87,39 @@ constructMap <- function(pp1, pp2, type){
     pp1_l = localLinhom(pp1, rvalue = intr_dist, verbose=FALSE)
     marks(pp1) = pp1_l
     
-    D_1 = Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025)
+    D_1 = Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.01)
     X_1 = t((D_1)$v)
     
     pp2_l = localLinhom(pp2, rvalue = intr_dist, verbose=FALSE)
     marks(pp2) = pp2_l
     
-    D_2 = Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025)
+    D_2 = Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.01)
     X_2 = t((D_2)$v)
     
   }else if(type=="local_linhom_sector_horizontal"){
     pp1_l = localLinhomsector(pp1, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(pp1) = pp1_l
     
-    D_1 = Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.025)
+    D_1 = Smooth(pp1, sigma=bw.diggle(pp1), adjust=2, diggle=TRUE, eps=0.01)
     X_1 = t((D_1)$v)
     
     pp2_l = localLinhomsector(pp2, rvalue = intr_dist, begin=-15, end=15, units="degrees", verbose=FALSE)
     marks(pp2) = pp2_l
     
-    D_2 = Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.025)
+    D_2 = Smooth(pp2, sigma=bw.diggle(pp2),  adjust=2, diggle=TRUE, eps=0.01)
     X_2 = t((D_2)$v)
     
   }else if(type=="local_linhom_sector_vertical"){
     pp1_l = localLinhomsector(pp1, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(pp1) = pp1_l
     
-    D_1 = Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.025)
+    D_1 = Smooth(pp1, sigma=bw.diggle(pp1),adjust=2,diggle=TRUE, eps=0.01)
     X_1 = t((D_1)$v)
     
     pp2_l = localLinhomsector(pp2, rvalue = intr_dist, begin=90-15, end=90+15, units="degrees", verbose=FALSE)
     marks(pp2) = pp2_l
     
-    D_2 = Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.025)
+    D_2 = Smooth(pp2, sigma=bw.diggle(pp2), adjust=2, diggle=TRUE, eps=0.01)
     X_2 = t((D_2)$v)
     
   }else{
@@ -196,7 +196,7 @@ while (i <= length(data_files)) {
     axon_pp_1 = ppp(x=axon_locations_1$X, y=axon_locations_1$Y, checkdup=F, window = retrieved_contour_1)
     if(scaling == 1){
       print("scaled")
-      axon_pp_1 = rescale.ppp(axon_pp_1, s=axon_pp_1$window$yrange[2])
+      axon_pp_1 = rescale.ppp(axon_pp_1, s=320153.4)
     }
     axon_pp_1 = shift.ppp(axon_pp_1, origin = "centroid")
     
@@ -212,7 +212,7 @@ while (i <= length(data_files)) {
     axon_pp_2 = ppp(x=axon_locations_2$X, y=axon_locations_2$Y, checkdup=F, window = retrieved_contour_2)
     if(scaling == 1){
       print("scaled")
-      axon_pp_2 = rescale.ppp(axon_pp_2, s=axon_pp_2$window$yrange[2])
+      axon_pp_2 = rescale.ppp(axon_pp_2, s=320153.4)
     }
     axon_pp_2 = shift.ppp(axon_pp_2, origin = "centroid") 
     

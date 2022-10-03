@@ -193,7 +193,7 @@ while (i <= (chunk + 9)) {
     axon_pp_1 = ppp(x=axon_locations_1$X, y=axon_locations_1$Y, checkdup=F, window = retrieved_contour_1)
     if(scaling == 1){
       print("scaled")
-      axon_pp_1 = rescale.ppp(axon_pp_1, s=axon_pp_1$window$yrange[2])
+      axon_pp_1 = rescale.ppp(axon_pp_1, s=320153.4)
     }
     axon_pp_1 = shift.ppp(axon_pp_1, origin = "centroid") 
     axon_pp_1 = as.ppp(axon_pp_1)
@@ -208,7 +208,7 @@ while (i <= (chunk + 9)) {
     axon_pp_2 = ppp(x=axon_locations_2$X, y=axon_locations_2$Y, checkdup=F, window = retrieved_contour_2)  
     if(scaling == 1){
       print("scaled")
-      axon_pp_2 = rescale.ppp(axon_pp_2, s=axon_pp_2$window$yrange[2])
+      axon_pp_2 = rescale.ppp(axon_pp_2, s=320153.4)
     }
     axon_pp_2 = shift.ppp(axon_pp_2, origin = "centroid") 
     axon_pp_2 = as.ppp(axon_pp_2)

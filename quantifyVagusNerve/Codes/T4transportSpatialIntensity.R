@@ -79,7 +79,7 @@ while (i <= length(data_files)) {
   
   if(scaling == 1){
   	print("scaled")
-  	axon_pp = rescale.ppp(axon_pp, s=axon_pp$window$yrange[2]) 
+  	axon_pp = rescale.ppp(axon_pp, s=320153.4) 
   }
   axon_pp = shift.ppp(axon_pp, origin = "centroid")
   
@@ -175,7 +175,7 @@ while (i <= length(data_files)) {
     
     if(scaling == 1){
     	print("scaled")
-    	axon_pp_1 = rescale.ppp(axon_pp_1, s=axon_pp_1$window$yrange[2])
+    	axon_pp_1 = rescale.ppp(axon_pp_1, s=320153.4)
     }
     axon_pp_1 = shift.ppp(axon_pp_1, origin = "centroid")
     
@@ -192,7 +192,7 @@ while (i <= length(data_files)) {
     
     if(scaling == 1){
     	print("scaled")
-    	axon_pp_2 = rescale.ppp(axon_pp_2, s=axon_pp_2$window$yrange[2])
+    	axon_pp_2 = rescale.ppp(axon_pp_2, s=320153.4)
     }
     axon_pp_2 = shift.ppp(axon_pp_2, origin = "centroid") 
     
