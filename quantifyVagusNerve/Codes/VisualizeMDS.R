@@ -57,37 +57,46 @@ if(grepl("demo", chosen_file, fixed = TRUE)){
 df = cbind(df, sample_info)
 
 #### visualize
-svglite(paste(chosen_file, "_MDS_2.svg", sep=""), width = 4.64, height = 3.99)
+svglite(paste(chosen_file, "_MDS_Poster.svg", sep=""), width = 9, height = 6)
 
 ggplot(data = df, aes(x = x, y = y, label=Image_ID)) +
-  geom_point(size = 1.5, shape=21, colour="grey40", aes(fill = Nerve)) +
-  
-  geom_text_repel(size=2.5, 
+  #geom_point(size = 1.5, shape=21, colour="grey40", aes(fill = Nerve)) +
+    
+  geom_point(size = 3, aes(shape = Sex, colour=Nerve, fill= Nerve), show.legend = TRUE) +
+  geom_point(size = 3, colour="grey40", aes(shape = Sex, fill= Nerve), show.legend = FALSE) +
+  scale_shape_manual(values = c(21, 24)) + 
+    
+  geom_text_repel(size=5, 
                   segment.size=0.2, segment.color="grey40",
                   arrow = arrow(length = unit(0.01, "npc"), type = "open", ends = "first"),
                   max.overlaps = Inf) +
   
-  #stat_ellipse(type="t", aes(colour=Nerve)) +
+  #stat_ellipse(type="t", aes(colour=Nerve.Location.Avr)) +
   
   theme_bw()+
-  theme(legend.position="top",  legend.title=element_blank(), legend.text=element_text(size=10), 
+  theme(legend.position="top", legend.text=element_text(size=20),
         legend.box.margin=margin(-10,-10,-10,-10),
-        plot.title = element_text(hjust = 0.5, size=12),
-        plot.subtitle = element_text(hjust = 0.5, size=10),
-        axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10),
-        axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size=24),
+        legend.title = element_text(size=20),
+        plot.subtitle = element_text(hjust = 0.5, size=20),
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        axis.title.x = element_text(size = 20), axis.title.y = element_text(size = 20),
         panel.background = element_rect(fill='white', colour='black'),
         panel.grid.major = element_line(color = "grey", size=0.25, linetype=2)) +
   
-  xlab(expression(paste("Dimension 1"))) + ylab("Dimension 2")+
+  xlab(expression(paste("Dimension 1"))) + ylab("Dimension 2") +
   
-  # labs(title = "Sinkhorn Space of Spatial Features",    # the titles needs changing for different runs
-  #      subtitle = "Analysis: Spatial Point Pattern")
-  #labs(subtitle=expression("no sector"))
-  # labs(title = "Local inhomogeneous L-function",    # the titles needs changing for different runs
-  #      subtitle = expression("vertical sector (90Â±15)"*degree))
-  labs(title = expression("Sinkhorn Space of Spatial Feature, "*~lambda*italic(" = 0.01")),    # the titles needs changing for different runs
-       subtitle = "Analysis: Image of Spatial Feature")
+  # labs(title = expression("Sinkhorn Space of Spatial Intensity, "*lambda*" = 0.01"),    # the titles needs changing for different runs
+  #   subtitle = "Analysis: Kernel-smoothed Spatial Map")
+    
+  labs(title = expression("Sinkhorn Space of Spatial Satistics, "*lambda*" = 0.01"),    # the titles needs changing for different runs
+    subtitle = "Analysis: Kernel-smoothed Spatial Map\nLocal Inhomogeneous L-Function")
+  
+  # labs(subtitle = "no sector")
+  # labs(subtitle = expression("vertical sector (90 ± 15) "*degree))
+    
+  # labs(title = "Local Inhomogeneous L-Function",
+  #      subtitle = expression("vertical sector (90 ± 15) "*degree))
 
 dev.off()
 

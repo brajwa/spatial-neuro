@@ -1,0 +1,30 @@
+"","x","y","Sample_ID","Sample_ID_Avr","Nerve","Nerve.Location","Nerve.Location.Avr","Sex","Image_ID"
+"1",-0.114560247313424,-0.0622059975388273,"11326_2_C_IR_F2 ICE merge_pred_mi.csv","11326-2-F2","Vagus","Right Cervical Trunk","Right CT","F",1
+"2",0.0159234218237756,0.0207850651632006,"11326_2_C_IR_F3 ICECB ICE merge_pred_mi.csv","11326-2-F3","Vagus","Right Cervical Trunk","Right CT","F",2
+"3",0.0588540959761417,-0.0795746244194109,"11326_2_C_IR_FASCICLE1 no layers_pred_mi.csv","11326-2-F1","Vagus","Right Cervical Trunk","Right CT","F",12
+"4",0.054414552901054,-0.103432277245318,"11327_1_C_IL_montage compressed_pred_mi.csv","11327-1","Vagus","Left Cervical Trunk","Left CT","F",13
+"5",0.0524219248347176,-0.0473720419933223,"11327_2_C_IR ICE+photoshop merge c_pred_mi.csv","11327-2","Vagus","Right Cervical Trunk","Right CT","F",3
+"6",0.00912487824737142,0.033168680733642,"11327_3_AB_1V_FASCICLE1_pred_mi.csv","11327-3-F1","Vagus","Abdominal Vagus Anterior Trunk","AVAT","F",4
+"7",0.047137414207786,-0.0197407604805223,"11327_4_AB_1D_pred_mi.csv","11327-4","Vagus","Abdominal Vagus Posterior Trunk","AVPT","F",5
+"8",-0.015371084214998,0.0271300261744858,"11327_5_AB-2V_1_montage_pred_mi.csv","11327-5-1","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","F",14
+"9",0.147416042332627,-0.0273399434479028,"11327_AB-2V_2_12-70 ICE only + manual_pred_mi.csv","11327-AB-2","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","F",6
+"10",0.0690298398012975,0.00831044476961382,"11328_4_AB_1D_F1 montage no layers_pred_mi.csv","11328-4-F1","Vagus","Abdominal Vagus Posterior Trunk","AVPT","F",7
+"11",-0.0839360868159506,-0.00014999017495237,"11328_5_AB-2V_2_montage_pred_mi.csv","11328-5-2","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","F",8
+"12",0.040365585245886,-0.0160518971653634,"896_2_CR F1 CE ICECB ICE merge_pred_mi.csv","896-2-F1","Vagus","Right Cervical Trunk","Right CT","M",9
+"13",-0.00460926077382402,0.0269521357103637,"896_2_CR F3 ICE _pred_mi.csv","896-2-F3","Vagus","Right Cervical Trunk","Right CT","M",10
+"14",0.0134153382718584,0.0195880233461298,"896_4_Abdominal Vagus Posterior Trunk_pred_mi.csv","896-4","Vagus","Abdominal Vagus Posterior Trunk","AVPT","M",11
+"15",0.093919204416241,0.0391545492093889,"896_AbdVagAntGast_FASCICLE1_EM_pred_mi.csv","896-F1","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","M",15
+"16",-0.0462171155123805,0.0328457884949806,"896_AbdVagAntGast_FASCICLE2_EM_pred_mi.csv","896-F2","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","M",16
+"17",0.0512472489745002,0.0046981172533595,"897_5_F1 ICECB ICE merge_pred_mi.csv","897-5-F1","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","M",17
+"18",-0.044762752881688,0.0341127234338735,"897_AbdVagAntGast_FASCICLE2_EM_pred_mi.csv","897-F2","Vagus","Abdominal Vagus Anterior Gastric (Ventral Gastric Branch)","AVAG","M",18
+"19",0.117510548707888,0.0137840204072389,"sub-131_sam-1_Image_em_pred_mi.csv","131-1","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",19
+"20",-0.0804236485766647,0.000360500648791397,"sub-131_sam-2_Image_em_pred_mi.csv","131-2","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",20
+"21",-0.109674777601,-0.0590681646939231,"sub-131_sam-3_Image_em_pred_mi.csv","131-3","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",21
+"22",-0.0890074893984647,-0.00616857932499835,"sub-131_sam-4_Image_em_pred_mi.csv","131-4","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",22
+"23",-0.0456824199712967,0.0216386155094138,"sub-131_sam-5_Image_em_pred_mi.csv","131-5","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",23
+"24",-0.0799485203781986,-0.00940829224310242,"sub-131_sam-8_Image_em_pred_mi.csv","131-8","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",24
+"25",-0.00470113267881315,0.0225352423740551,"sub-131_sam-9_Image_em_pred_mi.csv","131-9","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",25
+"26",0.0392336310498762,0.0628536725988171,"sub-401_sam-1_Image_em_pred_mi.csv","401-1","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",26
+"27",-0.0202337067988234,0.0325355319769751,"sub-401_sam-2_Image_em_pred_mi.csv","401-2","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",27
+"28",-0.0751592641035536,0.00943156976808002,"sub-401_sam-3_Image_em_pred_mi.csv","401-3","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",28
+"29",0.00427378022805903,0.0206278611552341,"sub-401_sam-4_Image_em_pred_mi.csv","401-4","Pelvic","<= 2 mm from Pelvic Ganglion","<= 2 mm from PG","M",29
