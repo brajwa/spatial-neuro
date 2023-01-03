@@ -72,21 +72,23 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     hardcoreStrauss_model_param = mean(branch.adj$Euclidean.distance)
     
     #### constructing a dataframe with the branch nodes, consider y coordinates are negated beforehand.
-    branch.sim = data.frame(x1=branch.adj$V1.x, y1=branch.adj$V1.y, x2=branch.adj$V2.x, y2=branch.adj$V2.y)
+    branch.sim = data.frame(x1=branch.adj$V1.x, y1=branch.adj$V1.y, x2=branch.adj$V2.x, y2=branch.adj$V2.y, 
+                            euclid = branch.adj$Euclidean.distance)
     
     #### removing duplicate branches
     temp = which(branch.sim[,1]!=branch.sim[,3] &  branch.sim[,2]!=branch.sim[,4])
     branch.sim = branch.sim[temp,]
     
     #### create a unique id for each of the branches so, we can find the vertices
-    branch.id = matrix(data=factor(as.numeric(as.matrix(branch.sim))), ncol=4)
+    branch.id = matrix(data=factor(as.numeric(as.matrix(branch.sim))), ncol=5)
     branch.id = data.frame(P1=paste(branch.id[,1],"-",branch.id[,2], sep=""), P2=paste(branch.id[,3],"-",branch.id[,4], sep=""))
     branch.id = c(as.matrix(branch.id)) %>% factor() #%>% unclass()
     levels(branch.id)  = 1:length(levels(branch.id))
     branch.id = data.frame(matrix(ncol=2, data=unclass(branch.id)))
     
     #### put together all info and extract position of all the vertices
-    branch.all = data.frame(branch.sim, branch.id); colnames(branch.all) <- c("x1","y1","x2","y2","n1","n2")
+    branch.all = data.frame(branch.sim, branch.id); colnames(branch.all) <- c("x1","y1","x2","y2", "euclid", "n1","n2")
+    branch.all = branch.all[, c("x1","y1","x2","y2","n1","n2","euclid")]
     
     branch.xy = data.frame(x=c(branch.all$x1, branch.all$x2), y=c(branch.all$y1, branch.all$y2), n =c(branch.all$n1, branch.all$n2) )
     branch.xy = distinct(branch.xy)
