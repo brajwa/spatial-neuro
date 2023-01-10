@@ -125,8 +125,8 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     degs = degs[ord]
     
     #### required sometimes
-    #marks(branch.ppp) = factor(degs)
-    #branch.ppp$markformat = "factor"
+    marks(branch.ppp) = factor(degs)
+    branch.ppp$markformat = "factor"
     
     #### Create point pattern on linear network to store the information
     #### There are some problems with this approach. 

@@ -44,6 +44,15 @@ branch.lpp = data_struct_list[[3]]
 g1 = data_struct_list[[4]]
 hardcoreStrauss_model_param = data_struct_list[[5]]
 
+plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
+                                                       "mediumpurple"))
+plot(g1, 
+     vertex.size=2*degree(g1), 
+     vertex.label=NA, 
+     vertex.shape="circle", 
+     vertex.color=degree(g1))
+
+
 #### spatial point pattern metrics
 num_points_pp = branch.ppp$n
 area_pp = summary(branch.ppp)$window$area
@@ -57,6 +66,15 @@ farthest_point_dist = max(pairdist(branch.ppp))
 
 # degree distribution
 table_degree = table(degree(g1))
+
+degree_frame = as.data.frame(degree(g1))
+colnames(degree_frame)[colnames(degree_frame) == 'degree(g1)'] = 'deg'
+
+ggplot(degree_frame, aes(x=deg)) + 
+  geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+ 
+  geom_density(alpha=1, colour="black", size=1.5) +
+  scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
+  labs(x = "Degree of the vertices", y = "Density", color = "")
 
 #### calculating the edge probability p from the degree distribution
 #### to use while generating ER random graph G(n, p)
@@ -83,3 +101,26 @@ L = sum(branch.all$euclid)
 meshedness = (E-N+1)/((2*N)-5)
 network_density = E/((3*N)-6)
 compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
+
+
+#### calculate the edge angle (in degree) and plot the distribution
+#### not scaled
+branch.all$angle = (apply(branch.all, 1, function(x) calcAngle(x)))
+
+ggplot(branch.all, aes(x=angle)) + 
+  geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 3)+
+  geom_density(alpha=1, colour="black", size=1.5) +
+  labs(x = "Edge angle", y = "Density", color = "")
+
+
+#### calculate the edge length and plot the distribution
+#### not scaled
+branch.all$euclid = (apply(branch.all, 1, function(x) calcDist(x)))
+
+ggplot(branch.all, aes(x=euclid)) + 
+  geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 7)+
+  geom_density(alpha=1, colour="black", size=1.5) +
+  labs(x = "Edge length (Euclidean)", y = "Density", color = "")
+
+
+#### motif profile
