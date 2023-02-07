@@ -1,7 +1,8 @@
 #### loading required libraries (there might be more libraries loaded than required)
 load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
-             "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path")
+             "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path", 
+             "causaloptim")
 
 install_lib = load_lib[!load_lib %in% installed.packages()]
 for(lib in install_lib) install.packages(lib, dependencies=TRUE)
@@ -46,11 +47,11 @@ hardcoreStrauss_model_param = data_struct_list[[5]]
 
 plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
                                                        "mediumpurple"))
-plot(g1, 
-     vertex.size=2*degree(g1), 
-     vertex.label=NA, 
-     vertex.shape="circle", 
-     vertex.color=degree(g1))
+plot(g1,
+     vertex.size=2*igraph::degree(g1),
+     vertex.label=NA,
+     vertex.shape="circle",
+     vertex.color=igraph::degree(g1))
 
 
 #### spatial point pattern metrics
@@ -65,10 +66,10 @@ farthest_point_dist = max(pairdist(branch.ppp))
 #### spatial network metrics
 
 # degree distribution
-table_degree = table(degree(g1))
+table_degree = table(igraph::degree(g1))
 
-degree_frame = as.data.frame(degree(g1))
-colnames(degree_frame)[colnames(degree_frame) == 'degree(g1)'] = 'deg'
+degree_frame = as.data.frame(igraph::degree(g1))
+colnames(degree_frame)[colnames(degree_frame) == 'igraph::degree(g1)'] = 'deg'
 
 ggplot(degree_frame, aes(x=deg)) + 
   geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+ 
@@ -89,7 +90,7 @@ print(edge_probability)
 
 #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
 #### This is sometimes also called the clustering coefficient.
-cluster_coeff = transitivity(g1, type = "global")
+cluster_coeff = igraph::transitivity(g1, type = "global")
 print(cluster_coeff)
 
 #### alpha, gamma, psi
@@ -124,3 +125,6 @@ ggplot(branch.all, aes(x=euclid)) +
 
 
 #### motif profile
+
+#### cycle detection
+#cycles = find_cycles(g1)

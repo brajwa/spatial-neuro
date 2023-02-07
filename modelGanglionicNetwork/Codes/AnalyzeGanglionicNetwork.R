@@ -120,7 +120,7 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     #plot(g1, vertex.size=2*degree(g1), vertex.label=NA, vertex.shape="circle", layout=as.matrix(branch.xy[,1:2]), vertex.color=degree(g1))
     
     #### creating a list representing degree for every node an use it in spatstat pattern
-    degs = (degree(g1))
+    degs = (igraph::degree(g1))
     ord = order(as.numeric(names(degs)))
     degs = degs[ord]
     
@@ -395,10 +395,10 @@ analyzeBranch <- function(sample_id, parent, branch_info_path, output_folder_pat
     doc = ph_with(doc, dml(code = plot(branch.lpp, main="", pch=20, cex=1)), location = ph_location_fullsize())
     
     #### extracting information about connectivity
-    table_degree = table(degree(g1))
+    table_degree = table(igraph::degree(g1))
     cat("Degree table:\n", table_degree, "\n")
     
-    degree_frame = as.data.frame(degree(g1))
+    degree_frame = as.data.frame(igraph::degree(g1))
     colnames(degree_frame)[colnames(degree_frame) == 'degree(g1)'] = 'deg'
     
     ggobj = ggplot(degree_frame, aes(x=deg)) + 
@@ -479,7 +479,7 @@ analyzeBranch <- function(sample_id, parent, branch_info_path, output_folder_pat
     cat("compactness: ", compactness, "\n")
     
     #### assigning a weight to each edge based on the degree of its end nodes
-    branch.all$weight = apply(branch.all, 1, function(x) computeEdgeWeight(degree(g1), x))
+    branch.all$weight = apply(branch.all, 1, function(x) computeEdgeWeight(igraph::degree(g1), x))
     branch.all$weight = range01(branch.all$weight)
     
     #### compute the univariate or bivariate density distribution of the edge angle and/ or edge length 

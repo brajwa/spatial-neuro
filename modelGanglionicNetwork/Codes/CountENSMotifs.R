@@ -1,7 +1,8 @@
 #### loading required libraries (there might be more libraries loaded than required)
 load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
-             "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path")
+             "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path",
+             "resample")
 
 install_lib = load_lib[!load_lib %in% installed.packages()]
 for(lib in install_lib) install.packages(lib, dependencies=TRUE)
@@ -145,25 +146,51 @@ graphlet[[length(graphlet) + 1]] = graphlet_instance
 graphlet_instance = make_full_graph(n=5)
 graphlet[[length(graphlet) + 1]] = graphlet_instance
 
+#### computing the isomorphism class of the graphlets; because ordering them in the increasing order of isomorphism class is important
 for (i in c(1:29)) {
   graphlet_iso_class[length(graphlet_iso_class) + 1] = isomorphism_class(graphlet[[i]])
 }
 
 graphlet_ord = graphlet[order(graphlet_iso_class)]
-for (i in c(1:29)) {
-  plot(graphlet_ord[[i]], main=i)
+
+#### graphlet frequency count in the given ENS network for size 3, 4 and 5
+graphlet_count = c(na.omit(c(motifs(g1, size=3), motifs(g1, size=4), motifs(g1, size=5)))) # using the updated library function
+rel_graphlet_count = graphlet_count / sum(graphlet_count)
+
+graphlet_count
+plot(rel_graphlet_count, type="l")
+
+# #### manually counting the graphlet frequency
+# pattern = graphlet_ord[[1]]
+# plot(pattern)
+# 
+# iso = subgraph_isomorphisms(pattern, g1)      # takes a while
+# iso_2 = lapply(iso, sort)
+# iso_3 = lapply(iso_2, as.vector)
+# iso_4 = unique(iso_3)
+# 
+# motifs = lapply(iso_4, function (x) { induced_subgraph(g1, vids = x, impl = "copy_and_delete") })
+# length(motifs)
+
+####generate ER random graphs with the same number of nodes and edges as the ENS network
+how_many_ER = 50
+ER_graphs = vector(mode = "list", length = how_many_ER)
+ER_graphlet_count = matrix(nrow = how_many_ER, ncol = 29)    # a matrix
+
+for (j in 1:how_many_ER) {
+  ER_graphs[[j]] = erdos.renyi.game(N, E, type = "gnm")
+  #plot(ER_graphs[[j]])
+  
+  ER_graphlet_count_j = c(na.omit(c(motifs(ER_graphs[[j]], size=3), motifs(ER_graphs[[j]], size=4), motifs(ER_graphs[[j]], size=5))))
+  print(ER_graphlet_count_j)
+  
+  ER_graphlet_count[j, ] = ER_graphlet_count_j
 }
 
-graphlet_count = c(na.omit(motifs(g1, size=3)))
+ER_graphlet_count_mean = colMeans(ER_graphlet_count)
+ER_graphlet_count_var =  colVars(ER_graphlet_count)
 
+ER_graphlet_count_mean
 
-pattern = graphlet_ord[[2]]
-plot(pattern)
-
-iso = subgraph_isomorphisms(pattern, g1)      # takes a while
-iso_2 = lapply(iso, sort)
-iso_3 = lapply(iso_2, as.vector)
-iso_4 = unique(iso_3)
-
-motifs = lapply(iso_4, function (x) { induced_subgraph(g1, vids = x, impl = "copy_and_delete") })
-length(motifs)
+z_score = (graphlet_count - ER_graphlet_count_mean)/sqrt(ER_graphlet_count_var)
+z_score
