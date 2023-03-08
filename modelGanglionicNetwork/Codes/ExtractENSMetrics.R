@@ -23,16 +23,16 @@ parent = strsplit(dir, folder)
 
 #### the TIF images of the ganglionic networks are preprocessed in Fiji (ImageJ) and the network information is extracted as .csv files
 #### choose one of the ganglionic network samples with file chooser below
-setwd(paste(parent, "Data/Branch Information (in um)/", sep=""))
+setwd(paste(parent, "Data/ENSMouse Branch Information (in um)/", sep=""))
 path_to_branch_info = file.choose()
 
 #### extract which sample we will be working on from the file name (the data files are to be saved in a particular format)
 sample_id = strsplit(path_to_branch_info, "\\\\")[[1]]
 sample_id = sample_id[length(sample_id)]
-sample_id = (strsplit(sample_id, "_")[[1]])[1]
+sample_id = (strsplit(sample_id, "\\.")[[1]])[1]
 
 #### creating an output folder for the working sample
-output_folder_path = paste(parent, "Outputs/", sample_id, "/", sep="")
+output_folder_path = paste(parent, "Outputs/ENSMouse/", sample_id, "/", sep="")
 if (!dir.exists(output_folder_path)) {dir.create(output_folder_path, recursive=TRUE)}
 
 
@@ -47,6 +47,8 @@ hardcoreStrauss_model_param = data_struct_list[[5]]
 
 plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
                                                        "mediumpurple"))
+                                                       
+g1$layout = as.matrix(data.frame(x=branch.ppp$x, y=branch.ppp$y))
 plot(g1,
      vertex.size=2*igraph::degree(g1),
      vertex.label=NA,
@@ -72,8 +74,8 @@ degree_frame = as.data.frame(igraph::degree(g1))
 colnames(degree_frame)[colnames(degree_frame) == 'igraph::degree(g1)'] = 'deg'
 
 ggplot(degree_frame, aes(x=deg)) + 
-  geom_histogram(aes(y=..density..), colour="grey", fill="grey", binwidth = 0.5)+ 
-  geom_density(alpha=1, colour="black", size=1.5) +
+  geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 0.5)+ 
+  geom_density(alpha=1, colour="black", linewidth=1.5) +
   scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
   labs(x = "Degree of the vertices", y = "Density", color = "")
 
