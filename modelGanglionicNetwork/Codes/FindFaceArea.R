@@ -62,7 +62,53 @@ face_node_count = face_node_count[-which.max(face_area_list)]
 face_list = face_list[-which.max(face_area_list)]
 face_area_list = face_area_list[-which.max(face_area_list)]
 
-
-
 hist(face_node_count, breaks=100)
-plot(density(face_area_list))
+#plot(density(face_area_list))
+
+ggplot(data.frame(area=face_area_list)) + 
+  geom_density(aes(x=area, y=after_stat(density)), alpha=1, colour="black", linewidth=1.5) +
+  labs(x = "Area of face", y = "Density", color = "")
+
+combined_f_a_l[[length(combined_f_a_l) + 1]] = face_area_list
+
+#### save list of list as xlsx, each list in separate sheet
+#### 11 distal, 9 middle, 15 proximal
+# sheet_name_list = as.character(c(1:length(combined_f_a_l)))
+# combined_f_a_file_name = "C:/Users/sanja/Documents/GitHub/spatial-neuro/modelGanglionicNetwork/Outputs/ENSMouse/combined_face_area.xlsx"
+# 
+# write.xlsx(setNames(as.list(lapply(combined_f_a_l, data.frame)), names(sheet_name_list)), file=combined_f_a_file_name)
+
+
+#############################################################################################33
+# ggplot() +
+#   geom_density(aes(x=combined_f_a_l[[1]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) + #black=distal
+#   geom_density(aes(x=combined_f_a_l[[2]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[3]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[4]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[5]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+# 
+#   geom_density(aes(x=combined_f_a_l[[6]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[7]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[8]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[9]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[10]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+# 
+#   geom_density(aes(x=combined_f_a_l[[11]], y=after_stat(density)), alpha=1, colour="black", linewidth=1) +
+# 
+#   geom_density(aes(x=combined_f_a_l[[12]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) + #red=middle
+#   geom_density(aes(x=combined_f_a_l[[13]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[14]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[15]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[16]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+# 
+#   geom_density(aes(x=combined_f_a_l[[17]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[18]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[19]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[20]], y=after_stat(density)), alpha=1, colour="red", linewidth=1) +
+#   
+#   geom_density(aes(x=combined_f_a_l[[21]], y=after_stat(density)), alpha=1, colour="dodgerblue", linewidth=1) + #dodgerblue=proximal
+#   geom_density(aes(x=combined_f_a_l[[22]], y=after_stat(density)), alpha=1, colour="dodgerblue", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[23]], y=after_stat(density)), alpha=1, colour="dodgerblue", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[24]], y=after_stat(density)), alpha=1, colour="dodgerblue", linewidth=1) +
+#   geom_density(aes(x=combined_f_a_l[[25]], y=after_stat(density)), alpha=1, colour="dodgerblue", linewidth=1) +
+#   labs(x = "Area of face", y = "Density", color = "")

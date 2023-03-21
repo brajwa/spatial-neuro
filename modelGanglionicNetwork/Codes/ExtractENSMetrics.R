@@ -9,6 +9,8 @@ for(lib in install_lib) install.packages(lib, dependencies=TRUE)
 sapply(load_lib, require, character=TRUE)
 
 
+setwd("~/GitHub/spatial-neuro/modelGanglionicNetwork/Codes")
+
 #### source the functions from other files
 source("AnalyzeGanglionicNetwork.R")
 source("GenerateGangliaCenters.R")
