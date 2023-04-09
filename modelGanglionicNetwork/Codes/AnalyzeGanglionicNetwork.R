@@ -51,7 +51,7 @@ computeKDE <- function(data, mode){
 
 
 #########################################################################################
-constructDataStruct <- function(sample_id, parent, branch_info_path, output_folder_path){
+constructDataStruct <- function(sample_id, parent, branch_info_path, output_folder_path, max_y){
     #### extracting branch information file type. usually saved as .csv, checking for .xlsx in case.
     path_tokens = strsplit(branch_info_path, "\\.")
     file_extension = path_tokens[[1]][length(path_tokens[[1]])]
@@ -69,12 +69,14 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     #### checking Branch.length column: if the length is 1, it is not really  a branch, removing them
     branch.adj = branch[which(branch$Branch.length!=1),]
     
-    hardcoreStrauss_model_param = mean(branch.adj$Euclidean.distance)
-    
     #### constructing a dataframe with the branch nodes, consider y coordinates are negated beforehand for human data.
     #### not negated for mouse data.
     branch.sim = data.frame(x1=branch.adj$V1.x, y1=-branch.adj$V1.y, x2=branch.adj$V2.x, y2=-branch.adj$V2.y, 
                             euclid = branch.adj$Euclidean.distance)
+    
+    branch.sim = branch.sim / max_y
+    
+    hardcoreStrauss_model_param = mean(branch.sim$euclid)
     
     #### removing duplicate branches
     temp = which(branch.sim[,1]!=branch.sim[,3] & branch.sim[,2]!=branch.sim[,4])
@@ -104,6 +106,9 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     #### creating a point pattern
     branch.ppp = ppp(x=branch.xy.ord$x, y=branch.xy.ord$y, window=owin(xrange=c(min(branch.xy.ord$x), max(branch.xy.ord$x)), yrange=c(min(branch.xy.ord$y), max(branch.xy.ord$y))))
     branch.ppp = unique.ppp(branch.ppp)
+    
+    #branch.ppp = rescale.ppp(branch.ppp, s=max_y)  #pre-computed maximum y-range of all the samples
+    branch.ppp = shift.ppp(branch.ppp, origin = "centroid")
     
     #### plot the nodes
     #plot(branch.ppp, cex=1, pch=20, main="", bg=1)
