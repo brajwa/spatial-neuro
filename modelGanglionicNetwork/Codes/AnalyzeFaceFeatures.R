@@ -26,15 +26,17 @@ parent = strsplit(dir, folder)
 moment_folder = paste(parent, "Data/ENSMouse Moment Information (in um)/", sep="")
 moment_files = list.files(moment_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
 
+figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
+
 face_feature_list = c("Area", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") 
-select_feature = 5
+select_feature = 6
 cat("Face feature under consideration: ", face_feature_list[select_feature], "\n")
 
 columns = c("feature_value","ens_location","sample_id") 
 feature_info_combined = data.frame(matrix(nrow = 0, ncol = length(columns))) 
 colnames(feature_info_combined) = columns
 
-for (i in c(1: length(moment_files))) { #2,13,21
+for (i in c(1:length(moment_files))) { #2,13,21
     ens_location = strsplit(moment_files[i], "/")[[1]][11]
     sample_id = strsplit(strsplit(moment_files[i], "/")[[1]][12], "\\.")[[1]][1]
     cat("\nLocation: ", ens_location, "\nSample Id: ", sample_id, "\n")
@@ -59,7 +61,8 @@ for (i in c(1: length(moment_files))) { #2,13,21
 #make the face orientation angle between 0 and 180
 #feature_info_combined$feature_value = (360 + feature_info_combined$feature_value) %% 180
 
-ggplot(feature_info_combined, aes(x = ens_location, y = (feature_value), fill = ens_location)) +
+svglite(paste(figure_folder, "All_", face_feature_list[select_feature], ".svg",  sep=""), width = 6, height = 4)
+ggplot(feature_info_combined, aes(x = ens_location, y = log(feature_value), fill = ens_location)) +
     geom_boxplot(notch=TRUE, outlier.size = 1) +
     #geom_quasirandom(cex=0.5, shape = 21, colour = "grey40", aes(fill=ens_location)) +
     
@@ -73,10 +76,11 @@ ggplot(feature_info_combined, aes(x = ens_location, y = (feature_value), fill = 
           panel.background = element_rect(fill='white', colour='black'),
           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
     
-    xlab(expression(paste("ENS location"))) + ylab(paste("(", face_feature_list[select_feature], ")",sep = "") )+
+    xlab(expression(paste("ENS location"))) + ylab(paste("log(", face_feature_list[select_feature], ")",sep = "") )+
     
-    labs(title = paste("Statistical comparison of Face ", face_feature_list[select_feature] ," from different part of ENS", sep="") )   # the titles needs changing for different runs
-
+    #labs(title = paste("Statistical comparison of Face ", face_feature_list[select_feature] ," from different part of ENS", sep="") )   
+    labs(title = paste("Statistical comparison of Face ", face_feature_list[select_feature], sep="")) # the titles needs changing for different runs
+dev.off()
 
 #### statistical tests
 #### transformed values

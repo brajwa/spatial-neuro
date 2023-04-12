@@ -28,15 +28,19 @@ parent = strsplit(dir, folder)
 branch_info_folder = paste(parent, "Data/ENSMouse Branch Information (in um) v2.0/", sep="")
 branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
 
-network_feature_list = c("Node degree", "Edge angle", "Edge length", "Face area", "Face node count") 
-select_feature = 4
+network_feature_list = c("Node_degree", "Edge_angle", "Edge_length", "Face_area", "Face_node_count") 
+select_feature = 2
 cat("Network feature under consideration: ", network_feature_list[select_feature], "\n")
+
+figure_folder = paste(parent, "Outputs/ENSMouse/PlanarNetFeature/", sep="")
 
 columns = c("feature_value","ens_location","sample_id") 
 feature_info_combined = data.frame(matrix(nrow = 0, ncol = length(columns))) 
 colnames(feature_info_combined) = columns
 
-for (i in c(1: length(branch_info_files))) { #2,13,21
+max_y = 4539.812 # found by computation
+
+for (i in c(1: length(branch_info_files))) { # 2,13,21
   ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
   sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][12], "\\.")[[1]][1]
   cat("\n(", i, ") Location: ", ens_location, "\nSample Id: ", sample_id, "\n")
@@ -46,7 +50,7 @@ for (i in c(1: length(branch_info_files))) { #2,13,21
   if (!dir.exists(output_folder_path)) {dir.create(output_folder_path, recursive=TRUE)}
   
   
-  data_struct_list = constructDataStruct(sample_id, parent, branch_info_files[i], output_folder_path)
+  data_struct_list = constructDataStruct(sample_id, parent, branch_info_files[i], output_folder_path, max_y)
   
   #### the returned values
   branch.all = data_struct_list[[1]]
@@ -58,7 +62,7 @@ for (i in c(1: length(branch_info_files))) { #2,13,21
   plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
                                                          "mediumpurple"))
   #save the network plot
-  pdf(paste(output_folder_path, "Networkv2.0.pdf", sep=""), width = 6, height = 6)
+  svglite(paste(output_folder_path, "network.svg", sep=""), width = 6, height = 6)
   par(mar = c(0,0,0,0))
   plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
                                                          "mediumpurple"))
@@ -138,23 +142,23 @@ for (i in c(1: length(branch_info_files))) { #2,13,21
   #### not scaled
   branch.all$angle = (apply(branch.all, 1, function(x) calcAngle(x)))
   
-  ggplot(branch.all, aes(x=angle)) + 
+  print(ggplot(branch.all, aes(x=angle)) + 
     geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 3)+
     geom_density(alpha=1, colour="black", linewidth=1.5) +
-    labs(x = "Edge angle", y = "Density", color = "")
+    labs(x = "Edge angle", y = "Density", color = "") )
   
   
   #### calculate the edge length and plot the distribution
   #### not scaled
   branch.all$euclid = (apply(branch.all, 1, function(x) calcDist(x)))
   
-  ggplot(branch.all, aes(x=euclid)) + 
+  print(ggplot(branch.all, aes(x=euclid)) + 
     geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 7)+
     geom_density(alpha=1, colour="black", linewidth=1.5) +
-    labs(x = "Edge length (Euclidean)", y = "Density", color = "")
+    labs(x = "Edge length (Euclidean)", y = "Density", color = "") )
   
   
-  #### netwrok faces
+  #### network faces
   g <- as_graphnel(g1) ## Convert igraph object to graphNEL object for planarity testing
   boyerMyrvoldPlanarityTest(g)
   
@@ -211,7 +215,7 @@ for (i in c(1: length(branch_info_files))) { #2,13,21
                                                                     ens_location=rep(ens_location, edge_count), 
                                                                     sample_id=rep(sample_id, edge_count)) )
     
-  }else if(select_feature==4){
+  }else if(select_feature == 4){
     face_count = length(face_area_list)
     feature_info_combined = rbind(feature_info_combined, data.frame(feature_value=face_area_list, 
                                                                     ens_location=rep(ens_location, face_count), 
@@ -225,6 +229,7 @@ for (i in c(1: length(branch_info_files))) { #2,13,21
 }
 
 # boxplot of select feature
+svglite(paste(figure_folder, "All_", network_feature_list[select_feature], ".svg",  sep=""), width = 6, height = 4)
 ggplot(feature_info_combined, aes(x = ens_location, y = (feature_value), fill = ens_location)) +
   geom_boxplot(notch=TRUE, outlier.size = 1) +
   #geom_quasirandom(cex=0.5, shape = 21, colour = "grey40", aes(fill=ens_location)) +
@@ -241,5 +246,45 @@ ggplot(feature_info_combined, aes(x = ens_location, y = (feature_value), fill = 
   
   xlab(expression(paste("ENS location"))) + ylab(paste("(", network_feature_list[select_feature], ")",sep = "") )+
   
-  labs(title = paste("Statistical comparison of Network ", network_feature_list[select_feature] ," from different part of ENS", sep="") )   # the titles needs changing for different runs
+  labs(title = paste("Statistical comparison of ", network_feature_list[select_feature], sep="") )   # the titles needs changing for different runs
+dev.off()
 
+
+#### statistical tests
+#### transformed values
+# feature_info_combined$log_f = log10(feature_info_combined$feature_value)
+# feature_info_combined$sqrt_f = sqrt(feature_info_combined$feature_value)
+# feature_info_combined$cbrt_f = (feature_info_combined$feature_value)^(1/3)
+
+ggdensity(feature_info_combined[feature_info_combined$ens_location == "distal", ]$feature_value)
+ggdensity(feature_info_combined[feature_info_combined$ens_location == "middle", ]$feature_value)
+ggdensity(feature_info_combined[feature_info_combined$ens_location == "proximal", ]$feature_value)
+
+ggqqplot(feature_info_combined[feature_info_combined$ens_location == "distal", ]$feature_value)
+ggqqplot(feature_info_combined[feature_info_combined$ens_location == "middle", ]$feature_value)
+ggqqplot(feature_info_combined[feature_info_combined$ens_location == "proximal", ]$feature_value)
+
+
+# shapiro.test(feature_info_combined[feature_info_combined$ens_location == "distal", ]$feature_value)
+# shapiro.test(feature_info_combined[feature_info_combined$ens_location == "middle", ]$feature_value)
+# shapiro.test(feature_info_combined[feature_info_combined$ens_location == "proximal", ]$feature_value)
+
+#### conclusion: network feature not normally distributed, needs non-parametric test for 3 groups
+#### Kruskal-Wallis test
+
+feature_info_combined$ens_location = as.factor(feature_info_combined$ens_location)
+levels(feature_info_combined$ens_location)
+
+group_by(feature_info_combined, ens_location) %>%
+  summarise(
+    count = n(),
+    mean = mean(feature_value, na.rm = TRUE),
+    sd = sd(feature_value, na.rm = TRUE),
+    median = median(feature_value, na.rm = TRUE),
+    IQR = IQR(feature_value, na.rm = TRUE)
+  )
+
+kruskal.test(feature_value ~ ens_location, data = feature_info_combined)
+
+pairwise.wilcox.test(feature_info_combined$feature_value, feature_info_combined$ens_location,
+                     p.adjust.method = "BH")
