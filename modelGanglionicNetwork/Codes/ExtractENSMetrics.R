@@ -38,6 +38,10 @@ columns = c("feature_value","ens_location","sample_id")
 feature_info_combined = data.frame(matrix(nrow = 0, ncol = length(columns))) 
 colnames(feature_info_combined) = columns
 
+columns_2 = c("sample_id", "ens_location", "edge_prob", "cluster_coeff", "meshedness", "net_density", "compactness") 
+net_metrics_combined = data.frame(matrix(nrow = 0, ncol = length(columns_2))) 
+colnames(net_metrics_combined) = columns_2
+
 max_y = 4539.812 # found by computation
 
 for (i in c(1: length(branch_info_files))) { # 2,13,21
@@ -109,11 +113,13 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
   
   #### calculating the edge probability p from the degree distribution
   #### to use while generating ER random graph G(n, p)
+  tab_degree = data.frame(table(igraph::degree(g1)))
+  tab_degree$Var1 = as.numeric(tab_degree$Var1)
   num_nodes = 0
   sum = 0
-  for(i in 1:length(table_degree)){
-    num_nodes = num_nodes + table_degree[[i]]
-    sum = sum + (i * table_degree[[i]])
+  for(j in 1:length(tab_degree$Var1)){
+    num_nodes = num_nodes + tab_degree[j, ]$Freq
+    sum = sum + (tab_degree[j, ]$Freq * tab_degree[j, ]$Var1)
   }
   edge_probability = divide_by(sum, num_nodes^2)
   cat("Edge probability: ", edge_probability, "\n")
@@ -136,6 +142,14 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
   cat("Meshedness: ", meshedness, "\n",
       "Network density: ", network_density, "\n",
       "Compactness: ", compactness, "\n")
+  
+  net_metrics_combined = rbind(net_metrics_combined, data.frame(sample_id = sample_id,
+                                                                ens_location=ens_location,
+                                                                edge_prob=edge_probability, 
+                                                                cluster_coeff=cluster_coeff, 
+                                                                meshedness=meshedness, 
+                                                                net_density=network_density, 
+                                                                compactness=compactness))
   
   
   #### calculate the edge angle (in degree) and plot the distribution
@@ -228,6 +242,8 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
   }
 }
 
+#write.csv(net_metrics_combined, paste(figure_folder, "PlanarNetMetrics.csv", sep = ""))
+
 # boxplot of select feature
 svglite(paste(figure_folder, "All_", network_feature_list[select_feature], ".svg",  sep=""), width = 6, height = 4)
 ggplot(feature_info_combined, aes(x = ens_location, y = (feature_value), fill = ens_location)) +
@@ -288,3 +304,51 @@ kruskal.test(feature_value ~ ens_location, data = feature_info_combined)
 
 pairwise.wilcox.test(feature_info_combined$feature_value, feature_info_combined$ens_location,
                      p.adjust.method = "BH")
+
+
+####
+# boxplot of net metric
+# svglite(paste(figure_folder, "compactness.svg",  sep=""), width = 6, height = 4)
+# ggplot(net_metrics_combined, aes(x = ens_location, y = (compactness), fill = ens_location)) +
+#   geom_boxplot(notch=FALSE, outlier.size = 1) +
+#   geom_quasirandom(cex=1, shape = 21, colour = "grey40", aes(fill=ens_location)) +
+#   
+#   scale_fill_brewer(palette="Set3") +
+#   theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+#         legend.box.margin=margin(-10,-10,-10,-10),
+#         plot.title = element_text(hjust = 0.5, size=18),
+#         plot.subtitle = element_text(hjust = 0.5, size=16),
+#         axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+#         axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+#         panel.background = element_rect(fill='white', colour='black'),
+#         panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+#   
+#   xlab(expression(paste("ENS location"))) + ylab("Compactness")+
+#   
+#   labs(title = paste("Statistical comparison of network metrics", sep="") )   # the titles needs changing for different runs
+# dev.off()
+
+
+#### statistical tests
+# shapiro.test(net_metrics_combined[net_metrics_combined$ens_location == "distal", ]$compactness)
+# shapiro.test(net_metrics_combined[net_metrics_combined$ens_location == "middle", ]$compactness)
+# shapiro.test(net_metrics_combined[net_metrics_combined$ens_location == "proximal", ]$compactness)
+
+#### Kruskal-Wallis test
+
+# net_metrics_combined$ens_location = as.factor(net_metrics_combined$ens_location)
+# levels(net_metrics_combined$ens_location)
+# 
+# group_by(net_metrics_combined, ens_location) %>%
+#   summarise(
+#     count = n(),
+#     mean = mean(compactness, na.rm = TRUE),
+#     sd = sd(compactness, na.rm = TRUE),
+#     median = median(compactness, na.rm = TRUE),
+#     IQR = IQR(compactness, na.rm = TRUE)
+#   )
+# 
+# kruskal.test(compactness ~ ens_location, data = net_metrics_combined)
+# 
+# pairwise.wilcox.test(net_metrics_combined$compactness, net_metrics_combined$ens_location,
+#                      p.adjust.method = "BH")

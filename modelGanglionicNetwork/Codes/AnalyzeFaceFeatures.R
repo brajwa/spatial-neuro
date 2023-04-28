@@ -29,7 +29,7 @@ moment_files = list.files(moment_folder, recursive = TRUE, pattern = "\\.csv", f
 figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
 
 face_feature_list = c("Area", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") 
-select_feature = 6
+select_feature = 7
 cat("Face feature under consideration: ", face_feature_list[select_feature], "\n")
 
 columns = c("feature_value","ens_location","sample_id") 
@@ -57,6 +57,8 @@ for (i in c(1:length(moment_files))) { #2,13,21
                                                                     sample_id=rep(sample_id, face_count)) )
     
 }
+
+#write.csv(feature_info_combined, paste(figure_folder, face_feature_list[select_feature], ".csv", sep = ""))
 
 #make the face orientation angle between 0 and 180
 #feature_info_combined$feature_value = (360 + feature_info_combined$feature_value) %% 180
