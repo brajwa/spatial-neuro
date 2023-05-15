@@ -215,10 +215,16 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     boundary_4 = as.integer(rownames(boundary_4))
     
     #### the new edges will connect the boundary nodes computed above sequentially and create a loop by connecting the last node to the first one.
+    #### to avoid shifting error
+    if(length(boundary_1) == 1){
+        b_1 = c()
+    }else{
+        b_1 = boundary_1[2:length(boundary_1)]
+    }
     new_edges = data.frame(n1 = c(boundary_1, boundary_2, boundary_3, boundary_4),
-                           n2 = c(boundary_1[2:length(boundary_1)], boundary_2, boundary_3, boundary_4, boundary_1[1]))
+                           n2 = c(b_1, boundary_2, boundary_3, boundary_4, boundary_1[1]))
     
-    g_p =  graph_from_data_frame(rbind(branch.all[, 5:6], new_edges), directed = FALSE) # new graph object that combines the actual network and the new edges
+    g_p =  graph_from_data_frame(unique(rbind(branch.all[, 5:6], new_edges)), directed = FALSE) # new graph object that combines the actual network and the new edges
     
     g <- as_graphnel(g_p) ## Convert igraph object to graphNEL object for planarity testing
     boyerMyrvoldPlanarityTest(g)
