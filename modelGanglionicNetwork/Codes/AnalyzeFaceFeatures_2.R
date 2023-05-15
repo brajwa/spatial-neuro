@@ -85,7 +85,12 @@ branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "
 
 max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
 
-for (i in c(2)) { # 2,13,21
+#### a combined dataframe for all the face features of all the samples
+columns_combined = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
+face_features_combined = data.frame(matrix(nrow = 0, ncol = length(columns_combined)))
+colnames(face_features_combined) = columns_combined
+
+for (i in c(1: length(branch_info_files))) { # 2,13,21
     ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
     sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][12], "\\.")[[1]][1]
     cat("\n(", i, ") Location: ", ens_location, "\nSample Id: ", sample_id, "\n")
@@ -224,7 +229,7 @@ for (i in c(2)) { # 2,13,21
     #### applying the shoe lace formula
     face_area_list = sapply(face_list, function(x) faceArea(x, branch.ppp))
     
-    ####
+    #### eliminating the outer face, it has the largest face area
     face_node_count = face_node_count[-which.max(face_area_list)]
     face_list = face_list[-which.max(face_area_list)]
     face_area_list = face_area_list[-which.max(face_area_list)]
@@ -234,6 +239,8 @@ for (i in c(2)) { # 2,13,21
     ggplot(data.frame(area=face_area_list)) + 
        geom_density(aes(x=area, y=after_stat(density)), alpha=1, colour="black", linewidth=1.5) +
        labs(x = "Area of face", y = "Density", color = "")
+    
+    plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1", "mediumpurple"))
     
     #### face features computation
     columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
@@ -245,7 +252,7 @@ for (i in c(2)) { # 2,13,21
         
         #f_contour = face_contours$contours[face_contours$contours[, 1] == f, 2:3]  # this line was used when contours were computed from watershed lines
         f_contour = as.matrix(contourNodeCoord(face_list[[f]], branch.ppp))
-        lines(f_contour, col="red", type="l", lwd=2)
+        lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
         
         area = Rvision::contourArea(f_contour[,1], f_contour[,2])
         
@@ -273,9 +280,11 @@ for (i in c(2)) { # 2,13,21
         
     }# loop ends for each face of the current iteration sample
     
-    face_features = cbind(face_features, face_area_list)
-    columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL") # Area_SL: from shoelace formula, Area_CF: from contour function
+    face_features = cbind(face_features, face_area_list, rep(ens_location, length(face_area_list)), rep(sample_id, length(face_area_list)))
+    columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
     colnames(face_features) = columns
+    
+    face_features_combined = rbind(face_features_combined, face_features)
     
 }# loop ends for each sample
 
