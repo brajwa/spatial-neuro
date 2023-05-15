@@ -74,7 +74,7 @@ constructDataStruct <- function(sample_id, parent, branch_info_path, output_fold
     branch.sim = data.frame(x1=branch.adj$V1.x, y1=-branch.adj$V1.y, x2=branch.adj$V2.x, y2=-branch.adj$V2.y, 
                             euclid = branch.adj$Euclidean.distance)
     
-    branch.sim = branch.sim / max_y
+    branch.sim = branch.sim / max_y # previously this was dome in a later step. but doing it here is consistent.
     
     hardcoreStrauss_model_param = mean(branch.sim$euclid)
     

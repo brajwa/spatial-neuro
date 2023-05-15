@@ -11,15 +11,41 @@ sapply(load_lib, require, character=TRUE)
 devtools::install_github("swarm-lab/Rvision")
 require("Rvision")
 
-contourNodeCoord <- function(face, pp){
-    df1 = data.frame(x = pp$x[as.integer(face)], y = pp$y[as.integer(face)])
-    df1 = rbind(df1, df1[1, ])
-    df2 = data.frame(df1[order(nrow(df1):1),])
-    return(df2)
+
+#### shoelace formula for computing the face area
+faceArea <- function(face, branch.ppp){
+    n = length(face)
+    area = 0
+    
+    for(i in c(1:(n-1))){
+        area = area + ( branch.ppp$x[as.integer(face[i])] * branch.ppp$y[as.integer(face[i+1])] )
+    }
+    
+    area = area + ( branch.ppp$x[as.integer(face[n])] * branch.ppp$y[as.integer(face[1])] )
+    
+    for(i in c(1:(n-1))){
+        area = area - ( branch.ppp$x[as.integer(face[i+1])] * branch.ppp$y[as.integer(face[i])] )
+    }
+    
+    area = area - ( branch.ppp$x[as.integer(face[1])] * branch.ppp$y[as.integer(face[n])] )
+    
+    area = abs(area) / 2
+    
+    return(area)
 }
 
 
-#### from watershed lines
+#### Given a face of the network as a sequence of vertex id and the point pattern object of the vertices, 
+#### this function returns a 2-column dataframe of the vertex coordinates
+contourNodeCoord <- function(face, pp){
+    df1 = data.frame(x = pp$x[as.integer(face)], y = pp$y[as.integer(face)])
+    df1 = rbind(df1, df1[1, ])  # add the first to the last to make a loop
+    
+    return(df1)
+}
+
+
+#### TESTING: from watershed lines
 # watershed_line_file = "C:/Users/sanja/Desktop/MAX_File_85_01-31-2019_CYM_1_4_Calb2_3B_YFP_DS_GFP-g_Hu-b.lif - TileScan_001_Merging001_ProjMax001_AdjustClr001-watershed-lines.tif"
 # 
 # w_lines = Rvision::image(watershed_line_file, colorspace = "GRAY")
@@ -57,7 +83,7 @@ parent = strsplit(dir, folder)
 branch_info_folder = paste(parent, "Data/ENSMouse Branch Information (in um) v2.0/", sep="")
 branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
 
-max_y = 1 #4539.812 # found by computation and converting to nm scale from microns
+max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
 
 for (i in c(2)) { # 2,13,21
     ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
@@ -92,7 +118,6 @@ for (i in c(2)) { # 2,13,21
     
     
     #### spatial network metrics
-    
     # degree distribution
     table_degree = table(igraph::degree(g1))
     
@@ -161,29 +186,34 @@ for (i in c(2)) { # 2,13,21
     
     
     #### network faces
-    #add additional edges for faces that are cut off at the boundary
+    #### adding additional edges for faces that are cut off at the boundary; these edges are not part of the actual network
     pp_nodes = data.frame(x=branch.ppp$x, y=branch.ppp$y)
     
+    #### nodes at the left side of the network, ordered from bottom to top
     boundary_1 = pp_nodes[pp_nodes$x <= branch.ppp$window$xrange[1], ]
     boundary_1 = boundary_1[order(boundary_1$y), ]
-    boundary_1 = as.integer(rownames(boundary_1))
+    boundary_1 = as.integer(rownames(boundary_1))   # vertex ids
     
+    #### nodes at the top, ordered from left to right
     boundary_2 = pp_nodes[pp_nodes$y >= branch.ppp$window$yrange[2], ]
     boundary_2 = boundary_2[order(boundary_2$x), ]
     boundary_2 = as.integer(rownames(boundary_2))
     
+    #### nodes at the right side, ordered from top to bottom
     boundary_3 = pp_nodes[pp_nodes$x >= branch.ppp$window$xrange[2], ]
     boundary_3 = boundary_3[order(boundary_3$y, decreasing = TRUE), ]
     boundary_3 = as.integer(rownames(boundary_3))
     
+    #### nodes at the bottom, ordered from right to left
     boundary_4 = pp_nodes[pp_nodes$y <= branch.ppp$window$yrange[1], ]
     boundary_4 = boundary_4[order(boundary_4$x, decreasing = TRUE), ]
     boundary_4 = as.integer(rownames(boundary_4))
     
+    #### the new edges will connect the boundary nodes computed above sequentially and create a loop by connecting the last node to the first one.
     new_edges = data.frame(n1 = c(boundary_1, boundary_2, boundary_3, boundary_4),
                            n2 = c(boundary_1[2:length(boundary_1)], boundary_2, boundary_3, boundary_4, boundary_1[1]))
     
-    g_p =  graph_from_data_frame(rbind(branch.all[, 5:6], new_edges), directed = FALSE)
+    g_p =  graph_from_data_frame(rbind(branch.all[, 5:6], new_edges), directed = FALSE) # new graph object that combines the actual network and the new edges
     
     g <- as_graphnel(g_p) ## Convert igraph object to graphNEL object for planarity testing
     boyerMyrvoldPlanarityTest(g)
@@ -191,82 +221,66 @@ for (i in c(2)) { # 2,13,21
     face_list = planarFaceTraversal(g)
     face_node_count = sapply(face_list, length)
     
-    #shoelace formula
-    faceArea <- function(face, branch.ppp){
-       n = length(face)
-       area = 0
-       
-       for(i in c(1:(n-1))){
-           area = area + ( branch.ppp$x[as.integer(face[i])] * branch.ppp$y[as.integer(face[i+1])] )
-       }
-       
-       area = area + ( branch.ppp$x[as.integer(face[n])] * branch.ppp$y[as.integer(face[1])] )
-       
-       for(i in c(1:(n-1))){
-           area = area - ( branch.ppp$x[as.integer(face[i+1])] * branch.ppp$y[as.integer(face[i])] )
-       }
-       
-       area = area - ( branch.ppp$x[as.integer(face[1])] * branch.ppp$y[as.integer(face[n])] )
-       
-       area = abs(area) / 2
-       
-       return(area)
-    }
-    
+    #### applying the shoe lace formula
     face_area_list = sapply(face_list, function(x) faceArea(x, branch.ppp))
     
+    ####
     face_node_count = face_node_count[-which.max(face_area_list)]
     face_list = face_list[-which.max(face_area_list)]
     face_area_list = face_area_list[-which.max(face_area_list)]
     
     hist(face_node_count, breaks=100)
-    #plot(density(face_area_list))
-    
+
     ggplot(data.frame(area=face_area_list)) + 
        geom_density(aes(x=area, y=after_stat(density)), alpha=1, colour="black", linewidth=1.5) +
        labs(x = "Area of face", y = "Density", color = "")
-}
-
-
-#### face features computation
-columns = c("Area", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") 
-face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
-colnames(face_features) = columns
-
-for(f in c(1: length(face_list))){
-    cat("face id: ", f, "\n")
     
-    #f_contour = face_contours$contours[face_contours$contours[, 1] == f, 2:3]
-    f_contour = as.matrix(contourNodeCoord(face_list[[f]], branch.ppp))
-    lines(f_contour, col="red", type="l", lwd=2)
+    #### face features computation
+    columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+    face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
+    colnames(face_features) = columns
     
-    #f_contour[, 2] = f_contour[, 2] - dim_y
-    #plot(f_contour, col="red", type="l", lwd=2)
-    
-    area = Rvision::contourArea(f_contour[,1], f_contour[,2])
-    
-    moments = Rvision::moments(f_contour)
-    
-    #### rotational invariants
-    phi1 = moments$value[moments$moment == "nu02"] + moments$value[moments$moment == "nu20"]
-    phi2 = ((moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"]) * (moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"])) 
-        + (4 * moments$value[moments$moment == "nu11"] * moments$value[moments$moment == "nu11"])
-    lambda1 = 2 * pi * (phi1 + sqrt(phi2))
-    lambda2 = 2 * pi * (phi1 - sqrt(phi2))
+    for(f in c(1: length(face_list))){
+        cat("face id: ", f, "\n")
         
-    #### ext, disp, elong
-    ext = log2(lambda1)
-    disp = log2(sqrt(lambda1 * lambda2))
-    elong = log2(sqrt(lambda1 / lambda2))
+        #f_contour = face_contours$contours[face_contours$contours[, 1] == f, 2:3]  # this line was used when contours were computed from watershed lines
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], branch.ppp))
+        lines(f_contour, col="red", type="l", lwd=2)
+        
+        area = Rvision::contourArea(f_contour[,1], f_contour[,2])
+        
+        moments = Rvision::moments(f_contour)
+        
+        #### rotational invariants; use normalized central moments
+        phi1 = moments$value[moments$moment == "nu02"] + moments$value[moments$moment == "nu20"]
+        phi2 = ((moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"]) * (moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"])) 
+        + (4 * moments$value[moments$moment == "nu11"] * moments$value[moments$moment == "nu11"])
+        lambda1 = 2 * pi * (phi1 + sqrt(phi2))
+        lambda2 = 2 * pi * (phi1 - sqrt(phi2))
+        
+        #### ext, disp, elong
+        ext = log2(lambda1)
+        disp = log2(sqrt(lambda1 * lambda2))
+        elong = log2(sqrt(lambda1 / lambda2))
+        
+        #### orient, eccentr, use direct spatial moments
+        orient = 0.5 * atan2((2 * moments$value[moments$moment == "m11"]) , (moments$value[moments$moment == "m20"] - moments$value[moments$moment == "m02"]))
+        orient = orient * 180 / pi
+        eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
+                   + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
+        
+        face_features = rbind(face_features, data.frame(area, ext, disp, elong, eccentr, orient))
+        
+    }# loop ends for each face of the current iteration sample
     
-    #### orient, eccentr
-    orient = 0.5 * atan2((2 * moments$value[moments$moment == "m11"]) , (moments$value[moments$moment == "m20"] - moments$value[moments$moment == "m02"]))
-    orient = orient * 180 / pi
-    eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
-               + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
+    face_features = cbind(face_features, face_area_list)
+    columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL") # Area_SL: from shoelace formula, Area_CF: from contour function
+    colnames(face_features) = columns
     
-    face_features = rbind(face_features, data.frame(area, ext, disp, elong, eccentr, orient))
-}
+}# loop ends for each sample
+
+
+
 
 
 
