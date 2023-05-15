@@ -2,7 +2,7 @@
 load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
              "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path", 
-             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools")
+             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools", "geosphere")
 
 install_lib = load_lib[!load_lib %in% installed.packages()]
 for(lib in install_lib) install.packages(lib, dependencies=TRUE)
@@ -39,9 +39,21 @@ faceArea <- function(face, branch.ppp){
 #### this function returns a 2-column dataframe of the vertex coordinates
 contourNodeCoord <- function(face, pp){
     df1 = data.frame(x = pp$x[as.integer(face)], y = pp$y[as.integer(face)])
-    df1 = rbind(df1, df1[1, ])  # add the first to the last to make a loop
     
     return(df1)
+}
+
+
+#### Given a face contour computes the perimeter
+contourPerimeter <- function(f_c){
+    f_c = rbind(f_c, f_c[1, ])  # add the first to the last to make a loop
+    r = dim(f_c)[1]
+    p = 0
+    for(e in c(1: (r-1))){
+        p = p + calcDist(c(f_c[e, ], f_c[e+1, ]))   # uses Euclidean distance routine
+    }
+    
+    return(as.numeric(p))
 }
 
 
@@ -86,7 +98,7 @@ branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "
 max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
 
 #### a combined dataframe for all the face features of all the samples
-columns_combined = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
+columns_combined = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
 face_features_combined = data.frame(matrix(nrow = 0, ncol = length(columns_combined)))
 colnames(face_features_combined) = columns_combined
 
@@ -249,18 +261,20 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1", "mediumpurple"))
     
     #### face features computation
-    columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+    columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
     face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
     colnames(face_features) = columns
     
     for(f in c(1: length(face_list))){
         cat("face id: ", f, "\n")
         
-        #f_contour = face_contours$contours[face_contours$contours[, 1] == f, 2:3]  # this line was used when contours were computed from watershed lines
-        f_contour = as.matrix(contourNodeCoord(face_list[[f]], branch.ppp))
+        #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], branch.ppp)) # in this case the contour is not a loop, as per example in documentation
         lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
         
         area = Rvision::contourArea(f_contour[,1], f_contour[,2])
+        
+        perim = contourPerimeter(f_contour)
         
         moments = Rvision::moments(f_contour)
         
@@ -282,19 +296,20 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
         eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
                    + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
         
-        face_features = rbind(face_features, data.frame(area, ext, disp, elong, eccentr, orient))
+        face_features = rbind(face_features, data.frame(area, perim, ext, disp, elong, eccentr, orient))
         
     }# loop ends for each face of the current iteration sample
     
     face_features = cbind(face_features, face_area_list, rep(ens_location, length(face_area_list)), rep(sample_id, length(face_area_list)))
-    columns = c("Area_CF", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
+    columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
     colnames(face_features) = columns
     
     face_features_combined = rbind(face_features_combined, face_features)
     
 }# loop ends for each sample
 
-
+figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
+write.csv(face_features_combined, paste(figure_folder, "FaceFeatures_2.csv", sep = ""))
 
 
 
