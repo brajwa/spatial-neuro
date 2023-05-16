@@ -205,6 +205,9 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     #### network faces
     #### adding additional edges for faces that are cut off at the boundary; these edges are not part of the actual network
     pp_nodes = data.frame(x=branch.ppp$x, y=branch.ppp$y)
+    #### corner nodes
+    pp_nodes = rbind(pp_nodes, data.frame(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]), 
+                                          y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1])))
     
     #### nodes at the left side of the network, ordered from bottom to top
     boundary_1 = pp_nodes[pp_nodes$x <= branch.ppp$window$xrange[1], ]
@@ -235,6 +238,7 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     }
     new_edges = data.frame(n1 = c(boundary_1, boundary_2, boundary_3, boundary_4),
                            n2 = c(b_1, boundary_2, boundary_3, boundary_4, boundary_1[1]))
+    new_edges = new_edges[new_edges$n1 != new_edges$n2, ]   # removing self loops at the corner nodes
     
     g_p =  graph_from_data_frame(unique(rbind(branch.all[, 5:6], new_edges)), directed = FALSE) # new graph object that combines the actual network and the new edges
     
@@ -245,7 +249,13 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     face_node_count = sapply(face_list, length)
     
     #### applying the shoe lace formula
-    face_area_list = sapply(face_list, function(x) faceArea(x, branch.ppp))
+    #### include the corner nodes to a temporary point pattern, the original point pattern is being unmarked 
+    #### as we only need the coordinates for the shoelace formula
+    corner.ppp = ppp(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]), 
+                     y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1]),
+                     window = branch.ppp$window)
+    u_branch.ppp = unmark(branch.ppp)
+    face_area_list = sapply(face_list, function(x) faceArea(x, superimpose.ppp(u_branch.ppp, corner.ppp)))
     
     #### eliminating the outer face, it has the largest face area
     face_node_count = face_node_count[-which.max(face_area_list)]
@@ -269,7 +279,7 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
         cat("face id: ", f, "\n")
         
         #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
-        f_contour = as.matrix(contourNodeCoord(face_list[[f]], branch.ppp)) # in this case the contour is not a loop, as per example in documentation
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
         lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
         
         area = Rvision::contourArea(f_contour[,1], f_contour[,2])
