@@ -206,9 +206,9 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     #### adding additional edges for faces that are cut off at the boundary; these edges are not part of the actual network
     pp_nodes = data.frame(x=branch.ppp$x, y=branch.ppp$y)
     #### corner nodes
-    pp_nodes = rbind(pp_nodes, data.frame(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]), 
+    pp_nodes = rbind(pp_nodes, data.frame(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]),
                                           y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1])))
-    
+
     #### nodes at the left side of the network, ordered from bottom to top
     boundary_1 = pp_nodes[pp_nodes$x <= branch.ppp$window$xrange[1], ]
     boundary_1 = boundary_1[order(boundary_1$y), ]
