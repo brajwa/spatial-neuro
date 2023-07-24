@@ -39,6 +39,64 @@ faceArea <- function(face, branch.ppp){
 }
 
 
+#### Given a face of the network as a sequence of vertex id and the point pattern object of the vertices, 
+#### this function returns a 2-column dataframe of the vertex coordinates
+contourNodeCoord <- function(face, pp){
+    df1 = data.frame(x = pp$x[as.integer(face)], y = pp$y[as.integer(face)])
+    
+    return(df1)
+}
+
+
+#### Given a face contour computes the perimeter
+contourPerimeter <- function(f_c){
+    f_c = rbind(f_c, f_c[1, ])  # add the first to the last to make a loop
+    r = dim(f_c)[1]
+    p = 0
+    for(e in c(1: (r-1))){
+        p = p + calcDist(c(f_c[e, ], f_c[e+1, ]))   # uses Euclidean distance routine
+    }
+    
+    return(as.numeric(p))
+}
+
+
+#### Given the list of all faces (as sequence of vertices) and a particular face id,
+#### this function computes all the face features under consideration of the given face id
+computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
+    cat("face id: ", f, "\n")
+    
+    #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
+    f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
+    lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
+    
+    area = Rvision::contourArea(f_contour[,1], f_contour[,2])
+    
+    perim = contourPerimeter(f_contour)
+    
+    moments = Rvision::moments(f_contour)
+    
+    #### rotational invariants; use normalized central moments
+    phi1 = moments$value[moments$moment == "nu02"] + moments$value[moments$moment == "nu20"]
+    phi2 = ((moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"]) * (moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"])) 
+    + (4 * moments$value[moments$moment == "nu11"] * moments$value[moments$moment == "nu11"])
+    lambda1 = 2 * pi * (phi1 + sqrt(phi2))
+    lambda2 = 2 * pi * (phi1 - sqrt(phi2))
+    
+    #### ext, disp, elong
+    ext = log2(lambda1)
+    disp = log2(sqrt(lambda1 * lambda2))
+    elong = log2(sqrt(lambda1 / lambda2))
+    
+    #### orient, eccentr, use direct spatial moments
+    orient = 0.5 * atan2((2 * moments$value[moments$moment == "m11"]) , (moments$value[moments$moment == "m20"] - moments$value[moments$moment == "m02"]))
+    orient = orient * 180 / pi
+    eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
+               + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
+    
+    return(data.frame(area, perim, ext, disp, elong, eccentr, orient))
+}
+
 
 ########################################################################
 #### computes an edge weight based on the degree of its two end vertices
