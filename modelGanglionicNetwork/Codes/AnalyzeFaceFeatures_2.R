@@ -57,6 +57,43 @@ contourPerimeter <- function(f_c){
 }
 
 
+#### Given the list of all faces (as sequence of vertices) and a particular face id,
+#### this function computes all the face features under consideration of the given face id
+computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
+    cat("face id: ", f, "\n")
+    
+    #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
+    f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
+    lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
+    
+    area = Rvision::contourArea(f_contour[,1], f_contour[,2])
+    
+    perim = contourPerimeter(f_contour)
+    
+    moments = Rvision::moments(f_contour)
+    
+    #### rotational invariants; use normalized central moments
+    phi1 = moments$value[moments$moment == "nu02"] + moments$value[moments$moment == "nu20"]
+    phi2 = ((moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"]) * (moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"])) 
+    + (4 * moments$value[moments$moment == "nu11"] * moments$value[moments$moment == "nu11"])
+    lambda1 = 2 * pi * (phi1 + sqrt(phi2))
+    lambda2 = 2 * pi * (phi1 - sqrt(phi2))
+    
+    #### ext, disp, elong
+    ext = log2(lambda1)
+    disp = log2(sqrt(lambda1 * lambda2))
+    elong = log2(sqrt(lambda1 / lambda2))
+    
+    #### orient, eccentr, use direct spatial moments
+    orient = 0.5 * atan2((2 * moments$value[moments$moment == "m11"]) , (moments$value[moments$moment == "m20"] - moments$value[moments$moment == "m02"]))
+    orient = orient * 180 / pi
+    eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
+               + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
+    
+    return(data.frame(area, perim, ext, disp, elong, eccentr, orient))
+}
+
+
 #### TESTING: from watershed lines
 # watershed_line_file = "C:/Users/sanja/Desktop/MAX_File_85_01-31-2019_CYM_1_4_Calb2_3B_YFP_DS_GFP-g_Hu-b.lif - TileScan_001_Merging001_ProjMax001_AdjustClr001-watershed-lines.tif"
 # 
@@ -101,6 +138,13 @@ max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled
 columns_combined = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
 face_features_combined = data.frame(matrix(nrow = 0, ncol = length(columns_combined)))
 colnames(face_features_combined) = columns_combined
+
+#### a dataframe for mean and sd of all face features per sample
+columns_per_sample = c(paste("mean", colnames(face_features)[1:(ncol(face_features)-2)], sep="_"), 
+                       paste("sd", colnames(face_features)[1:(ncol(face_features)-2)], sep="_"),
+                       "ens_location", "sample_id")
+face_features_per_sample = data.frame(matrix(nrow = 0, ncol = length(columns_per_sample)))
+
 
 for (i in c(1: length(branch_info_files))) { # 2,13,21
     ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
@@ -276,37 +320,8 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     colnames(face_features) = columns
     
     for(f in c(1: length(face_list))){
-        cat("face id: ", f, "\n")
-        
-        #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
-        f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
-        lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
-        
-        area = Rvision::contourArea(f_contour[,1], f_contour[,2])
-        
-        perim = contourPerimeter(f_contour)
-        
-        moments = Rvision::moments(f_contour)
-        
-        #### rotational invariants; use normalized central moments
-        phi1 = moments$value[moments$moment == "nu02"] + moments$value[moments$moment == "nu20"]
-        phi2 = ((moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"]) * (moments$value[moments$moment == "nu02"] - moments$value[moments$moment == "nu20"])) 
-        + (4 * moments$value[moments$moment == "nu11"] * moments$value[moments$moment == "nu11"])
-        lambda1 = 2 * pi * (phi1 + sqrt(phi2))
-        lambda2 = 2 * pi * (phi1 - sqrt(phi2))
-        
-        #### ext, disp, elong
-        ext = log2(lambda1)
-        disp = log2(sqrt(lambda1 * lambda2))
-        elong = log2(sqrt(lambda1 / lambda2))
-        
-        #### orient, eccentr, use direct spatial moments
-        orient = 0.5 * atan2((2 * moments$value[moments$moment == "m11"]) , (moments$value[moments$moment == "m20"] - moments$value[moments$moment == "m02"]))
-        orient = orient * 180 / pi
-        eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
-                   + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
-        
-        face_features = rbind(face_features, data.frame(area, perim, ext, disp, elong, eccentr, orient))
+        f_feat = computeFacefeatures(f, face_list, u_branch.ppp, corner.ppp)
+        face_features = rbind(face_features, f_feat)
         
     }# loop ends for each face of the current iteration sample
     
@@ -316,10 +331,19 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     
     face_features_combined = rbind(face_features_combined, face_features)
     
+    #### mean and sd of the face features per sample
+    m = sapply(face_features[, 1:(ncol(face_features)-2)], mean, na.rm=TRUE)
+    sd = sapply(face_features[, 1:(ncol(face_features)-2)], sd, na.rm=TRUE)
+    face_features_per_sample = rbind(face_features_per_sample, c(m, sd, ens_location, sample_id))
+    
 }# loop ends for each sample
 
 figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
 write.csv(face_features_combined, paste(figure_folder, "FaceFeatures_2.csv", sep = ""))
+
+colnames(face_features_per_sample) = columns_per_sample
+face_features_per_sample = face_features_per_sample[, c(1, 9, 2, 10, 3, 11, 4 , 12, 5, 13, 6, 14, 7, 15, 8, 16, 17, 18)]
+write.csv(face_features_per_sample, paste(figure_folder, "FaceFeaturesperSample_2.csv", sep = ""))
 
 
 

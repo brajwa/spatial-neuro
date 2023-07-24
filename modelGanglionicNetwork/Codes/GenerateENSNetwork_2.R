@@ -1,0 +1,416 @@
+#### loading required libraries (there might be more libraries loaded than required)
+load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
+             "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
+             "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path", 
+             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools", "geosphere")
+
+install_lib = load_lib[!load_lib %in% installed.packages()]
+for(lib in install_lib) install.packages(lib, dependencies=TRUE)
+sapply(load_lib, require, character=TRUE)
+
+devtools::install_github("swarm-lab/Rvision")
+require("Rvision")
+
+setwd("~/GitHub/spatial-neuro/modelGanglionicNetwork/Codes")
+#### source the functions from other files
+source("AnalyzeGanglionicNetwork.R")
+
+
+#### shoelace formula for computing the face area
+faceArea <- function(face, branch.ppp){
+    n = length(face)
+    area = 0
+    
+    for(i in c(1:(n-1))){
+        area = area + ( branch.ppp$x[as.integer(face[i])] * branch.ppp$y[as.integer(face[i+1])] )
+    }
+    
+    area = area + ( branch.ppp$x[as.integer(face[n])] * branch.ppp$y[as.integer(face[1])] )
+    
+    for(i in c(1:(n-1))){
+        area = area - ( branch.ppp$x[as.integer(face[i+1])] * branch.ppp$y[as.integer(face[i])] )
+    }
+    
+    area = area - ( branch.ppp$x[as.integer(face[1])] * branch.ppp$y[as.integer(face[n])] )
+    
+    area = abs(area) / 2
+    
+    return(area)
+}
+
+
+
+########################################################################
+#### computes an edge weight based on the degree of its two end vertices
+#### g2_degree is the list of degree of each vertex in the graph under consideration
+#### x is the edge whose weight is being computed, the 5th and 6th index provides the indices of the end vertices
+computeEdgeWeight <- function(g2_degree, x){
+    return(g2_degree[x[5]] + g2_degree[x[6]])
+}
+
+
+#### Given a face and an edge find if that edge is present in the face
+isEdgeOnFace <- function(face, edge){
+    face = as.numeric(face)
+    matched_index = which(face %in% edge)
+    if(length(matched_index) < 2){
+        return(FALSE)
+    }else{
+        if((abs(matched_index[1] - matched_index[2]) == 1) | (abs(matched_index[1] - matched_index[2]) == (length(face)-1))){
+            return(TRUE)
+        }else{
+            return(FALSE)
+        }
+    }
+}
+
+
+deterministicEdges_2 <- function(branch.ppp, branch.all, sample_id){
+    #### construct the Delaunay triangulation on the parent points as a starter network
+    #### ord_point_list: to maintain the order of the points
+    set.seed(Sys.time())
+    ord_point_list = data.frame(x = branch.ppp$x, y = branch.ppp$y)
+    
+    network_triangulation = deldir(ord_point_list[, 1:2])
+    
+    #### construct a convenient data structure to keep the triangulation information
+    network_extra1 = data.frame(x1=network_triangulation$delsgs$x1, y1=network_triangulation$delsgs$y1,
+                                x2=network_triangulation$delsgs$x2, y2=network_triangulation$delsgs$y2,
+                                ind1=network_triangulation$delsgs$ind1, ind2=network_triangulation$delsgs$ind2)
+    
+    network_extra1$euclidDist = apply(network_extra1, 1, function(x) sqrt( ((x[1]-x[3])^2) + ((x[2]-x[4])^2) ) ) 
+    network_extra1$anglecomp = apply(network_extra1, 1, function(x) calcAngle(x))
+    
+    #### new
+    #### compute the face area of the triangulation
+    graph_obj =  graph_from_data_frame(unique(network_extra1[, 5:6]), directed = FALSE) 
+    
+    g_o <- as_graphnel(graph_obj) ## Convert igraph object to graphNEL object for planarity testing
+    boyerMyrvoldPlanarityTest(g_o)
+    
+    face_list = planarFaceTraversal(g_o)
+    face_node_count = sapply(face_list, length)
+    
+    #### applying the shoe lace formula
+    #### the original point pattern is being unmarked 
+    #### as we only need the coordinates for the shoelace formula
+    u_branch.ppp = unmark(branch.ppp)
+    face_area_list = sapply(face_list, function(x) faceArea(x, u_branch.ppp))
+    
+    #### eliminating the outer face, it has the largest face area
+    face_node_count = face_node_count[-which.max(face_area_list)]
+    face_list = face_list[-which.max(face_area_list)]
+    face_area_list = face_area_list[-which.max(face_area_list)]
+    #### new end
+    
+    #### create another copy of the data structure
+    network_extra = rbind(network_extra1)
+    
+    #### construct and display as corresponding ppp and linnet
+    g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra[,5:6]))
+    
+    plot(branch.ppp, cex=1, pch=20, main="", bg=1)
+    plot(g_o_lin, add=T)
+    
+    plot(density(face_area_list), main="Feature density in Initial DT")
+    
+    #### degree list of the newly constructed Delaunay graph
+    #### create a graph from Delaunay triangulation
+    g_o_degree = igraph::degree(graph_obj)
+    
+    network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g_o_degree, x))
+    network_extra$weight = range01(network_extra$weight)
+    
+    triKDE_face_area = kde(as.matrix(face_area_list))
+    
+    return(list(network_extra, face_list, face_area_list, face_node_count, triKDE_face_area, g_o_degree))
+    
+}
+
+
+rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_list, face_node_count, 
+                                g2_degree, orgKDE_face_area, triKDE_face_area, 
+                                meshedness, network_density, compactness, sample_id){
+    #### some initialization
+    rejected1 = 0
+    noChange = 0
+    
+    set.seed(Sys.time())
+    
+    network_extra$accepted = 0
+    dist_to_boundary = bdist.points(branch.ppp)
+    
+    while (TRUE) {
+        cat("noChange: ", noChange, "\n")  
+        if(noChange == 200){    # if the network has not been changed for 200 iterations
+            break
+        }
+        
+        N = branch.ppp$n
+        E = length(network_extra$x1)
+        A = summary(branch.ppp)$window$area
+        L = sum(network_extra$euclidDist)
+        
+        mesh = (E-N+1)/((2*N)-5)
+        n_density = E/((3*N)-6)
+        compact = 1- ((4*A)/(L-(2*sqrt(A)))^2)
+        
+        cat(meshedness, " ", network_density, " ", compactness, "\n")
+        cat(mesh, " ", n_density, " ", compact, "\n\n")
+        
+        # if(mesh <= meshedness || n_density <= network_density || compact <= compactness){   # if network is getting too sparse
+        #     break
+        # }
+        
+        #### sample an edge index based on the degree-based weights assigned to the edges
+        i = sample.int(length(network_extra[, 1]), 1, prob = network_extra$weight)
+        
+        if(network_extra$accepted[i] == 1){     # if the samples edge has already been accepted skip to the next sampling
+            noChange = noChange + 1
+            next
+        }
+        
+        cat("index: ", i, " current num of edges: ", length(network_extra[, 1]), "\n")
+        
+        #### check the degree of the nodes of the selected edge
+        #### if removing the edge lowers the connectivity significantly or disconnects the network - skip
+        fromDeg = g2_degree[network_extra[i, ]$ind1]
+        toDeg = g2_degree[network_extra[i, ]$ind2]
+        
+        cat("from deg: ", fromDeg, " to degree: ", toDeg, "\n")
+        
+        # if(fromDeg <= 3 || toDeg <= 3){
+        #     if(dist_to_boundary[network_extra[i, ]$ind1] > 100 && dist_to_boundary[network_extra[i, ]$ind2] > 100){     # we allow the degree of the nodes close to the boundary to be lower than the rest
+        #         cat("Edge not removed [degree constraint]...\n\n")
+        #         network_extra$accepted[i] = 1
+        #         noChange = noChange + 1
+        #         next
+        #     }
+        # }
+        
+        #### finding out the faces the chosen edge is a part of
+        face_index = which(unlist(lapply(face_list, function(x) isEdgeOnFace(x, c(network_extra[i, ]$ind1, network_extra[i, ]$ind2)))))
+        
+        accept = FALSE
+        for (f in face_index) {
+            org_est = predict(orgKDE_face_area, x=face_area_list[f])
+            tri_est = predict(triKDE_face_area, x=face_area_list[f])
+            
+            if(tri_est <= org_est){
+                accept = accept | TRUE 
+            }else{
+                accept = accept | FALSE
+            }
+        }
+        
+        #### accept 
+        if(accept){
+            cat("edge accepted...\n")
+            network_extra$accepted[i] = 1
+        }
+        else{
+            #### check for network connectivity
+            network_temp = network_extra[-c(i), ]
+            g2 = make_empty_graph() %>% add_vertices(branch.ppp$n)
+            g2 = add_edges(as.undirected(g2), as.vector(t(as.matrix(network_temp[,5:6]))))
+            
+            if(is_connected(g2)){
+                #### adjust the degree of the nodes
+                g2_degree[network_extra[i, ]$ind1] = g2_degree[network_extra[i, ]$ind1] - 1
+                g2_degree[network_extra[i, ]$ind2] = g2_degree[network_extra[i, ]$ind2] - 1
+                
+                network_extra = network_temp
+                
+                cat("edge rejected...\n")
+                rejected1 = rejected1 + 1
+                noChange = 0
+                
+                #### recompute the degree based edge weights
+                network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g2_degree, x))
+                network_extra$weight = range01(network_extra$weight)
+                
+                #### recompute the density estimation of the triangulation
+                graph_obj =  graph_from_data_frame(unique(network_extra[, 5:6]), directed = FALSE) 
+                
+                g_o <- as_graphnel(graph_obj) ## Convert igraph object to graphNEL object for planarity testing
+                boyerMyrvoldPlanarityTest(g_o)
+                
+                face_list = planarFaceTraversal(g_o)
+                face_node_count = sapply(face_list, length)
+                
+                #### applying the shoe lace formula
+                #### the original point pattern is being unmarked 
+                #### as we only need the coordinates for the shoelace formula
+                u_branch.ppp = unmark(branch.ppp)
+                face_area_list = sapply(face_list, function(x) faceArea(x, u_branch.ppp))
+                
+                #### eliminating the outer face, it has the largest face area
+                face_node_count = face_node_count[-which.max(face_area_list)]
+                face_list = face_list[-which.max(face_area_list)]
+                face_area_list = face_area_list[-which.max(face_area_list)]
+                
+                triKDE_face_area = kde(as.matrix(face_area_list))
+            }
+            else{
+                cat("Edge not removed [connectivity constraint]...\n\n")
+                network_extra$accepted[i] = 1
+            }
+        }
+        noChange = noChange + 1
+        cat("\n")
+        
+        # ####
+        # g2_lin = linnet(branch.ppp, edges=as.matrix(network_extra[, 5:6]))
+        # 
+        # plot(branch.ppp, cex=1, pch=20, main="", bg=1)
+        # plot(g2_lin, add=T)
+        # Sys.sleep(2)
+        # ####
+    }
+    
+    return(network_extra)
+    
+}
+
+
+generateNetworkEdges_2 <- function(branch.ppp, branch_all, orgKDE_face_area,
+                       meshedness, network_density, compactness,
+                       sample_id){
+    
+    #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
+    triangulation_info_list = deterministicEdges_2(branch.ppp, branch.all, sample_id)
+    
+    #### returned values
+    network_extra1 = triangulation_info_list[[1]]
+    face_list = triangulation_info_list[[2]]
+    face_area_list = triangulation_info_list[[3]]
+    face_node_count = triangulation_info_list[[4]]
+    triKDE_face_area = triangulation_info_list[[5]]
+    g2_degree = triangulation_info_list[[6]]
+    
+    #### remove edges from the initial triangulation by rejection sampling
+    network_extra = rejectionSampling_2(branch.ppp, network_extra1, face_list, face_area_list, face_node_count, 
+                                        g2_degree, orgKDE_face_area, triKDE_face_area, 
+                                        meshedness, network_density, compactness, sample_id)
+    
+    #### observe if the distribution under consideration covers the targeted distribution
+    # par(mar=c(5, 2, 1, 1))
+    # plot(density(branch.all$angle), col="red", lty=2, xlab="Edge angle", ylab="Density", main="", xlim=c(-100,250), ylim=c(0, 0.02))
+    # lines(density(network_extra1$anglecomp), col="blue")
+    # lines(density(network_extra1$anglecomp), col="black", lty=3)
+    # legend(x=0, y=0.02, legend=c("ENS angle", "Triangulation angle", "Simulated angle"), 
+    #        col=c("red", "blue", "black"), 
+    #        lty=c(2, 1, 3))
+    # 
+    # plot(density(branch.all$euclid), col="red", lty=2, xlab="Edge Length", ylab="Density", main="")
+    # lines(density(network_extra1$euclidDist), col="blue")
+    # lines(density(network_extra1$euclidDist), col="black", lty=3)
+    # legend(x=300, y=0.006, legend=c("ENS edge len", "Triangulation edge len", "Simulated edge len"), 
+    #        col=c("red", "blue", "black"), 
+    #        lty=c(2, 1, 3))
+    # 
+    # #### visualize the bivariate distribution of the trimmed triangulation
+    # den3d = kde2d(network_extra$anglecomp, network_extra$euclidDist)
+    # persp(den3d, theta = -45, phi = 30, xlab="angle", ylab="edge len",
+    #       ticktype = "detailed", shade = 0.75, col="lightblue")
+    
+    #### create a graph from sampled Delaunay triangulation
+    g2 = make_empty_graph() %>% add_vertices(branch.ppp$n)
+    g2 = add_edges(as.undirected(g2), as.vector(t(as.matrix(network_extra[,5:6]))))
+    
+    #### display as corresponding ppp and linnet
+    g2_lin = linnet(branch.ppp, edges=as.matrix(network_extra[, 5:6]))
+    
+    plot(branch.ppp, cex=1, pch=20, main="", bg=1)
+    plot(g2_lin, add=T)
+    
+    
+    return(list(network_extra, g2_lin))
+}
+
+
+#### extracting parent directory information for accessing input and output location
+dir = this.dir()
+folder = strsplit(dir, "/")
+folder = folder[[1]][length(folder[[1]])]
+parent = strsplit(dir, folder)
+
+face_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
+face_features_combined = read.csv(paste(face_folder, "FaceFeatures_2.csv", sep = ""))
+
+
+#### the TIF images of the ganglionic networks are preprocessed in Fiji (ImageJ) and the network information is extracted as .csv files
+#### choose one/all of the ganglionic network samples with file chooser below
+branch_info_folder = paste(parent, "Data/ENSMouse Branch Information (in um) v2.0/", sep="")
+branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
+
+i = 2
+
+ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
+sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][12], "\\.")[[1]][1]
+cat("\n(", i, ") Location: ", ens_location, "\nSample Id: ", sample_id, "\n")
+
+max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
+
+data_struct_list = constructDataStruct(sample_id, parent, branch_info_files[i], output_folder_path, max_y)
+
+#### the returned values
+branch.all = data_struct_list[[1]]
+branch.ppp = data_struct_list[[2]]
+branch.lpp = data_struct_list[[3]]
+g1 = data_struct_list[[4]]
+hardcoreStrauss_model_param = data_struct_list[[5]]
+
+plot(branch.lpp, main="original", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
+                                                       "mediumpurple"))
+                                                       #save the network plot
+
+#### alpha, gamma, psi
+N = branch.ppp$n
+E = length(branch.all$x1)
+A = summary(branch.ppp)$window$area
+L = sum(branch.all$euclid)
+
+meshedness = (E-N+1)/((2*N)-5)
+network_density = E/((3*N)-6)
+compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
+
+
+face_feature = face_features_combined[face_features_combined$sample_id == sample_id, ]
+plot(density(face_feature$Area_SL), main="Feature density in original network")
+
+orgKDE_face_area = kde(as.matrix(face_feature$Area_SL))
+
+network_info_list = generateNetworkEdges_2(branch.ppp, branch_all, orgKDE_face_area,
+                                         meshedness, network_density, compactness,
+                                         sample_id)
+
+net_data_struct = network_info_list[[1]]
+linnet_obj = network_info_list[[2]]
+
+branch.lpp_2 = lpp(branch.ppp, linnet_obj )
+plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
+                                                       "mediumpurple"))
+                                                       
+
+#### compute the face area of the newly constructed network to compare the density with the original face area
+graph_obj =  graph_from_data_frame(unique(net_data_struct[, 5:6]), directed = FALSE) 
+
+g_o <- as_graphnel(graph_obj) ## Convert igraph object to graphNEL object for planarity testing
+boyerMyrvoldPlanarityTest(g_o)
+
+face_list = planarFaceTraversal(g_o)
+face_node_count = sapply(face_list, length)
+
+#### applying the shoe lace formula
+#### the original point pattern is being unmarked 
+#### as we only need the coordinates for the shoelace formula
+u_branch.ppp = unmark(branch.ppp)
+face_area_list = sapply(face_list, function(x) faceArea(x, u_branch.ppp))
+
+#### eliminating the outer face, it has the largest face area
+face_node_count = face_node_count[-which.max(face_area_list)]
+face_list = face_list[-which.max(face_area_list)]
+face_area_list = face_area_list[-which.max(face_area_list)]
+
+plot(density(face_area_list), main="Feature density in constructed network")
