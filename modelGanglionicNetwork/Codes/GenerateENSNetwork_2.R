@@ -105,7 +105,74 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
 #### plot the face features of two given networks for comparison 
 #### can be original vs. initial DT or original vs. final network
 comparePlotOrgSim <- function(org_face_feature, face_features){
+    cat("Number of faces in the original network: ", length(org_face_feature$X))
+    cat("\nNumber of faces in the simulated network: ", length(face_features$area))
     
+    # area
+    den_org_area = density(org_face_feature$Area_CF)
+    den_org_area = data.frame(x=den_org_area$x, y=den_org_area$y)
+    
+    den_sim_area = density(face_features$area)
+    den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
+    
+    print(ggplot(data = den_org_area, aes(y)) +
+        geom_density(fill = "blue", alpha = 0.3) +
+        geom_density(data = den_sim_area, aes(y), fill="red", alpha =0.3) +
+        
+        theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              legend.box.margin=margin(-10,-10,-10,-10),
+              plot.title = element_text(hjust = 0.5, size=18),
+              plot.subtitle = element_text(hjust = 0.5, size=16),
+              axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+              axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+              panel.background = element_rect(fill='white', colour='black'),
+              panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+        xlab(expression(paste("Face Area"))) + ylab("Density")+
+        labs(title = "Comparison of face feature of original and simulated networks") )   # the titles needs changing for different runs
+    
+    # elongation
+    den_org_elong = density(org_face_feature$Elong.)
+    den_org_elong = data.frame(x=den_org_elong$x, y=den_org_elong$y)
+    
+    den_sim_elong = density(face_features$elong)
+    den_sim_elong = data.frame(x=den_sim_elong$x, y= den_sim_elong$y)
+    
+    print(ggplot(data = den_org_elong, aes(y)) +
+        geom_density(fill = "blue", alpha = 0.3) +
+        geom_density(data = den_sim_elong, aes(y), fill="red", alpha =0.3) +
+        
+        theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              legend.box.margin=margin(-10,-10,-10,-10),
+              plot.title = element_text(hjust = 0.5, size=18),
+              plot.subtitle = element_text(hjust = 0.5, size=16),
+              axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+              axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+              panel.background = element_rect(fill='white', colour='black'),
+              panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+        xlab(expression(paste("Face Elongation"))) + ylab("Density")+
+        labs(title = "Comparison of face feature of original and simulated networks")  )  # the titles needs changing for different runs
+    
+    # orientation
+    den_org_orient = density(org_face_feature$Orient.)
+    den_org_orient = data.frame(x=den_org_orient$x, y=den_org_orient$y)
+    
+    den_sim_orient = density(face_features$orient)
+    den_sim_orient = data.frame(x=den_sim_orient$x, y= den_sim_orient$y)
+    
+    print(ggplot(data = den_org_orient, aes(y)) +
+        geom_density(fill = "blue", alpha = 0.3) +
+        geom_density(data = den_sim_orient, aes(y), fill="red", alpha =0.3) +
+        
+        theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              legend.box.margin=margin(-10,-10,-10,-10),
+              plot.title = element_text(hjust = 0.5, size=18),
+              plot.subtitle = element_text(hjust = 0.5, size=16),
+              axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+              axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+              panel.background = element_rect(fill='white', colour='black'),
+              panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+        xlab(expression(paste("Face Orientation"))) + ylab("Density")+
+        labs(title = "Comparison of face feature of original and simulated networks")  )  # the titles needs changing for different runs
 }
 
 
