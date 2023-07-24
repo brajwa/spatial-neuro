@@ -67,8 +67,12 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
     cat("face id: ", f, "\n")
     
     #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
-    f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
-    lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
+    if(!is.null(corner.ppp)){
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
+    }else{
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], u_branch.ppp))
+    }
+    #lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
     
     area = Rvision::contourArea(f_contour[,1], f_contour[,2])
     
@@ -98,6 +102,13 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
 }
 
 
+#### plot the face features of two given networks for comparison 
+#### can be original vs. initial DT or original vs. final network
+comparePlotOrgSim <- function(org_face_feature, face_features){
+    
+}
+
+
 ########################################################################
 #### computes an edge weight based on the degree of its two end vertices
 #### g2_degree is the list of degree of each vertex in the graph under consideration
@@ -123,7 +134,7 @@ isEdgeOnFace <- function(face, edge){
 }
 
 
-deterministicEdges_2 <- function(branch.ppp, branch.all, sample_id){
+deterministicEdges_2 <- function(branch.ppp, branch.all, org_face_feature, sample_id){
     #### construct the Delaunay triangulation on the parent points as a starter network
     #### ord_point_list: to maintain the order of the points
     set.seed(Sys.time())
@@ -140,6 +151,7 @@ deterministicEdges_2 <- function(branch.ppp, branch.all, sample_id){
     network_extra1$anglecomp = apply(network_extra1, 1, function(x) calcAngle(x))
     
     #### new
+    #### reminder: The initial triangulation already has closed faces at  the boundary, no need to add extra edges before computing the faces.
     #### compute the face area of the triangulation
     graph_obj =  graph_from_data_frame(unique(network_extra1[, 5:6]), directed = FALSE) 
     
@@ -159,6 +171,17 @@ deterministicEdges_2 <- function(branch.ppp, branch.all, sample_id){
     face_node_count = face_node_count[-which.max(face_area_list)]
     face_list = face_list[-which.max(face_area_list)]
     face_area_list = face_area_list[-which.max(face_area_list)]
+    
+    #### face features computation
+    columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+    face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
+    colnames(face_features) = columns
+    
+    for(f in c(1: length(face_list))){
+        f_feat = computeFacefeatures(f, face_list, u_branch.ppp, NULL)
+        face_features = rbind(face_features, f_feat)
+        
+    }# loop ends for each face of the triangulation
     #### new end
     
     #### create another copy of the data structure
@@ -167,10 +190,13 @@ deterministicEdges_2 <- function(branch.ppp, branch.all, sample_id){
     #### construct and display as corresponding ppp and linnet
     g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra[,5:6]))
     
-    plot(branch.ppp, cex=1, pch=20, main="", bg=1)
-    plot(g_o_lin, add=T)
+    plot(g_o_lin, main="Initial DT", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
+                                                                    "mediumpurple"))
     
-    plot(density(face_area_list), main="Feature density in Initial DT")
+    ####new
+    ####plot the feature densities of the initial triangulation vs the original network for comparison
+    comparePlotOrgSim(org_face_feature, face_features)
+    ####new end
     
     #### degree list of the newly constructed Delaunay graph
     #### create a graph from Delaunay triangulation
@@ -331,12 +357,12 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
 }
 
 
-generateNetworkEdges_2 <- function(branch.ppp, branch_all, orgKDE_face_area,
+generateNetworkEdges_2 <- function(branch.ppp, branch_all, org_face_feature, orgKDE_face_area,
                        meshedness, network_density, compactness,
                        sample_id){
     
     #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
-    triangulation_info_list = deterministicEdges_2(branch.ppp, branch.all, sample_id)
+    triangulation_info_list = deterministicEdges_2(branch.ppp, branch.all, org_face_feature, sample_id)
     
     #### returned values
     network_extra1 = triangulation_info_list[[1]]
@@ -433,13 +459,15 @@ meshedness = (E-N+1)/((2*N)-5)
 network_density = E/((3*N)-6)
 compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
 
-
+#### filter out the face face features of the sample under consideration
+#### reminder: the face features were computed assuming additional edges were computed to close the open faces at the boundary
+#### similar thing should be done for the new network too if needed.
 face_feature = face_features_combined[face_features_combined$sample_id == sample_id, ]
 plot(density(face_feature$Area_SL), main="Feature density in original network")
 
 orgKDE_face_area = kde(as.matrix(face_feature$Area_SL))
 
-network_info_list = generateNetworkEdges_2(branch.ppp, branch_all, orgKDE_face_area,
+network_info_list = generateNetworkEdges_2(branch.ppp, branch_all, face_feature, orgKDE_face_area,
                                          meshedness, network_density, compactness,
                                          sample_id)
 

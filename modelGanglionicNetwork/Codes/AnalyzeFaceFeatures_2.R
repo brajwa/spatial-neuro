@@ -63,8 +63,11 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
     cat("face id: ", f, "\n")
     
     #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
-    f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
-    lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
+    if(!is.null(corner.ppp)){
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
+    }else{
+        f_contour = as.matrix(contourNodeCoord(face_list[[f]], u_branch.ppp))
+    }lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
     
     area = Rvision::contourArea(f_contour[,1], f_contour[,2])
     
