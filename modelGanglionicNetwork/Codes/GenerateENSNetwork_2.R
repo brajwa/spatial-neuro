@@ -222,6 +222,11 @@ deterministicEdges_2 <- function(branch.ppp, branch.all, org_face_feature, sampl
     #### compute the face area of the triangulation
     graph_obj =  graph_from_data_frame(unique(network_extra1[, 5:6]), directed = FALSE) 
     
+    #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+    #### This is sometimes also called the clustering coefficient.
+    cluster_coeff_t = igraph::transitivity(graph_obj, type = "global")
+    cat("CC DT: ", cluster_coeff_t, "\n")
+    
     g_o <- as_graphnel(graph_obj) ## Convert igraph object to graphNEL object for planarity testing
     boyerMyrvoldPlanarityTest(g_o)
     
@@ -309,17 +314,18 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
         cat(meshedness, " ", network_density, " ", compactness, "\n")
         cat(mesh, " ", n_density, " ", compact, "\n\n")
         
-        # if(mesh <= meshedness || n_density <= network_density || compact <= compactness){   # if network is getting too sparse
-        #     break
-        # }
+        if(mesh <= meshedness || n_density <= network_density || compact <= compactness){   # if network is getting too sparse
+            break
+        }
         
         #### sample an edge index based on the degree-based weights assigned to the edges
-        i = sample.int(length(network_extra[, 1]), 1, prob = network_extra$weight)
+        #i = sample.int(length(network_extra[, 1]), 1, prob = network_extra$weight)
+        i = sample.int(length(network_extra[, 1]), 1)
         
-        if(network_extra$accepted[i] == 1){     # if the samples edge has already been accepted skip to the next sampling
-            noChange = noChange + 1
-            next
-        }
+        # if(network_extra$accepted[i] == 1){     # if the samples edge has already been accepted skip to the next sampling
+        #     noChange = noChange + 1
+        #     next
+        # }
         
         cat("index: ", i, " current num of edges: ", length(network_extra[, 1]), "\n")
         
@@ -526,6 +532,11 @@ meshedness = (E-N+1)/((2*N)-5)
 network_density = E/((3*N)-6)
 compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
 
+#### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+#### This is sometimes also called the clustering coefficient.
+cluster_coeff = igraph::transitivity(g1, type = "global")
+cat("CC original: ", cluster_coeff, "\n")
+
 #### filter out the face face features of the sample under consideration
 #### reminder: the face features were computed assuming additional edges were computed to close the open faces at the boundary
 #### similar thing should be done for the new network too if needed.
@@ -547,7 +558,51 @@ plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "gre
                                                        
 
 #### compute the face area of the newly constructed network to compare the density with the original face area
-graph_obj =  graph_from_data_frame(unique(net_data_struct[, 5:6]), directed = FALSE) 
+#### Reminder: for the simulated network there are many open boundary faces
+#### additional edges are required
+pp_nodes = data.frame(x=branch.ppp$x, y=branch.ppp$y)
+#### corner nodes
+pp_nodes = rbind(pp_nodes, data.frame(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]),
+                                      y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1])))
+
+#### nodes at the left side of the network, ordered from bottom to top
+boundary_1 = pp_nodes[pp_nodes$x <= branch.ppp$window$xrange[1], ]
+boundary_1 = boundary_1[order(boundary_1$y), ]
+boundary_1 = as.integer(rownames(boundary_1))   # vertex ids
+
+#### nodes at the top, ordered from left to right
+boundary_2 = pp_nodes[pp_nodes$y >= branch.ppp$window$yrange[2], ]
+boundary_2 = boundary_2[order(boundary_2$x), ]
+boundary_2 = as.integer(rownames(boundary_2))
+
+#### nodes at the right side, ordered from top to bottom
+boundary_3 = pp_nodes[pp_nodes$x >= branch.ppp$window$xrange[2], ]
+boundary_3 = boundary_3[order(boundary_3$y, decreasing = TRUE), ]
+boundary_3 = as.integer(rownames(boundary_3))
+
+#### nodes at the bottom, ordered from right to left
+boundary_4 = pp_nodes[pp_nodes$y <= branch.ppp$window$yrange[1], ]
+boundary_4 = boundary_4[order(boundary_4$x, decreasing = TRUE), ]
+boundary_4 = as.integer(rownames(boundary_4))
+
+#### the new edges will connect the boundary nodes computed above sequentially and create a loop by connecting the last node to the first one.
+#### to avoid shifting error
+if(length(boundary_1) == 1){
+    b_1 = c()
+}else{
+    b_1 = boundary_1[2:length(boundary_1)]
+}
+new_edges = data.frame(ind1 = c(boundary_1, boundary_2, boundary_3, boundary_4),
+                       ind2 = c(b_1, boundary_2, boundary_3, boundary_4, boundary_1[1]))
+new_edges = new_edges[new_edges$ind1 != new_edges$ind2, ]  # removing self loops at the corner nodes
+
+graph_obj =  graph_from_data_frame(unique(rbind(net_data_struct[, 5:6], new_edges)), directed = FALSE) # new graph object that combines the actual network and the new edges
+graph_obj = delete_edges(graph_obj, which(which_multiple(graph_obj)))
+
+#### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+#### This is sometimes also called the clustering coefficient.
+cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+cat("CC simulated: ", cluster_coeff_s, "\n")
 
 g_o <- as_graphnel(graph_obj) ## Convert igraph object to graphNEL object for planarity testing
 boyerMyrvoldPlanarityTest(g_o)
@@ -556,14 +611,28 @@ face_list = planarFaceTraversal(g_o)
 face_node_count = sapply(face_list, length)
 
 #### applying the shoe lace formula
-#### the original point pattern is being unmarked 
+#### include the corner nodes to a temporary point pattern, the original point pattern is being unmarked 
 #### as we only need the coordinates for the shoelace formula
+corner.ppp = ppp(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]), 
+                 y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1]),
+                 window = branch.ppp$window)
 u_branch.ppp = unmark(branch.ppp)
-face_area_list = sapply(face_list, function(x) faceArea(x, u_branch.ppp))
+face_area_list = sapply(face_list, function(x) faceArea(x, superimpose.ppp(u_branch.ppp, corner.ppp)))
 
 #### eliminating the outer face, it has the largest face area
 face_node_count = face_node_count[-which.max(face_area_list)]
 face_list = face_list[-which.max(face_area_list)]
 face_area_list = face_area_list[-which.max(face_area_list)]
 
-plot(density(face_area_list), main="Feature density in constructed network")
+#### face features computation
+columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+face_features_sim = data.frame(matrix(nrow = 0, ncol = length(columns)))
+colnames(face_features_sim) = columns
+
+for(f in c(1: length(face_list))){
+    f_feat = computeFacefeatures(f, face_list, u_branch.ppp, corner.ppp)
+    face_features_sim = rbind(face_features_sim, f_feat)
+    
+}# loop ends for each face of the triangulation
+
+comparePlotOrgSim(face_feature, face_features_sim)
