@@ -349,6 +349,41 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
 }
 
 
+generateNetworkEdges_3 <- function(branch.ppp, branch_all, org_face_feature, orgKDE_face_feat,
+                                   meshedness, network_density, compactness,
+                                   sample_id){
+    
+    #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
+    triangulation_info_list = deterministicEdges_3(branch.ppp, branch.all, org_face_feature, sample_id)
+    
+    #### returned values
+    network_extra1 = triangulation_info_list[[1]]
+    
+    face_list = triangulation_info_list[[2]]
+    face_area_list = triangulation_info_list[[3]]
+    face_node_count = triangulation_info_list[[4]]
+    
+    triKDE_face_feat = triangulation_info_list[[5]]
+    
+    g2_degree = triangulation_info_list[[6]]
+    tri_face_features = triangulation_info_list[[7]]
+    
+    #### remove edges from the initial triangulation by rejection sampling
+    network_extra = rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_node_count, 
+                                        g2_degree, orgKDE_face_feat, triKDE_face_feat, 
+                                        meshedness, network_density, compactness, sample_id, tri_face_features)
+    
+    #### create a graph from sampled triangulation
+    g2 = make_empty_graph() %>% add_vertices(branch.ppp$n)
+    g2 = add_edges(as.undirected(g2), as.vector(t(as.matrix(network_extra[,5:6]))))
+    
+    #### display as corresponding ppp and linnet
+    g2_lin = linnet(branch.ppp, edges=as.matrix(network_extra[, 5:6]))
+    
+    return(list(network_extra, g2_lin))
+}
+
+
 ####main 
 #### extracting parent directory information for accessing input and output location
 dir = this.dir()
@@ -411,6 +446,10 @@ face_feature = face_features_combined[face_features_combined$sample_id == sample
 orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL, 
                                             face_feature$Elong., 
                                             face_feature$Orient.))) # this will be also tested by replacing by PC1 of all the face features we want
+
+####At this point, new point pattern will be simulated. 
+####For now we are generating networks on the original point pattern.
+####branch.ppp will be replaced by some new ppp object
 
 #### call the network generation functions
 network_info_list = generateNetworkEdges_3(branch.ppp, branch_all, face_feature, orgKDE_face_feat,
