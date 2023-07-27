@@ -2,7 +2,7 @@
 load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
              "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path", 
-             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools", "geosphere")
+             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools", "geosphere", "philentropy")
 
 install_lib = load_lib[!load_lib %in% installed.packages()]
 for(lib in install_lib) install.packages(lib, dependencies=TRUE)
@@ -64,12 +64,14 @@ contourPerimeter <- function(f_c){
 #### Given the list of all faces (as sequence of vertices) and a particular face id,
 #### this function computes all the face features under consideration of the given face id
 computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
-    cat("face id: ", f, "\n")
+    #cat("face id: ", f, "\n")
     
     #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
     if(!is.null(corner.ppp)){
+        #cat("computing face features with corner ppp\n")
         f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
     }else{
+        #cat("computing face features without corner ppp\n")
         f_contour = as.matrix(contourNodeCoord(face_list[[f]], u_branch.ppp))
     }
     #lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
@@ -98,6 +100,7 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
     eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
                + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
     
+    #cat(area, perim, ext, disp, elong, eccentr, orient, "\n")
     return(data.frame(area, perim, ext, disp, elong, eccentr, orient))
 }
 
@@ -247,7 +250,7 @@ deterministicEdges_2 <- function(branch.ppp, branch.all, org_face_feature, sampl
     #### face features computation
     columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
     face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
-    colnames(face_features) = columns
+    colnames(face_features) = columns    
     
     for(f in c(1: length(face_list))){
         f_feat = computeFacefeatures(f, face_list, u_branch.ppp, NULL)
@@ -277,16 +280,18 @@ deterministicEdges_2 <- function(branch.ppp, branch.all, org_face_feature, sampl
     network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g_o_degree, x))
     network_extra$weight = range01(network_extra$weight)
     
-    triKDE_face_area = kde(as.matrix(face_area_list))
+    triKDE_face_area = kde(as.matrix(data.frame(face_area_list, 
+                                                face_features$elong, 
+                                                face_features$orient)))
     
-    return(list(network_extra, face_list, face_area_list, face_node_count, triKDE_face_area, g_o_degree))
+    return(list(network_extra, face_list, face_area_list, face_node_count, triKDE_face_area, g_o_degree, face_features))
     
 }
 
 
 rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_list, face_node_count, 
                                 g2_degree, orgKDE_face_area, triKDE_face_area, 
-                                meshedness, network_density, compactness, sample_id){
+                                meshedness, network_density, compactness, sample_id, face_features){
     #### some initialization
     rejected1 = 0
     noChange = 0
@@ -311,8 +316,8 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
         n_density = E/((3*N)-6)
         compact = 1- ((4*A)/(L-(2*sqrt(A)))^2)
         
-        cat(meshedness, " ", network_density, " ", compactness, "\n")
-        cat(mesh, " ", n_density, " ", compact, "\n\n")
+        cat("org: ", meshedness, " ", network_density, " ", compactness, "\n")
+        cat("cur: ", mesh, " ", n_density, " ", compact, "\n\n")
         
         if(mesh <= meshedness || n_density <= network_density || compact <= compactness){   # if network is getting too sparse
             break
@@ -336,22 +341,25 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
         
         cat("from deg: ", fromDeg, " to degree: ", toDeg, "\n")
         
-        # if(fromDeg <= 3 || toDeg <= 3){
-        #     if(dist_to_boundary[network_extra[i, ]$ind1] > 100 && dist_to_boundary[network_extra[i, ]$ind2] > 100){     # we allow the degree of the nodes close to the boundary to be lower than the rest
-        #         cat("Edge not removed [degree constraint]...\n\n")
-        #         network_extra$accepted[i] = 1
-        #         noChange = noChange + 1
-        #         next
-        #     }
-        # }
+        if(fromDeg <= 2 || toDeg <= 2){
+            # if(dist_to_boundary[network_extra[i, ]$ind1] >100 && dist_to_boundary[network_extra[i, ]$ind2] >100){     # we allow the degree of the nodes close to the boundary to be lower than the rest
+            #     cat("Edge not removed [degree constraint]...\n\n")
+            #     network_extra$accepted[i] = 1
+            #     noChange = noChange + 1
+            #     next
+            # }
+            network_extra$accepted[i] = 1
+            noChange = noChange + 1
+            next
+        }
         
         #### finding out the faces the chosen edge is a part of
         face_index = which(unlist(lapply(face_list, function(x) isEdgeOnFace(x, c(network_extra[i, ]$ind1, network_extra[i, ]$ind2)))))
         
         accept = FALSE
         for (f in face_index) {
-            org_est = predict(orgKDE_face_area, x=face_area_list[f])
-            tri_est = predict(triKDE_face_area, x=face_area_list[f])
+            org_est = predict(orgKDE_face_area, x=data.frame(face_area_list[f], face_features$elong[f], face_features$orient[f]))
+            tri_est = predict(triKDE_face_area, x=data.frame(face_area_list[f], face_features$elong[f], face_features$orient[f]))
             
             if(tri_est <= org_est){
                 accept = accept | TRUE 
@@ -373,9 +381,10 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
             
             if(is_connected(g2)){
                 #### adjust the degree of the nodes
+                #g2_degree = igraph::degree(g2)
                 g2_degree[network_extra[i, ]$ind1] = g2_degree[network_extra[i, ]$ind1] - 1
                 g2_degree[network_extra[i, ]$ind2] = g2_degree[network_extra[i, ]$ind2] - 1
-                
+
                 network_extra = network_temp
                 
                 cat("edge rejected...\n")
@@ -386,9 +395,47 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
                 network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g2_degree, x))
                 network_extra$weight = range01(network_extra$weight)
                 
-                #### recompute the density estimation of the triangulation
-                graph_obj =  graph_from_data_frame(unique(network_extra[, 5:6]), directed = FALSE) 
+                #### add boundary edges
+                pp_nodes = data.frame(x=branch.ppp$x, y=branch.ppp$y)
+                #### corner nodes
+                pp_nodes = rbind(pp_nodes, data.frame(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]),
+                                                      y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1])))
                 
+                #### nodes at the left side of the network, ordered from bottom to top
+                boundary_1 = pp_nodes[pp_nodes$x <= branch.ppp$window$xrange[1], ]
+                boundary_1 = boundary_1[order(boundary_1$y), ]
+                boundary_1 = as.integer(rownames(boundary_1))   # vertex ids
+                
+                #### nodes at the top, ordered from left to right
+                boundary_2 = pp_nodes[pp_nodes$y >= branch.ppp$window$yrange[2], ]
+                boundary_2 = boundary_2[order(boundary_2$x), ]
+                boundary_2 = as.integer(rownames(boundary_2))
+                
+                #### nodes at the right side, ordered from top to bottom
+                boundary_3 = pp_nodes[pp_nodes$x >= branch.ppp$window$xrange[2], ]
+                boundary_3 = boundary_3[order(boundary_3$y, decreasing = TRUE), ]
+                boundary_3 = as.integer(rownames(boundary_3))
+                
+                #### nodes at the bottom, ordered from right to left
+                boundary_4 = pp_nodes[pp_nodes$y <= branch.ppp$window$yrange[1], ]
+                boundary_4 = boundary_4[order(boundary_4$x, decreasing = TRUE), ]
+                boundary_4 = as.integer(rownames(boundary_4))
+                
+                #### the new edges will connect the boundary nodes computed above sequentially and create a loop by connecting the last node to the first one.
+                #### to avoid shifting error
+                if(length(boundary_1) == 1){
+                    b_1 = c()
+                }else{
+                    b_1 = boundary_1[2:length(boundary_1)]
+                }
+                new_edges = data.frame(ind1 = c(boundary_1, boundary_2, boundary_3, boundary_4),
+                                       ind2 = c(b_1, boundary_2, boundary_3, boundary_4, boundary_1[1]))
+                new_edges = new_edges[new_edges$ind1 != new_edges$ind2, ]  # removing self loops at the corner nodes
+                
+                graph_obj =  graph_from_data_frame(unique(rbind(network_extra[, 5:6], new_edges)), directed = FALSE) # new graph object that combines the actual network and the new edges
+                graph_obj = delete_edges(graph_obj, which(which_multiple(graph_obj)))
+                
+                #### recompute the density estimation of the triangulation
                 g_o <- as_graphnel(graph_obj) ## Convert igraph object to graphNEL object for planarity testing
                 boyerMyrvoldPlanarityTest(g_o)
                 
@@ -396,17 +443,33 @@ rejectionSampling_2 <- function(branch.ppp, network_extra, face_list, face_area_
                 face_node_count = sapply(face_list, length)
                 
                 #### applying the shoe lace formula
-                #### the original point pattern is being unmarked 
+                #### include the corner nodes to a temporary point pattern, the original point pattern is being unmarked 
                 #### as we only need the coordinates for the shoelace formula
+                corner.ppp = ppp(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]), 
+                                 y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1]),
+                                 window = branch.ppp$window)
                 u_branch.ppp = unmark(branch.ppp)
-                face_area_list = sapply(face_list, function(x) faceArea(x, u_branch.ppp))
+                face_area_list = sapply(face_list, function(x) faceArea(x, superimpose.ppp(u_branch.ppp, corner.ppp)))
                 
                 #### eliminating the outer face, it has the largest face area
                 face_node_count = face_node_count[-which.max(face_area_list)]
                 face_list = face_list[-which.max(face_area_list)]
                 face_area_list = face_area_list[-which.max(face_area_list)]
                 
-                triKDE_face_area = kde(as.matrix(face_area_list))
+                #### face features computation
+                columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+                face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
+                colnames(face_features) = columns
+                
+                for(f in c(1: length(face_list))){
+                    f_feat = computeFacefeatures(f, face_list, u_branch.ppp, NULL)
+                    face_features = rbind(face_features, f_feat)
+                    
+                }# loop ends for each face of the triangulation
+                
+                triKDE_face_area = kde(as.matrix(data.frame(face_area_list, 
+                                                            face_features$elong, 
+                                                            face_features$orient)))
             }
             else{
                 cat("Edge not removed [connectivity constraint]...\n\n")
@@ -444,11 +507,12 @@ generateNetworkEdges_2 <- function(branch.ppp, branch_all, org_face_feature, org
     face_node_count = triangulation_info_list[[4]]
     triKDE_face_area = triangulation_info_list[[5]]
     g2_degree = triangulation_info_list[[6]]
+    face_features = triangulation_info_list[[7]]
     
     #### remove edges from the initial triangulation by rejection sampling
     network_extra = rejectionSampling_2(branch.ppp, network_extra1, face_list, face_area_list, face_node_count, 
                                         g2_degree, orgKDE_face_area, triKDE_face_area, 
-                                        meshedness, network_density, compactness, sample_id)
+                                        meshedness, network_density, compactness, sample_id, face_features)
     
     #### observe if the distribution under consideration covers the targeted distribution
     # par(mar=c(5, 2, 1, 1))
@@ -541,9 +605,10 @@ cat("CC original: ", cluster_coeff, "\n")
 #### reminder: the face features were computed assuming additional edges were computed to close the open faces at the boundary
 #### similar thing should be done for the new network too if needed.
 face_feature = face_features_combined[face_features_combined$sample_id == sample_id, ]
-plot(density(face_feature$Area_SL), main="Feature density in original network")
 
-orgKDE_face_area = kde(as.matrix(face_feature$Area_SL))
+orgKDE_face_area = kde(as.matrix(data.frame(face_feature$Area_SL, 
+                                            face_feature$Elong., 
+                                            face_feature$Orient.))) # this will be replaced by PC1 of all the face features we want
 
 network_info_list = generateNetworkEdges_2(branch.ppp, branch_all, face_feature, orgKDE_face_area,
                                          meshedness, network_density, compactness,
@@ -552,10 +617,20 @@ network_info_list = generateNetworkEdges_2(branch.ppp, branch_all, face_feature,
 net_data_struct = network_info_list[[1]]
 linnet_obj = network_info_list[[2]]
 
+#### creating a list representing degree for every node an use it in spatstat pattern
+graph_obj_0 = graph_from_data_frame(net_data_struct[, 5:6], directed = FALSE)
+degs = (igraph::degree(graph_obj_0))
+ord = order(as.numeric(names(degs)))
+degs = degs[ord]
+
+#### required sometimes
+marks(branch.ppp) = factor(degs)
+branch.ppp$markformat = "factor"
+
 branch.lpp_2 = lpp(branch.ppp, linnet_obj )
 plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
-                                                       "mediumpurple"))
-                                                       
+                                                                  "mediumpurple"))
+                                                                  
 
 #### compute the face area of the newly constructed network to compare the density with the original face area
 #### Reminder: for the simulated network there are many open boundary faces
