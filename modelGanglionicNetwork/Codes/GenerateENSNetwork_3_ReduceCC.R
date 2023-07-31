@@ -256,6 +256,21 @@ computeBoundaryEdges <- function(branch.ppp){
 }
 
 
+#### Given the pont pattern and the data structure of the network, computes the clustering coefficient by constructing
+#### the corresponding graph object
+ccFromDataframe <- function(branch.ppp, network_extra){
+    graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
+    graph_obj = add_edges(as.undirected(graph_obj), 
+                          as.vector(t(as.matrix(network_extra[,5:6]))))
+    
+    #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+    #### This is sometimes also called the clustering coefficient.
+    cluster_coeff = igraph::transitivity(graph_obj, type = "global")
+    
+    return(cluster_coeff)
+}
+
+
 deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sample_id){
     #### construct the Delaunay triangulation on the parent points as a starter network
     #### ord_point_list: to maintain the order of the points
@@ -316,7 +331,7 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
     network_extra = rbind(network_extra1)
     
     #### construct and display as corresponding ppp and linnet
-    degs = (igraph::degree(graph_obj))
+    degs = (igraph::degree(graph_obj, mode="total"))
     ord = order(as.numeric(names(degs)))
     degs = degs[ord]
     
@@ -336,7 +351,7 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
     ####new end
     
     #### degree list of the constructed Delaunay graph again for edge weight calculation
-    g_o_degree = igraph::degree(graph_obj)
+    g_o_degree = degs
     
     network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g_o_degree, x))
     network_extra$weight = range01(network_extra$weight)
@@ -349,8 +364,124 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
 }
 
 
+rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_node_count, 
+                    g2_degree, orgKDE_face_feat, triKDE_face_feat, 
+                    meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features){
+    
+    vertex_dist_boundary = bdist.points(branch.ppp)
+    
+    noChange = 0
+    while (TRUE) {
+        if(noChange == 200){    # if the network has not been changed for 200 iterations
+            break
+        }
+        
+        #### cc of the current network
+        cc_cur = ccFromDataframe(branch.ppp, network_extra1)
+        
+        if(cc_cur <= cluster_coeff){
+            cat("Rejection sampling ended [CC reached target]\n")
+            break
+        }
+        
+        #### select a vertex at random or based on high degree
+        set.seed(Sys.time())
+        
+        #### prepare the vertex probability from degree values
+        prob_vertex = g2_degree / sum(g2_degree)
+        selected_vertex = sample.int(branch.ppp$n, 1, prob = prob_vertex)
+        
+        #### detect the neighbors of a given vertex
+        adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
+                                 network_extra1$ind2[network_extra1$ind1==selected_vertex])
+        
+        #### list of the edges that are between those neighboring vertices (if any)
+        #### the indices are of network_extra1
+        edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) & 
+                                          (network_extra1$ind2 %in% adj_vertices_from_df))
+        
+        #### for each bet adj edge, there are two adj edges
+        for (e in edge_bet_adj_vertices) {
+            e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
+                                                        ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
+            
+            e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
+                                                        ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
+            cat(e, e1, e2, "\n")
+            
+            #### pick an edge random from these three ones
+            selected_edge = sample(c(e, e1, e2), 1)
+            cat(selected_edge, "\n")
+            
+            #### check for the degree of the end vertices
+            #### degree-one vertices only at the boundary
+            v1 = network_extra1$ind1[selected_edge]
+            v2 = network_extra1$ind2[selected_edge]
+            
+            #### if any of the end vertices of the selected edge has degree 2, deleting it will create a dangling vertex
+            #### and if that is not on the boundary we won't allow it
+            if((g2_degree[v1]==2 | g2_degree[v2]==2) & (vertex_dist_boundary[v1]!=0 | vertex_dist_boundary[v2]!=0)){
+                #noChange = noChange + 1
+                cat("Edge kept [Boundary degree constraint]\n")
+                next
+            }
+            
+            #### check if removing that edge disconnects the network
+            temp_network_extra1 = network_extra1[-c(selected_edge), ]
+            #rownames(temp_network_extra1) = NULL # to reset the row index after row deletion
+            
+            temp_graph_obj = make_empty_graph() %>% add_vertices(branch.ppp$n)
+            temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
+                                       as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+            
+            if(is_connected(temp_graph_obj)){
+                #### remove the edge, there is a change
+                noChange = 0
+                cat("Edge deleted\n")
+                
+                #### make necessary changes permanent
+                network_extra1 = temp_network_extra1
+                g2_degree = igraph::degree(temp_graph_obj, mode="total")
+                
+                #### also change the degree and weight variables
+            }else{
+                #### keep the edge, no change
+                noChange = noChange + 1
+                cat("Edge kept [Connectivity constraint]\n")
+            }
+        }
+    }
+    
+    ####
+    graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
+    graph_obj = add_edges(as.undirected(graph_obj), 
+              as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+    
+    #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+    #### This is sometimes also called the clustering coefficient.
+    cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+    cat("CC Sim: ", cluster_coeff_s, "\n")
+    
+    #### construct and display as corresponding ppp and linnet
+    degs = igraph::degree(graph_obj, mode="total")
+    # ord = order(as.numeric(names(degs)))
+    # degs = degs[ord]
+    
+    #### attach the degree information to the point pattern for proper visualization
+    marks(branch.ppp) = factor(degs)
+    branch.ppp$markformat = "factor"
+    g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra1[,5:6]))
+    branch.lpp_s = lpp(branch.ppp, g_o_lin )
+    
+    plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
+                                                                        "dodgerblue", "white", "maroon1", 
+                                                                        "mediumpurple", "yellow", "cyan"))
+    return(network_extra1)                                        
+}
+
+
 generateNetworkEdges_3 <- function(branch.ppp, branch_all, org_face_feature, orgKDE_face_feat,
-                                   meshedness, network_density, compactness,
+                                   meshedness, network_density, compactness, cluster_coeff,
                                    sample_id){
     
     #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
@@ -371,7 +502,7 @@ generateNetworkEdges_3 <- function(branch.ppp, branch_all, org_face_feature, org
     #### remove edges from the initial triangulation by rejection sampling
     network_extra = rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_node_count, 
                                         g2_degree, orgKDE_face_feat, triKDE_face_feat, 
-                                        meshedness, network_density, compactness, sample_id, tri_face_features)
+                                        meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features)
     
     #### create a graph from sampled triangulation
     g2 = make_empty_graph() %>% add_vertices(branch.ppp$n)
@@ -453,7 +584,7 @@ orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL,
 
 #### call the network generation functions
 network_info_list = generateNetworkEdges_3(branch.ppp, branch_all, face_feature, orgKDE_face_feat,
-                                           meshedness, network_density, compactness,
+                                           meshedness, network_density, compactness, cluster_coeff,
                                            sample_id)
 
 #### returned values
@@ -462,7 +593,7 @@ linnet_obj = network_info_list[[2]]
 
 #### creating a list representing degree for every node an use it in spatstat pattern
 graph_obj_0 = graph_from_data_frame(net_data_struct[, 5:6], directed = FALSE)
-degs = (igraph::degree(graph_obj_0))
+degs = (igraph::degree(graph_obj_0, mode="total"))
 ord = order(as.numeric(names(degs)))
 degs = degs[ord]
 
