@@ -60,14 +60,16 @@ contourPerimeter <- function(f_c){
 #### Given the list of all faces (as sequence of vertices) and a particular face id,
 #### this function computes all the face features under consideration of the given face id
 computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
-    cat("face id: ", f, "\n")
+    #cat("face id: ", f, "\n")
     
     #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
     if(!is.null(corner.ppp)){
         f_contour = as.matrix(contourNodeCoord(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp))) # in this case the contour is not a loop, as per example in documentation
     }else{
         f_contour = as.matrix(contourNodeCoord(face_list[[f]], u_branch.ppp))
-    }lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
+    }
+    
+    #lines(f_contour, col="red", type="l", lwd=2) # draws each face on the actual network for ease of verification
     
     area = Rvision::contourArea(f_contour[,1], f_contour[,2])
     
@@ -143,8 +145,8 @@ face_features_combined = data.frame(matrix(nrow = 0, ncol = length(columns_combi
 colnames(face_features_combined) = columns_combined
 
 #### a dataframe for mean and sd of all face features per sample
-columns_per_sample = c(paste("mean", colnames(face_features)[1:(ncol(face_features)-2)], sep="_"), 
-                       paste("sd", colnames(face_features)[1:(ncol(face_features)-2)], sep="_"),
+columns_per_sample = c(paste("mean", colnames(face_features_combined)[1:(ncol(face_features_combined)-2)], sep="_"), 
+                       paste("sd", colnames(face_features_combined)[1:(ncol(face_features_combined)-2)], sep="_"),
                        "ens_location", "sample_id")
 face_features_per_sample = data.frame(matrix(nrow = 0, ncol = length(columns_per_sample)))
 
@@ -188,11 +190,11 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     degree_frame = as.data.frame(igraph::degree(g1))
     colnames(degree_frame)[colnames(degree_frame) == 'igraph::degree(g1)'] = 'deg'
     
-    ggplot(degree_frame, aes(x=deg)) + 
-       geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 0.5)+ 
-       geom_density(alpha=1, colour="black", linewidth=1.5) +
-       scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
-       labs(x = "Degree of the vertices", y = "Density", color = "")
+    # ggplot(degree_frame, aes(x=deg)) + 
+    #    geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 0.5)+ 
+    #    geom_density(alpha=1, colour="black", linewidth=1.5) +
+    #    scale_x_continuous(limits=c(0, 10), breaks = seq(0,10, by=1))+
+    #    labs(x = "Degree of the vertices", y = "Density", color = "")
     
     cat("Degree distribution:", table_degree, "\n")
     
@@ -233,21 +235,21 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     #### not scaled
     branch.all$angle = (apply(branch.all, 1, function(x) calcAngle(x)))
     
-    print(ggplot(branch.all, aes(x=angle)) + 
-             geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 3)+
-             geom_density(alpha=1, colour="black", linewidth=1.5) +
-             labs(x = "Edge angle", y = "Density", color = "") )
-    
+    # print(ggplot(branch.all, aes(x=angle)) + 
+    #          geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 3)+
+    #          geom_density(alpha=1, colour="black", linewidth=1.5) +
+    #          labs(x = "Edge angle", y = "Density", color = "") )
+    # 
     
     #### calculate the edge length and plot the distribution
     #### not scaled
     branch.all$euclid = (apply(branch.all, 1, function(x) calcDist(x)))
     
-    print(ggplot(branch.all, aes(x=euclid)) + 
-             geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 7)+
-             geom_density(alpha=1, colour="black", linewidth=1.5) +
-             labs(x = "Edge length (Euclidean)", y = "Density", color = "") )
-    
+    # print(ggplot(branch.all, aes(x=euclid)) + 
+    #          geom_histogram(aes(y=after_stat(density)), colour="grey", fill="grey", binwidth = 7)+
+    #          geom_density(alpha=1, colour="black", linewidth=1.5) +
+    #          labs(x = "Edge length (Euclidean)", y = "Density", color = "") )
+    # 
     
     #### network faces
     #### adding additional edges for faces that are cut off at the boundary; these edges are not part of the actual network
@@ -309,14 +311,14 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     face_list = face_list[-which.max(face_area_list)]
     face_area_list = face_area_list[-which.max(face_area_list)]
     
-    hist(face_node_count, breaks=100)
+    plot(density(face_node_count))
 
-    ggplot(data.frame(area=face_area_list)) + 
-       geom_density(aes(x=area, y=after_stat(density)), alpha=1, colour="black", linewidth=1.5) +
-       labs(x = "Area of face", y = "Density", color = "")
-    
-    plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1", "mediumpurple"))
-    
+    # ggplot(data.frame(area=face_area_list)) + 
+    #    geom_density(aes(x=area, y=after_stat(density)), alpha=1, colour="black", linewidth=1.5) +
+    #    labs(x = "Area of face", y = "Density", color = "")
+    # 
+    # plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1", "mediumpurple"))
+    # 
     #### face features computation
     columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
     face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
@@ -341,12 +343,12 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     
 }# loop ends for each sample
 
-figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
-write.csv(face_features_combined, paste(figure_folder, "FaceFeatures_2.csv", sep = ""))
-
-colnames(face_features_per_sample) = columns_per_sample
-face_features_per_sample = face_features_per_sample[, c(1, 9, 2, 10, 3, 11, 4 , 12, 5, 13, 6, 14, 7, 15, 8, 16, 17, 18)]
-write.csv(face_features_per_sample, paste(figure_folder, "FaceFeaturesperSample_2.csv", sep = ""))
+# figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
+# write.csv(face_features_combined, paste(figure_folder, "FaceFeatures_2.csv", sep = ""))
+# 
+# colnames(face_features_per_sample) = columns_per_sample
+# face_features_per_sample = face_features_per_sample[, c(1, 9, 2, 10, 3, 11, 4 , 12, 5, 13, 6, 14, 7, 15, 8, 16, 17, 18)]
+# write.csv(face_features_per_sample, paste(figure_folder, "FaceFeaturesperSample_2.csv", sep = ""))
 
 
 
