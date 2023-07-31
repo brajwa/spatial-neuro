@@ -378,7 +378,6 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
         
         #### cc of the current network
         cc_cur = ccFromDataframe(branch.ppp, network_extra1)
-        
         if(cc_cur <= cluster_coeff){
             cat("Rejection sampling ended [CC reached target]\n")
             break
@@ -390,6 +389,9 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
         #### prepare the vertex probability from degree values
         prob_vertex = g2_degree / sum(g2_degree)
         selected_vertex = sample.int(branch.ppp$n, 1, prob = prob_vertex)
+        
+        cat("Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
+        points(branch.ppp$x[selected_vertex], branch.ppp$y[selected_vertex], col="red", cex=2, pch=19)
         
         #### detect the neighbors of a given vertex
         adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
@@ -417,6 +419,7 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
             #### degree-one vertices only at the boundary
             v1 = network_extra1$ind1[selected_edge]
             v2 = network_extra1$ind2[selected_edge]
+            lines(c(branch.ppp$x[v1], branch.ppp$x[v2]), c(branch.ppp$y[v1], branch.ppp$y[v2]), col="red", lwd=2.5)
             
             #### if any of the end vertices of the selected edge has degree 2, deleting it will create a dangling vertex
             #### and if that is not on the boundary we won't allow it
@@ -435,6 +438,10 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                                        as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
             
             if(is_connected(temp_graph_obj)){
+                #### ensured that removing the edge will not disconnect the network
+                #### now check for distribution of face features
+                
+                
                 #### remove the edge, there is a change
                 noChange = 0
                 cat("Edge deleted\n")
