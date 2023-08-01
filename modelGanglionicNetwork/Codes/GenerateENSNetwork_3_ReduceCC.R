@@ -441,6 +441,51 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                 #### ensured that removing the edge will not disconnect the network
                 #### now check for distribution of face features
                 
+                #### finding out the faces the chosen edge is a part of
+                face_index = which(unlist(lapply(face_list, 
+                                                 function(x) isEdgeOnFace(x, c(network_extra1[selected_edge, ]$ind1, 
+                                                                               network_extra1[selected_edge, ]$ind2)))))
+                
+                #### recompute the face features and KDE assuming the edge has been removed
+                #### and there's a new face now
+                temp_g_o <- as_graphnel(temp_graph_obj) 
+                boyerMyrvoldPlanarityTest(temp_g_o)
+                
+                temp_face_list = planarFaceTraversal(temp_g_o)
+                temp_face_node_count = sapply(temp_face_list, length)
+                
+                #### applying the shoe lace formula
+                u_branch.ppp = unmark(branch.ppp)
+                temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, u_branch.ppp))
+                
+                #### eliminating the outer face, it has the largest face area
+                temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
+                temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
+                temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
+                
+                #### face features computation
+                temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+                temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
+                colnames(temp_face_features) = temp_columns
+                
+                for(f in c(1: length(temp_face_list))){
+                    temp_f_feat = computeFacefeatures(f, temp_face_list, u_branch.ppp, NULL)
+                    temp_face_features = rbind(temp_face_features, temp_f_feat)
+                    
+                }# loop ends for each face of the temp network
+                
+                temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
+                                                            temp_face_features$elong, 
+                                                            temp_face_features$orient)))
+                
+                ####finding the new face
+                face_p = c()
+                for(f_i in face_index){
+                    face_p = c(face_p, as.numeric(unlist(face_list[f_i])))
+                }
+                face_p = unique(face_p)
+                face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))), 
+                                            identical, sort(face_p)))
                 
                 #### remove the edge, there is a change
                 noChange = 0
