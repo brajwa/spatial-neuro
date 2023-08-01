@@ -390,7 +390,7 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
         prob_vertex = g2_degree / sum(g2_degree)
         selected_vertex = sample.int(branch.ppp$n, 1, prob = prob_vertex)
         
-        cat("Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
+        cat("Selected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
         points(branch.ppp$x[selected_vertex], branch.ppp$y[selected_vertex], col="red", cex=2, pch=19)
         
         #### detect the neighbors of a given vertex
@@ -413,7 +413,7 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
             
             #### pick an edge random from these three ones
             selected_edge = sample(c(e, e1, e2), 1)
-            cat(selected_edge, "\n")
+            cat("Selected edge ID: ", selected_edge, "\n")
             
             #### check for the degree of the end vertices
             #### degree-one vertices only at the boundary
@@ -427,6 +427,8 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                 #noChange = noChange + 1
                 cat("Edge kept [Boundary degree constraint]\n")
                 next
+            }else{
+                cat("Not a boundary edge\n")
             }
             
             #### check if removing that edge disconnects the network
@@ -487,21 +489,97 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                 face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))), 
                                             identical, sort(face_p)))
                 
-                #### remove the edge, there is a change
-                noChange = 0
-                cat("Edge deleted\n")
+                edge_reject = FALSE
                 
-                #### make necessary changes permanent
-                network_extra1 = temp_network_extra1
-                g2_degree = igraph::degree(temp_graph_obj, mode="total")
+                #### prediction
+                org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index], 
+                                                        temp_face_features$elong[face_p_index], 
+                                                        temp_face_features$orient[face_p_index]))
+                temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index], 
+                                                                  temp_face_features$elong[face_p_index], 
+                                                                  temp_face_features$orient[face_p_index]))
                 
-                #### also change the degree and weight variables
+                if(length(face_index)==2){
+                    f1 = face_index[1]
+                    f2 = face_index[2]
+                    
+                    org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                    tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                    
+                    org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
+                    tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
+                    
+                    if((org_est1 < tri_est1) & (org_est2 < tri_est2) & (org_est >= temp_tri_est)){
+                        edge_reject = TRUE
+                    }
+                    
+                }else if(length(face_index)==1){
+                    f1 = face_index[1]
+
+                    org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                    tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                    
+                    if((org_est1 < tri_est1) & (org_est >= temp_tri_est)){
+                        edge_reject = TRUE
+                    }
+                    
+                }else{
+                    cat("Error in face identification\n")
+                    quit()
+                }
+                
+                if(edge_reject){
+                    #### remove the edge, there is a change
+                    noChange = 0
+                    cat("Edge deleted\n")
+                    
+                    #### make necessary changes permanent
+                    network_extra1 = temp_network_extra1
+                    g2_degree = igraph::degree(temp_graph_obj, mode="total")
+                    
+                    face_list = temp_face_list
+                    face_area_list = temp_face_area_list
+                    face_node_count = temp_face_node_count
+                    triKDE_face_feat = temp_triKDE_face_feat
+                    tri_face_features = temp_face_features
+                    
+                }else{
+                    #### keep the edge, no change
+                    noChange = noChange + 1
+                    cat("Edge kept [Face feature estimation constraint]\n")
+                }
+                
             }else{
                 #### keep the edge, no change
                 noChange = noChange + 1
                 cat("Edge kept [Connectivity constraint]\n")
             }
         }
+        
+        #### temporarily plotting each iteration
+        graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
+        graph_obj = add_edges(as.undirected(graph_obj), 
+                              as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+        
+        #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+        #### This is sometimes also called the clustering coefficient.
+        cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+        cat("CC Sim: ", cluster_coeff_s, "\n")
+        
+        #### construct and display as corresponding ppp and linnet
+        degs = igraph::degree(graph_obj, mode="total")
+        # ord = order(as.numeric(names(degs)))
+        # degs = degs[ord]
+        
+        #### attach the degree information to the point pattern for proper visualization
+        marks(branch.ppp) = factor(degs)
+        branch.ppp$markformat = "factor"
+        g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra1[,5:6]))
+        branch.lpp_s = lpp(branch.ppp, g_o_lin )
+        
+        plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
+                                                                    "dodgerblue", "white", "maroon1", 
+                                                                    "mediumpurple", "yellow", "cyan"))
     }
     
     ####
