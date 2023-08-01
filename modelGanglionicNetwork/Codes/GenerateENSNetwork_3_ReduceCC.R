@@ -541,6 +541,10 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                 face_p = unique(face_p)
                 face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))), 
                                             identical, sort(face_p)))
+                if(length(face_p_index)==0){
+                    cat("Error in face identification 2\n")
+                    next
+                }
                 
                 edge_reject = FALSE
                 
@@ -562,7 +566,7 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                     org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
                     tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
                     
-                    if((org_est1 < tri_est1) & (org_est2 < tri_est2) & (org_est >= temp_tri_est)){
+                    if((org_est >= temp_tri_est)){
                         edge_reject = TRUE
                     }
                     
@@ -572,12 +576,12 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                     org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
                     tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
                     
-                    if((org_est1 < tri_est1) & (org_est >= temp_tri_est)){
+                    if((org_est >= temp_tri_est)){
                         edge_reject = TRUE
                     }
                     
                 }else{
-                    cat("Error in face identification\n")
+                    cat("Error in face identification 1\n")
                     quit()
                 }
                 
@@ -607,32 +611,32 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
                 noChange = noChange + 1
                 cat("Edge kept [Connectivity constraint]\n")
             }
+            
+            #### temporarily plotting each iteration
+            graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
+            graph_obj = add_edges(as.undirected(graph_obj), 
+                                  as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+            
+            #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
+            #### This is sometimes also called the clustering coefficient.
+            cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+            cat("CC Sim: ", cluster_coeff_s, "\n")
+            
+            #### construct and display as corresponding ppp and linnet
+            degs = igraph::degree(graph_obj, mode="total")
+            # ord = order(as.numeric(names(degs)))
+            # degs = degs[ord]
+            
+            #### attach the degree information to the point pattern for proper visualization
+            marks(branch.ppp) = factor(degs)
+            branch.ppp$markformat = "factor"
+            g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra1[,5:6]))
+            branch.lpp_s = lpp(branch.ppp, g_o_lin )
+            
+            plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
+                                                                        "dodgerblue", "white", "maroon1", 
+                                                                        "mediumpurple", "yellow", "cyan"))
         }
-        
-        #### temporarily plotting each iteration
-        graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
-        graph_obj = add_edges(as.undirected(graph_obj), 
-                              as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
-        
-        #### Transitivity measures the probability that the adjacent vertices of a vertex are connected. 
-        #### This is sometimes also called the clustering coefficient.
-        cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
-        cat("CC Sim: ", cluster_coeff_s, "\n")
-        
-        #### construct and display as corresponding ppp and linnet
-        degs = igraph::degree(graph_obj, mode="total")
-        # ord = order(as.numeric(names(degs)))
-        # degs = degs[ord]
-        
-        #### attach the degree information to the point pattern for proper visualization
-        marks(branch.ppp) = factor(degs)
-        branch.ppp$markformat = "factor"
-        g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra1[,5:6]))
-        branch.lpp_s = lpp(branch.ppp, g_o_lin )
-        
-        plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
-                                                                    "dodgerblue", "white", "maroon1", 
-                                                                    "mediumpurple", "yellow", "cyan"))
     }
     
     ####
@@ -834,3 +838,6 @@ for(f in c(1: length(face_list))){
 }# loop ends for each face of the simulated network
 
 comparePlotOrgSim(face_feature, face_features_sim)
+
+#########################################################################
+#(org_est1 < tri_est1) & (org_est2 < tri_est2) & (org_est >= temp_tri_est)
