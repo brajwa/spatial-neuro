@@ -392,9 +392,14 @@ rejectionSampling_3(branch.ppp, network_extra1, face_list, face_area_list, face_
         set.seed(Sys.time())
         
         #### prepare the vertex probability from degree values
-        # prob_vertex = g2_degree / max(g2_degree)
-        # selected_vertex = sample(branch.ppp$n, 1, prob = prob_vertex)
-        selected_vertex = sample(which(g2_degree == max(g2_degree)), 1)
+        max_deg_vertex = which(g2_degree == max(g2_degree))
+        if(length(max_deg_vertex) > 1){
+            selected_vertex = sample(max_deg_vertex, 1)
+        }else{
+            prob_vertex = g2_degree / max(g2_degree)
+            selected_vertex = sample(branch.ppp$n, 1, prob = prob_vertex)
+        }
+        
         
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
         points(branch.ppp$x[selected_vertex], branch.ppp$y[selected_vertex], col="red", cex=2, pch=19)
