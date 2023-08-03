@@ -470,10 +470,10 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
     
     noChange = 0
     while (TRUE) {
-        q = readline()
-        if(q=="q"){
-            break
-        }
+        # q = readline()
+        # if(q=="q"){
+        #     break
+        # }
         
         if(noChange == 200){    # if the network has not been changed for 200 iterations
             break
