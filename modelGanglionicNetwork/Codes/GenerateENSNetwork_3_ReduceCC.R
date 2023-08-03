@@ -271,6 +271,66 @@ ccFromDataframe <- function(branch.ppp, network_extra){
 }
 
 
+#### given a single or list of edge index and the current network structure,
+#### eliminated the given edges from the network and 
+#### recomputes all network features
+eliminateEdges <- function(network_extra1, edges_to_eliminate){
+    
+    temp_network_extra1 = network_extra1[-c(edges_to_eliminate), ]
+    temp_graph_obj = make_empty_graph() %>% add_vertices(branch.ppp$n)
+    temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
+                               as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+    
+    temp_g_o <- as_graphnel(temp_graph_obj) 
+    boyerMyrvoldPlanarityTest(temp_g_o)
+    
+    temp_face_list = planarFaceTraversal(temp_g_o)
+    temp_face_node_count = sapply(temp_face_list, length)
+    
+    #### applying the shoe lace formula
+    u_branch.ppp = unmark(branch.ppp)
+    temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, u_branch.ppp))
+    
+    #### eliminating the outer face, it has the largest face area
+    temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
+    temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
+    temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
+    
+    #### face features computation
+    temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+    temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
+    colnames(temp_face_features) = temp_columns
+    
+    for(f in c(1: length(temp_face_list))){
+        temp_f_feat = computeFacefeatures(f, temp_face_list, u_branch.ppp, NULL)
+        temp_face_features = rbind(temp_face_features, temp_f_feat)
+        
+    }# loop ends for each face of the network
+    
+    temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
+                                                     temp_face_features$elong, 
+                                                     temp_face_features$orient)))
+    
+    #### remove the edges, there is a change
+    cat("Edge(s) deleted\n")
+    noChange = 0
+    
+    #### make necessary changes permanent
+    network_extra1 = temp_network_extra1
+    g2_degree = igraph::degree(temp_graph_obj, mode="total")
+    print(table(g2_degree))
+    
+    face_list = temp_face_list
+    face_area_list = temp_face_area_list
+    face_node_count = temp_face_node_count
+    triKDE_face_feat = temp_triKDE_face_feat
+    tri_face_features = temp_face_features
+    
+    return(list(noChange, network_extra1, g2_degree, face_list, face_area_list, face_node_count,
+                triKDE_face_feat, tri_face_features))
+}
+
+
 deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sample_id){
     #### construct the Delaunay triangulation on the parent points as a starter network
     #### ord_point_list: to maintain the order of the points
@@ -376,63 +436,26 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
     edges_to_eliminate = c(which(network_extra1$euclidDist > org_max_edge_length),
                            which(network_extra1$euclidDist < org_min_edge_length))
     
-    temp_network_extra1 = network_extra1[-c(edges_to_eliminate), ]
-    temp_graph_obj = make_empty_graph() %>% add_vertices(branch.ppp$n)
-    temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
-                               as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
-    temp_g_o <- as_graphnel(temp_graph_obj) 
-    boyerMyrvoldPlanarityTest(temp_g_o)
+    after_elim = eliminateEdges(network_extra1, edges_to_eliminate)
     
-    temp_face_list = planarFaceTraversal(temp_g_o)
-    temp_face_node_count = sapply(temp_face_list, length)
+    noChange = after_elim[[1]]
+    network_extra1 = after_elim[[2]]
+    g2_degree = after_elim[[3]]
+    face_list = after_elim[[4]]
+    face_area_list = after_elim[[5]]
+    face_node_count = after_elim[[6]]
+    triKDE_face_feat = after_elim[[7]]
+    tri_face_features = after_elim[[8]]
     
-    #### applying the shoe lace formula
-    u_branch.ppp = unmark(branch.ppp)
-    temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, u_branch.ppp))
-    
-    #### eliminating the outer face, it has the largest face area
-    temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
-    temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
-    temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
-    
-    #### face features computation
-    temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
-    temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
-    colnames(temp_face_features) = temp_columns
-    
-    for(f in c(1: length(temp_face_list))){
-        temp_f_feat = computeFacefeatures(f, temp_face_list, u_branch.ppp, NULL)
-        temp_face_features = rbind(temp_face_features, temp_f_feat)
-        
-    }# loop ends for each face of the temp network
-    
-    temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
-                                                     temp_face_features$elong, 
-                                                     temp_face_features$orient)))
-    
-    #### remove the edges, there is a change
-    cat("Long edge deleted\n")
-    
-    #### make necessary changes permanent
-    network_extra1 = temp_network_extra1
-    g2_degree = igraph::degree(temp_graph_obj, mode="total")
-    print(table(g2_degree))
-    
-    face_list = temp_face_list
-    face_area_list = temp_face_area_list
-    face_node_count = temp_face_node_count
-    triKDE_face_feat = temp_triKDE_face_feat
-    tri_face_features = temp_face_features
-    
-    #### next steps
+    #### distance of each vertex from the point pattern boundary
     vertex_dist_boundary = bdist.points(branch.ppp)
     
     noChange = 0
     while (TRUE) {
-        q = readline()
-        if(q=="q"){
-            break
-        }
+        # q = readline()
+        # if(q=="q"){
+        #     break
+        # }
         
         if(noChange == 200){    # if the network has not been changed for 200 iterations
             break
@@ -445,20 +468,11 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
             break
         }
         
+        #### prepare the vertex probability from degree values
+        prob_vertex = g2_degree / sum(g2_degree)
         #### select a vertex at random or based on high degree
         set.seed(Sys.time())
-        
-        #### prepare the vertex probability from degree values
-        max_deg_vertex = which(g2_degree == max(g2_degree))
-        
-        if(length(max_deg_vertex) > 1){
-            selected_vertex = sample(max_deg_vertex, 1)
-        }else{
-            prob_vertex = g2_degree / max(g2_degree)
-            selected_vertex = sample(branch.ppp$n, 1, prob = prob_vertex)
-            
-            selected_vertex = sample(c(selected_vertex, max_deg_vertex), 1)
-        }
+        selected_vertex = sample.int(branch.ppp$n, 1, prob = prob_vertex)
         
         
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
@@ -475,23 +489,36 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
         
         if(length(edge_bet_adj_vertices)==0){
             cat("No edges between neighboring vertices.\n")
-            next
+            
+            #### select an totally edge at random
+            selected_edge = sample(length(network_extra1$x1), 1)
+                
+        }else if(length(edge_bet_adj_vertices)==1){
+            e = edge_bet_adj_vertices
+            
+            e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
+                           ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
+            
+            e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
+                           ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
+            cat(e, e1, e2, "\n")
+            
+            #### pick an edge random from these three ones
+            selected_edge = sample(c(e, e1, e2), 1)
+        }else{
+            e = sample(edge_bet_adj_vertices, 1)
+            
+            e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
+                           ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
+            
+            e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
+                           ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
+            cat(e, e1, e2, "\n")
+            
+            #### pick an edge random from these three ones
+            selected_edge = sample(c(e, e1, e2), 1)
         }
         
-        e = sample(edge_bet_adj_vertices, 1)
-        
-        #### for each bet adj edge, there are two adj edges
-        #for (e in edge_bet_adj_vertices) {
-        
-        e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
-                                                    ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
-        
-        e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
-                                                    ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
-        cat(e, e1, e2, "\n")
-        
-        #### pick an edge random from these three ones
-        selected_edge = sample(c(e, e1, e2), 1)
         cat("Selected edge ID: ", selected_edge, "\n")
         
         #### check for the degree of the end vertices
@@ -719,7 +746,6 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
         plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
                                                                     "dodgerblue", "white", "maroon1", 
                                                                     "mediumpurple", "yellow", "cyan"))
-        #}
     }
     
     ####
