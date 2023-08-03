@@ -326,6 +326,10 @@ eliminateEdges <- function(network_extra1, edges_to_eliminate){
     triKDE_face_feat = temp_triKDE_face_feat
     tri_face_features = temp_face_features
     
+    if(!is_connected(temp_graph_obj)){
+        cat("NETWORK GOT DISCONNECTED\n")
+    }
+    
     return(list(noChange, network_extra1, g2_degree, face_list, face_area_list, face_node_count,
                 triKDE_face_feat, tri_face_features))
 }
@@ -428,6 +432,23 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
                     g2_degree, orgKDE_face_feat, triKDE_face_feat, 
                     meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features){
     
+    #### eliminate boundary-boundary edges
+    #### distance of each vertex from the point pattern boundary
+    vertex_dist_boundary = bdist.points(branch.ppp)
+    bb_edges = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
+                         (vertex_dist_boundary[network_extra1$ind2]==0))
+    
+    after_elim_0 = eliminateEdges(network_extra1, bb_edges)
+    
+    noChange = after_elim_0[[1]]
+    network_extra1 = after_elim_0[[2]]
+    g2_degree = after_elim_0[[3]]
+    face_list = after_elim_0[[4]]
+    face_area_list = after_elim_0[[5]]
+    face_node_count = after_elim_0[[6]]
+    triKDE_face_feat = after_elim_0[[7]]
+    tri_face_features = after_elim_0[[8]]
+    
     #### eliminate the edges from the triangulation whose length is larger/smaller than the max/min edge length
     #### in the original network
     #### then recompute the face features and KDE required
@@ -447,15 +468,12 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
     triKDE_face_feat = after_elim[[7]]
     tri_face_features = after_elim[[8]]
     
-    #### distance of each vertex from the point pattern boundary
-    vertex_dist_boundary = bdist.points(branch.ppp)
-    
     noChange = 0
     while (TRUE) {
-        # q = readline()
-        # if(q=="q"){
-        #     break
-        # }
+        q = readline()
+        if(q=="q"){
+            break
+        }
         
         if(noChange == 200){    # if the network has not been changed for 200 iterations
             break
@@ -529,8 +547,8 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
         
         #### if any of the end vertices of the selected edge has degree 2, deleting it will create a dangling vertex
         #### and if that is not on the boundary we won't allow it
-        if((g2_degree[v1]==2 | g2_degree[v2]==2) & (vertex_dist_boundary[v1]!=0 | vertex_dist_boundary[v2]!=0)){
-            #noChange = noChange + 1
+        if((g2_degree[v1]<=2 | g2_degree[v2]<=2) & (vertex_dist_boundary[v1]!=0 | vertex_dist_boundary[v2]!=0)){
+            noChange = noChange + 1
             cat("Edge kept [Boundary degree constraint]\n")
             next
         }
@@ -539,54 +557,16 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
         #### but no other comparison will be possible for a new face
         #### so we reject the edge without any more comparison
         if((vertex_dist_boundary[v1]==0 & vertex_dist_boundary[v2]==0)){
-            temp_network_extra1 = network_extra1[-c(selected_edge), ]
-            temp_graph_obj = make_empty_graph() %>% add_vertices(branch.ppp$n)
-            temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
-                                       as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
-            temp_g_o <- as_graphnel(temp_graph_obj) 
-            boyerMyrvoldPlanarityTest(temp_g_o)
+            after_elim_2 = eliminateEdges(network_extra1, selected_edge)
             
-            temp_face_list = planarFaceTraversal(temp_g_o)
-            temp_face_node_count = sapply(temp_face_list, length)
-            
-            #### applying the shoe lace formula
-            u_branch.ppp = unmark(branch.ppp)
-            temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, u_branch.ppp))
-            
-            #### eliminating the outer face, it has the largest face area
-            temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
-            temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
-            temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
-            
-            #### face features computation
-            temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
-            temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
-            colnames(temp_face_features) = temp_columns
-            
-            for(f in c(1: length(temp_face_list))){
-                temp_f_feat = computeFacefeatures(f, temp_face_list, u_branch.ppp, NULL)
-                temp_face_features = rbind(temp_face_features, temp_f_feat)
-                
-            }# loop ends for each face of the temp network
-            
-            temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
-                                                             temp_face_features$elong, 
-                                                             temp_face_features$orient)))
-            
-            #### remove the edge, there is a change
-            noChange = 0
-            cat("Boundary edge deleted\n")
-            
-            #### make necessary changes permanent
-            network_extra1 = temp_network_extra1
-            g2_degree = igraph::degree(temp_graph_obj, mode="total")
-            print(table(g2_degree))
-            
-            face_list = temp_face_list
-            face_area_list = temp_face_area_list
-            face_node_count = temp_face_node_count
-            triKDE_face_feat = temp_triKDE_face_feat
-            tri_face_features = temp_face_features
+            noChange = after_elim_2[[1]]
+            network_extra1 = after_elim_2[[2]]
+            g2_degree = after_elim_2[[3]]
+            face_list = after_elim_2[[4]]
+            face_area_list = after_elim_2[[5]]
+            face_node_count = after_elim_2[[6]]
+            triKDE_face_feat = after_elim_2[[7]]
+            tri_face_features = after_elim_2[[8]]
             
             next
         }
@@ -648,6 +628,7 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
             face_p = unique(face_p)
             face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))), 
                                         identical, sort(face_p)))
+            
             if(length(face_p_index)==0){
                 cat("Error in face identification 2\n")
                 next
