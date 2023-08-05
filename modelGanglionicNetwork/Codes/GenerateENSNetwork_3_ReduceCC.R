@@ -335,11 +335,11 @@ eliminateEdges <- function(network_extra1, edges_to_eliminate){
 }
 
 
-deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sample_id){
+deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id){
     #### construct the Delaunay triangulation on the parent points as a starter network
     #### ord_point_list: to maintain the order of the points
     set.seed(Sys.time())
-    ord_point_list = data.frame(x = branch.ppp$x, y = branch.ppp$y)
+    ord_point_list = data.frame(x = gen.ppp$x, y = gen.ppp$y)
     
     network_triangulation = deldir(ord_point_list[, 1:2])
     
@@ -369,10 +369,7 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
     face_node_count = sapply(face_list, length)
     
     #### applying the shoe lace formula
-    #### the original point pattern is being unmarked 
-    #### as we only need the coordinates for the shoelace formula
-    u_branch.ppp = unmark(branch.ppp)
-    face_area_list = sapply(face_list, function(x) faceArea(x, u_branch.ppp))
+    face_area_list = sapply(face_list, function(x) faceArea(x, gen.ppp))
     
     #### eliminating the outer face, it has the largest face area
     face_node_count = face_node_count[-which.max(face_area_list)]
@@ -385,7 +382,7 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
     colnames(face_features) = columns    
     
     for(f in c(1: length(face_list))){
-        f_feat = computeFacefeatures(f, face_list, u_branch.ppp, NULL)
+        f_feat = computeFacefeatures(f, face_list, gen.ppp, NULL)
         face_features = rbind(face_features, f_feat)
         
     }# loop ends for each face of the triangulation
@@ -400,10 +397,10 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
     degs = degs[ord]
     
     #### attach the degree information to the point pattern for proper visualization
-    marks(branch.ppp) = factor(degs)
-    branch.ppp$markformat = "factor"
-    g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra[,5:6]))
-    branch.lpp_dt = lpp(branch.ppp, g_o_lin )
+    marks(gen.ppp) = factor(degs)
+    gen.ppp$markformat = "factor"
+    g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra[,5:6]))
+    branch.lpp_dt = lpp(gen.ppp, g_o_lin )
     
     plot(branch.lpp_dt, main="Initial DT", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
                                                                         "dodgerblue", "white", "maroon1", 
@@ -428,27 +425,13 @@ deterministicEdges_3 <- function(branch.ppp, branch.all, org_face_feature, sampl
 }
 
 
-rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
+rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
                     g2_degree, orgKDE_face_feat, triKDE_face_feat, 
                     meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features){
     
-    #### eliminate boundary-boundary edges
     #### distance of each vertex from the point pattern boundary
-    vertex_dist_boundary = bdist.points(branch.ppp)
-    bb_edges = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
-                         (vertex_dist_boundary[network_extra1$ind2]==0))
-    
-    after_elim_0 = eliminateEdges(network_extra1, bb_edges)
-    
-    noChange = after_elim_0[[1]]
-    network_extra1 = after_elim_0[[2]]
-    g2_degree = after_elim_0[[3]]
-    face_list = after_elim_0[[4]]
-    face_area_list = after_elim_0[[5]]
-    face_node_count = after_elim_0[[6]]
-    triKDE_face_feat = after_elim_0[[7]]
-    tri_face_features = after_elim_0[[8]]
-    
+    vertex_dist_boundary = bdist.points(gen.ppp)
+   
     #### eliminate the edges from the triangulation whose length is larger/smaller than the max/min edge length
     #### in the original network
     #### then recompute the face features and KDE required
@@ -729,6 +712,22 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
                                                                     "mediumpurple", "yellow", "cyan"))
     }
     
+    # #### eliminate boundary-boundary edges
+    # bb_edges = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
+    #                      (vertex_dist_boundary[network_extra1$ind2]==0))
+    # 
+    # after_elim_0 = eliminateEdges(network_extra1, bb_edges)
+    # 
+    # noChange = after_elim_0[[1]]
+    # network_extra1 = after_elim_0[[2]]
+    # g2_degree = after_elim_0[[3]]
+    # face_list = after_elim_0[[4]]
+    # face_area_list = after_elim_0[[5]]
+    # face_node_count = after_elim_0[[6]]
+    # triKDE_face_feat = after_elim_0[[7]]
+    # tri_face_features = after_elim_0[[8]]
+    
+    
     ####
     graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
     graph_obj = add_edges(as.undirected(graph_obj), 
@@ -757,12 +756,12 @@ rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area
 }
 
 
-generateNetworkEdges_3 <- function(branch.ppp, branch_all, org_face_feature, orgKDE_face_feat,
+generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_feature, orgKDE_face_feat,
                                    meshedness, network_density, compactness, cluster_coeff,
                                    sample_id){
     
     #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
-    triangulation_info_list = deterministicEdges_3(branch.ppp, branch.all, org_face_feature, sample_id)
+    triangulation_info_list = deterministicEdges_3(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id)
     
     #### returned values
     network_extra1 = triangulation_info_list[[1]]
@@ -777,7 +776,7 @@ generateNetworkEdges_3 <- function(branch.ppp, branch_all, org_face_feature, org
     tri_face_features = triangulation_info_list[[7]]
     
     #### remove edges from the initial triangulation by rejection sampling
-    network_extra = rejectionSampling_3(branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
+    network_extra = rejectionSampling_3(gen.ppp, branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
                                         g2_degree, orgKDE_face_feat, triKDE_face_feat, 
                                         meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features)
     
@@ -858,9 +857,14 @@ orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL,
 ####At this point, new point pattern will be simulated. 
 ####For now we are generating networks on the original point pattern.
 ####branch.ppp will be replaced by some new ppp object
+gen.ppp = unmark(branch.ppp)
+gen_corner.ppp = ppp(x=c(gen.ppp$window$xrange[1], gen.ppp$window$xrange[2], gen.ppp$window$xrange[2], gen.ppp$window$xrange[1]), 
+                 y=c(gen.ppp$window$yrange[2], gen.ppp$window$yrange[2], gen.ppp$window$yrange[1], gen.ppp$window$yrange[1]),
+                 window = gen.ppp$window)
+gen.ppp = superimpose(gen.ppp, gen_corner.ppp)
 
 #### call the network generation functions
-network_info_list = generateNetworkEdges_3(branch.ppp, branch_all, face_feature, orgKDE_face_feat,
+network_info_list = generateNetworkEdges_3(gen.ppp, branch.ppp, branch_all, face_feature, orgKDE_face_feat,
                                            meshedness, network_density, compactness, cluster_coeff,
                                            sample_id)
 
