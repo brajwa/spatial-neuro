@@ -274,10 +274,10 @@ ccFromDataframe <- function(branch.ppp, network_extra){
 #### given a single or list of edge index and the current network structure,
 #### eliminated the given edges from the network and 
 #### recomputes all network features
-eliminateEdges <- function(network_extra1, edges_to_eliminate){
+eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     
     temp_network_extra1 = network_extra1[-c(edges_to_eliminate), ]
-    temp_graph_obj = make_empty_graph() %>% add_vertices(branch.ppp$n)
+    temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
     temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
                                as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
     
@@ -288,8 +288,7 @@ eliminateEdges <- function(network_extra1, edges_to_eliminate){
     temp_face_node_count = sapply(temp_face_list, length)
     
     #### applying the shoe lace formula
-    u_branch.ppp = unmark(branch.ppp)
-    temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, u_branch.ppp))
+    temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, gen.ppp))
     
     #### eliminating the outer face, it has the largest face area
     temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
@@ -302,7 +301,7 @@ eliminateEdges <- function(network_extra1, edges_to_eliminate){
     colnames(temp_face_features) = temp_columns
     
     for(f in c(1: length(temp_face_list))){
-        temp_f_feat = computeFacefeatures(f, temp_face_list, u_branch.ppp, NULL)
+        temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
         temp_face_features = rbind(temp_face_features, temp_f_feat)
         
     }# loop ends for each face of the network
@@ -431,6 +430,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     
     #### distance of each vertex from the point pattern boundary
     vertex_dist_boundary = bdist.points(gen.ppp)
+    
+    ####index of the boundary edges
+    bb_edges = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
+                          (vertex_dist_boundary[network_extra1$ind2]==0))
    
     #### eliminate the edges from the triangulation whose length is larger/smaller than the max/min edge length
     #### in the original network
@@ -440,7 +443,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     edges_to_eliminate = c(which(network_extra1$euclidDist > org_max_edge_length),
                            which(network_extra1$euclidDist < org_min_edge_length))
     
-    after_elim = eliminateEdges(network_extra1, edges_to_eliminate)
+    #### but we do not eliminate any boundary edge [for now]
+    edges_to_eliminate = setdiff(edges_to_eliminate, bb_edges) 
+    
+    after_elim = eliminateEdges(gen.ppp, network_extra1, edges_to_eliminate)
     
     noChange = after_elim[[1]]
     network_extra1 = after_elim[[2]]
@@ -687,7 +693,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         }
         
         #### temporarily plotting each iteration
-        graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
+        graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
         graph_obj = add_edges(as.undirected(graph_obj), 
                               as.vector(t(as.matrix(network_extra1[,5:6]))))
         
@@ -702,10 +708,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         # degs = degs[ord]
         
         #### attach the degree information to the point pattern for proper visualization
-        marks(branch.ppp) = factor(degs)
-        branch.ppp$markformat = "factor"
-        g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra1[,5:6]))
-        branch.lpp_s = lpp(branch.ppp, g_o_lin )
+        marks(gen.ppp) = factor(degs)
+        gen.ppp$markformat = "factor"
+        g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
+        branch.lpp_s = lpp(gen.ppp, g_o_lin )
         
         plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
                                                                     "dodgerblue", "white", "maroon1", 
