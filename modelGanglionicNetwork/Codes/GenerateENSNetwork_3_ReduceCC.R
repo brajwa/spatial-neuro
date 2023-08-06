@@ -333,6 +333,14 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
                 triKDE_face_feat, tri_face_features))
 }
 
+#### detects if a vertex is a corner of the pp boundary
+isCornerV <- function(v, gen.ppp){
+    v_x = gen.ppp$x[v]
+    v_y = gen.ppp$y[v]
+    
+    return((v_x %in% gen.ppp$window$xrange) & (v_y %in% gen.ppp$window$yrange))
+}
+
 
 deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id){
     #### construct the Delaunay triangulation on the parent points as a starter network
@@ -403,7 +411,7 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     
     plot(branch.lpp_dt, main="Initial DT", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
                                                                         "dodgerblue", "white", "maroon1", 
-                                                                        "mediumpurple"))
+                                                                        "mediumpurple", "yellow", "cyan"))
                                                                   
     ####new
     ####plot the feature densities of the initial triangulation vs the original network for comparison
@@ -538,7 +546,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         #### if any of the end vertices of the selected edge has degree 3,
         #### and if that is on the boundary we won't allow it
         #### cause in the end after deleting the boundary edges it will disconnect the network
-        if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3) | (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3)){
+        if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) | 
+           (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
             noChange = noChange + 1
             cat("Edge kept [Boundary degree constraint]\n")
             next
