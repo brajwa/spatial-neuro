@@ -459,17 +459,17 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     
     noChange = 0
     while (TRUE) {
-        # q = readline()
-        # if(q=="q"){
-        #     break
-        # }
+        q = readline()
+        if(q=="q"){
+            break
+        }
         
         if(noChange == 200){    # if the network has not been changed for 200 iterations
             break
         }
         
         #### cc of the current network
-        cc_cur = ccFromDataframe(branch.ppp, network_extra1)
+        cc_cur = ccFromDataframe(gen.ppp, network_extra1)
         if(cc_cur <= cluster_coeff){
             cat("Rejection sampling ended [CC reached target]\n")
             break
@@ -479,11 +479,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         prob_vertex = g2_degree / sum(g2_degree)
         #### select a vertex at random or based on high degree
         set.seed(Sys.time())
-        selected_vertex = sample.int(branch.ppp$n, 1, prob = prob_vertex)
+        selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
         
         
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
-        points(branch.ppp$x[selected_vertex], branch.ppp$y[selected_vertex], col="red", cex=2, pch=19)
+        points(gen.ppp$x[selected_vertex], gen.ppp$y[selected_vertex], col="red", cex=2, pch=19)
         
         #### detect the neighbors of a given vertex
         adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
@@ -494,6 +494,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) & 
                                           (network_extra1$ind2 %in% adj_vertices_from_df))
         
+        #### when there is no edges between the neighbor vertices, select an edge at random
         if(length(edge_bet_adj_vertices)==0){
             cat("No edges between neighboring vertices.\n")
             
@@ -532,31 +533,21 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         #### degree-one vertices only at the boundary
         v1 = network_extra1$ind1[selected_edge]
         v2 = network_extra1$ind2[selected_edge]
-        lines(c(branch.ppp$x[v1], branch.ppp$x[v2]), c(branch.ppp$y[v1], branch.ppp$y[v2]), col="red", lwd=2.5)
+        lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="red", lwd=2.5)
         
-        #### if any of the end vertices of the selected edge has degree 2, deleting it will create a dangling vertex
-        #### and if that is not on the boundary we won't allow it
-        if((g2_degree[v1]<=2 | g2_degree[v2]<=2) & (vertex_dist_boundary[v1]!=0 | vertex_dist_boundary[v2]!=0)){
+        #### if any of the end vertices of the selected edge has degree 3,
+        #### and if that is on the boundary we won't allow it
+        #### cause in the end after deleting the boundary edges it will disconnect the network
+        if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3) | (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3)){
             noChange = noChange + 1
             cat("Edge kept [Boundary degree constraint]\n")
             next
         }
         
-        #### if v1 and v2 both are boundary vertices, eliminating the edge will increase the outer face
-        #### but no other comparison will be possible for a new face
-        #### so we reject the edge without any more comparison
+        #### if v1 and v2 both are boundary vertices, we keep the edge for now
         if((vertex_dist_boundary[v1]==0 & vertex_dist_boundary[v2]==0)){
-            after_elim_2 = eliminateEdges(network_extra1, selected_edge)
-            
-            noChange = after_elim_2[[1]]
-            network_extra1 = after_elim_2[[2]]
-            g2_degree = after_elim_2[[3]]
-            face_list = after_elim_2[[4]]
-            face_area_list = after_elim_2[[5]]
-            face_node_count = after_elim_2[[6]]
-            triKDE_face_feat = after_elim_2[[7]]
-            tri_face_features = after_elim_2[[8]]
-            
+            noChange = noChange + 1
+            cat("Edge kept [Boundary edge constraint]\n")
             next
         }
         
@@ -564,7 +555,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         temp_network_extra1 = network_extra1[-c(selected_edge), ]
         #rownames(temp_network_extra1) = NULL # to reset the row index after row deletion
         
-        temp_graph_obj = make_empty_graph() %>% add_vertices(branch.ppp$n)
+        temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
         temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
                                    as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
         
@@ -586,8 +577,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             temp_face_node_count = sapply(temp_face_list, length)
             
             #### applying the shoe lace formula
-            u_branch.ppp = unmark(branch.ppp)
-            temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, u_branch.ppp))
+            temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, gen.ppp))
             
             #### eliminating the outer face, it has the largest face area
             temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
@@ -600,7 +590,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             colnames(temp_face_features) = temp_columns
             
             for(f in c(1: length(temp_face_list))){
-                temp_f_feat = computeFacefeatures(f, temp_face_list, u_branch.ppp, NULL)
+                temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
                 temp_face_features = rbind(temp_face_features, temp_f_feat)
                 
             }# loop ends for each face of the temp network
@@ -718,24 +708,21 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                                                                     "mediumpurple", "yellow", "cyan"))
     }
     
-    # #### eliminate boundary-boundary edges
-    # bb_edges = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
-    #                      (vertex_dist_boundary[network_extra1$ind2]==0))
-    # 
-    # after_elim_0 = eliminateEdges(network_extra1, bb_edges)
-    # 
-    # noChange = after_elim_0[[1]]
-    # network_extra1 = after_elim_0[[2]]
-    # g2_degree = after_elim_0[[3]]
-    # face_list = after_elim_0[[4]]
-    # face_area_list = after_elim_0[[5]]
-    # face_node_count = after_elim_0[[6]]
-    # triKDE_face_feat = after_elim_0[[7]]
-    # tri_face_features = after_elim_0[[8]]
+    #### eliminate boundary-boundary edges
+    after_elim_0 = eliminateEdges(network_extra1, bb_edges)
+
+    noChange = after_elim_0[[1]]
+    network_extra1 = after_elim_0[[2]]
+    g2_degree = after_elim_0[[3]]
+    face_list = after_elim_0[[4]]
+    face_area_list = after_elim_0[[5]]
+    face_node_count = after_elim_0[[6]]
+    triKDE_face_feat = after_elim_0[[7]]
+    tri_face_features = after_elim_0[[8]]
     
     
-    ####
-    graph_obj =  make_empty_graph() %>% add_vertices(branch.ppp$n)
+    #### final simulated network
+    graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
     graph_obj = add_edges(as.undirected(graph_obj), 
               as.vector(t(as.matrix(network_extra1[,5:6]))))
     
@@ -750,10 +737,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     # degs = degs[ord]
     
     #### attach the degree information to the point pattern for proper visualization
-    marks(branch.ppp) = factor(degs)
-    branch.ppp$markformat = "factor"
-    g_o_lin = linnet(branch.ppp, edges=as.matrix(network_extra1[,5:6]))
-    branch.lpp_s = lpp(branch.ppp, g_o_lin )
+    marks(gen.ppp) = factor(degs)
+    gen.ppp$markformat = "factor"
+    g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
+    branch.lpp_s = lpp(gen.ppp, g_o_lin )
     
     plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
                                                                         "dodgerblue", "white", "maroon1", 
