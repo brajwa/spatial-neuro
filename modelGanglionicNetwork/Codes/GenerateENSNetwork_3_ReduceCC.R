@@ -333,6 +333,7 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
                 triKDE_face_feat, tri_face_features))
 }
 
+
 #### detects if a vertex is a corner of the pp boundary
 isCornerV <- function(v, gen.ppp){
     v_x = gen.ppp$x[v]
@@ -718,7 +719,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     }
     
     #### eliminate boundary-boundary edges
-    after_elim_0 = eliminateEdges(network_extra1, bb_edges)
+    after_elim_0 = eliminateEdges(gen.ppp, network_extra1, bb_edges)
 
     noChange = after_elim_0[[1]]
     network_extra1 = after_elim_0[[2]]
