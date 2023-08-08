@@ -784,11 +784,11 @@ generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_fea
                                         meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features)
     
     #### create a graph from sampled triangulation
-    g2 = make_empty_graph() %>% add_vertices(branch.ppp$n)
+    g2 = make_empty_graph() %>% add_vertices(gen.ppp$n)
     g2 = add_edges(as.undirected(g2), as.vector(t(as.matrix(network_extra[,5:6]))))
     
     #### display as corresponding ppp and linnet
-    g2_lin = linnet(branch.ppp, edges=as.matrix(network_extra[, 5:6]))
+    g2_lin = linnet(gen.ppp, edges=as.matrix(network_extra[, 5:6]))
     
     return(list(network_extra, g2_lin))
 }
@@ -882,9 +882,9 @@ ord = order(as.numeric(names(degs)))
 degs = degs[ord]
 
 #### attach the degree information to the point pattern for proper visualization
-marks(branch.ppp) = factor(degs)
-branch.ppp$markformat = "factor"
-branch.lpp_2 = lpp(branch.ppp, linnet_obj )
+marks(gen.ppp) = factor(degs)
+gen.ppp$markformat = "factor"
+branch.lpp_2 = lpp(gen.ppp, linnet_obj )
 
 plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
                                                                   "white", "maroon1", "mediumpurple"))
@@ -893,7 +893,7 @@ plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "gre
 #### compute the face features of the newly constructed network to compare the density with the original face feature
 #### Reminder: for the simulated network there are many open boundary faces
 #### additional edges are required
-new_edges = computeBoundaryEdges(branch.ppp)
+new_edges = computeBoundaryEdges(gen.ppp)
 
 graph_obj =  graph_from_data_frame(unique(rbind(net_data_struct[, 5:6], new_edges)), directed = FALSE) # new graph object that combines the actual network and the new edges
 graph_obj = delete_edges(graph_obj, which(which_multiple(graph_obj)))
@@ -910,13 +910,7 @@ face_list = planarFaceTraversal(g_o)
 face_node_count = sapply(face_list, length)
 
 #### applying the shoe lace formula
-#### include the corner nodes to a temporary point pattern, the original point pattern is being unmarked 
-#### as we only need the coordinates for the shoelace formula
-corner.ppp = ppp(x=c(branch.ppp$window$xrange[1], branch.ppp$window$xrange[2], branch.ppp$window$xrange[2], branch.ppp$window$xrange[1]), 
-                 y=c(branch.ppp$window$yrange[2], branch.ppp$window$yrange[2], branch.ppp$window$yrange[1], branch.ppp$window$yrange[1]),
-                 window = branch.ppp$window)
-u_branch.ppp = unmark(branch.ppp)
-face_area_list = sapply(face_list, function(x) faceArea(x, superimpose.ppp(u_branch.ppp, corner.ppp)))
+face_area_list = sapply(face_list, function(x) faceArea(x, gen.ppp))
 
 #### eliminating the outer face, it has the largest face area
 face_node_count = face_node_count[-which.max(face_area_list)]
@@ -929,7 +923,7 @@ face_features_sim = data.frame(matrix(nrow = 0, ncol = length(columns)))
 colnames(face_features_sim) = columns
 
 for(f in c(1: length(face_list))){
-    f_feat = computeFacefeatures(f, face_list, u_branch.ppp, corner.ppp)
+    f_feat = computeFacefeatures(f, face_list, gen.ppp, NULL)
     face_features_sim = rbind(face_features_sim, f_feat)
     
 }# loop ends for each face of the simulated network
