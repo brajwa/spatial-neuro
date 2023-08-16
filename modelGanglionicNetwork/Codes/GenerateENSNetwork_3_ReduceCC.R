@@ -188,6 +188,33 @@ computeEdgeWeight <- function(g2_degree, x){
     return(g2_degree[x[5]] + g2_degree[x[6]])
 }
 
+####Given the degree of vertices of the current network and the max degree of the original network,
+#### compute the probability of each vertex
+computeVertexProb <- function(org_max_deg, g2_degree){
+    cur_max_deg = max(g2_degree)
+    
+    if(cur_max_deg > org_max_deg){
+        max_deg_vs = which.max(g2_degree)
+        if(length(max_deg_vs) == 1){
+            #### find the second max degree
+            n = length(g2_degree)
+            cur_s_max_deg = sort(g2_degree, partial=n-1)[n-1]
+            s_max_deg_vs = which(g2_degree == cur_s_max_deg)
+            
+            v_prob = numeric(length(g2_degree))
+            v_prob[max_deg_vs] = 1
+            v_prob[s_max_deg_vs] = 1
+            return(v_prob)
+        }else{
+            v_prob = numeric(length(g2_degree))
+            v_prob[max_deg_vs] = 1
+            return(v_prob)
+        }
+    }else{
+        return(g2_degree / sum(g2_degree))
+    }
+}
+
 
 #### Given a face and an edge find if that edge is present in the face
 isEdgeOnFace <- function(face, edge){
@@ -268,6 +295,22 @@ ccFromDataframe <- function(branch.ppp, network_extra){
     cluster_coeff = igraph::transitivity(graph_obj, type = "global")
     
     return(cluster_coeff)
+}
+
+####Given the pont pattern and the data structure of the network, computes the other network metrics
+netMetrics <- function(gen.ppp, network_extra){
+    #### alpha, gamma, psi (meshedness, network density and compactness parameters)
+    N = gen.ppp$n
+    E = length(network_extra$x1)
+    A = summary(gen.ppp)$window$area
+    L = sum(network_extra$euclidDist)
+    
+    meshedness = (E-N+1)/((2*N)-5)
+    network_density = E/((3*N)-6)
+    compactness = 1- ((4*A)/(L-(2*sqrt(A)))^2)
+    
+    cat("Meshedness: ", meshedness, ", Network density: ", network_density, ", Compactness: ", compactness, "\n")
+    return(list(meshedness, network_density, compactness))
 }
 
 
@@ -435,7 +478,10 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
 
 rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
                     g2_degree, orgKDE_face_feat, triKDE_face_feat, 
-                    meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features){
+                    meshedness, network_density, compactness, cluster_coeff, org_max_deg,
+                    sample_id, tri_face_features){
+    
+    set.seed(Sys.time())
     
     #### distance of each vertex from the point pattern boundary
     vertex_dist_boundary = bdist.points(gen.ppp)
@@ -468,12 +514,13 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     
     noChange = 0
     while (TRUE) {
-        q = readline()
-        if(q=="q"){
-            break
-        }
+        # q = readline()
+        # if(q=="q"){
+        #     break
+        # }
         
         if(noChange == 200){    # if the network has not been changed for 200 iterations
+            cat("No edges rejected for 200 iterations.\n")
             break
         }
         
@@ -484,10 +531,19 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             break
         }
         
+        #### other network metrics of the current network
+        metrics = netMetrics(gen.ppp, network_extra1)
+        mesh = metrics[[1]]
+        net_den = metrics[[2]]
+        compact = metrics[[3]]
+        if((mesh <= meshedness) | (net_den <= network_density) | (compact <= compactness)){
+            cat("Rejection sampling ended [Net metrics reached target]\n")
+            break
+        }
+        
         #### prepare the vertex probability from degree values
-        prob_vertex = g2_degree / sum(g2_degree)
+        prob_vertex = computeVertexProb(org_max_deg, g2_degree)
         #### select a vertex at random or based on high degree
-        set.seed(Sys.time())
         selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
         
         
@@ -521,7 +577,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             cat(e, e1, e2, "\n")
             
             #### pick an edge random from these three ones
-            selected_edge = sample(c(e, e1, e2), 1)
+            selected_edge = sample(c(e1, e2), 1)
         }else{
             e = sample(edge_bet_adj_vertices, 1)
             
@@ -533,7 +589,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             cat(e, e1, e2, "\n")
             
             #### pick an edge random from these three ones
-            selected_edge = sample(c(e, e1, e2), 1)
+            selected_edge = sample(c(e1, e2), 1)
         }
         
         cat("Selected edge ID: ", selected_edge, "\n")
@@ -558,6 +614,13 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
         if((vertex_dist_boundary[v1]==0 & vertex_dist_boundary[v2]==0)){
             noChange = noChange + 1
             cat("Edge kept [Boundary edge constraint]\n")
+            next
+        }
+        
+        #### just to see what happens
+        if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
+            noChange = noChange + 1
+            cat("Edge kept [Internal degree constraint]\n")
             next
         }
         
@@ -672,6 +735,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                 #### make necessary changes permanent
                 network_extra1 = temp_network_extra1
                 g2_degree = igraph::degree(temp_graph_obj, mode="total")
+                cat("Degree of vertices after edge deletion: ", g2_degree[v1], g2_degree[v2], "\n")
                 print(table(g2_degree))
                 
                 face_list = temp_face_list
@@ -718,8 +782,12 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                                                                     "mediumpurple", "yellow", "cyan"))
     }
     
+    #### compute index of the boundary edges again
+    bb_edges_2 = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
+                         (vertex_dist_boundary[network_extra1$ind2]==0))
+    
     #### eliminate boundary-boundary edges
-    after_elim_0 = eliminateEdges(gen.ppp, network_extra1, bb_edges)
+    after_elim_0 = eliminateEdges(gen.ppp, network_extra1, bb_edges_2)
 
     noChange = after_elim_0[[1]]
     network_extra1 = after_elim_0[[2]]
@@ -730,9 +798,35 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     triKDE_face_feat = after_elim_0[[7]]
     tri_face_features = after_elim_0[[8]]
     
+    #### figure out the vertex id of the corner points
+    c_v = c()
+    for (i in c(1:gen.ppp$n)) {
+        if(isCornerV(i, gen.ppp)){
+            c_v = c(c_v, i)
+        }
+    }
+    
+    #### compute index of the corner edges 
+    c_e = which(network_extra1$ind1 %in% c_v | network_extra1$ind2 %in% c_v)
+    
+    #### remove corner points any edge incident on them
+    gen.ppp_2 = subset.ppp(gen.ppp, !((x==gen.ppp$window$xrange[1] | x==gen.ppp$window$xrange[2]) 
+                                     & (y==gen.ppp$window$yrange[1] | y==gen.ppp$window$yrange[2])))
+    
+    #### eliminate corner edges
+    after_elim_1 = eliminateEdges(gen.ppp, network_extra1, c_e)
+    
+    noChange = after_elim_1[[1]]
+    network_extra1 = after_elim_1[[2]]
+    g2_degree = after_elim_1[[3]]
+    face_list = after_elim_1[[4]]
+    face_area_list = after_elim_1[[5]]
+    face_node_count = after_elim_1[[6]]
+    triKDE_face_feat = after_elim_1[[7]]
+    tri_face_features = after_elim_1[[8]]
     
     #### final simulated network
-    graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
+    graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp_2$n)
     graph_obj = add_edges(as.undirected(graph_obj), 
               as.vector(t(as.matrix(network_extra1[,5:6]))))
     
@@ -747,20 +841,20 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     # degs = degs[ord]
     
     #### attach the degree information to the point pattern for proper visualization
-    marks(gen.ppp) = factor(degs)
-    gen.ppp$markformat = "factor"
-    g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
-    branch.lpp_s = lpp(gen.ppp, g_o_lin )
+    marks(gen.ppp_2) = factor(degs)
+    gen.ppp_2$markformat = "factor"
+    g_o_lin = linnet(gen.ppp_2, edges=as.matrix(network_extra1[,5:6]))
+    branch.lpp_s = lpp(gen.ppp_2, g_o_lin )
     
     plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
                                                                         "dodgerblue", "white", "maroon1", 
                                                                         "mediumpurple", "yellow", "cyan"))
-    return(network_extra1)                                        
+    return(list(gen.ppp_2, network_extra1))                                    
 }
 
 
 generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_feature, orgKDE_face_feat,
-                                   meshedness, network_density, compactness, cluster_coeff,
+                                   meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                                    sample_id){
     
     #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
@@ -779,10 +873,14 @@ generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_fea
     tri_face_features = triangulation_info_list[[7]]
     
     #### remove edges from the initial triangulation by rejection sampling
-    network_extra = rejectionSampling_3(gen.ppp, branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
+    sampled_net = rejectionSampling_3(gen.ppp, branch.ppp, branch.all, network_extra1, face_list, face_area_list, face_node_count, 
                                         g2_degree, orgKDE_face_feat, triKDE_face_feat, 
-                                        meshedness, network_density, compactness, cluster_coeff, sample_id, tri_face_features)
+                                        meshedness, network_density, compactness, cluster_coeff, org_max_deg,
+                                        sample_id, tri_face_features)
     
+    gen.ppp = sampled_net[[1]]
+    network_extra = sampled_net[[2]]
+        
     #### create a graph from sampled triangulation
     g2 = make_empty_graph() %>% add_vertices(gen.ppp$n)
     g2 = add_edges(as.undirected(g2), as.vector(t(as.matrix(network_extra[,5:6]))))
@@ -790,7 +888,7 @@ generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_fea
     #### display as corresponding ppp and linnet
     g2_lin = linnet(gen.ppp, edges=as.matrix(network_extra[, 5:6]))
     
-    return(list(network_extra, g2_lin))
+    return(list(gen.ppp, network_extra, g2_lin))
 }
 
 
@@ -847,6 +945,8 @@ cat("Meshedness: ", meshedness, ", Network density: ", network_density, ", Compa
 cluster_coeff = igraph::transitivity(g1, type = "global")
 cat("CC original: ", cluster_coeff, "\n")
 
+org_max_deg = max(igraph::degree(g1))
+
 #### filter out the face face features of the sample under consideration
 #### Reminder: the face features were computed assuming additional edges were computed 
 #### to close the open faces at the boundary
@@ -868,12 +968,13 @@ gen.ppp = superimpose(gen.ppp, gen_corner.ppp)
 
 #### call the network generation functions
 network_info_list = generateNetworkEdges_3(gen.ppp, branch.ppp, branch_all, face_feature, orgKDE_face_feat,
-                                           meshedness, network_density, compactness, cluster_coeff,
+                                           meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                                            sample_id)
 
 #### returned values
-net_data_struct = network_info_list[[1]]
-linnet_obj = network_info_list[[2]]
+gen.ppp_wo_c = network_info_list[[1]]
+net_data_struct = network_info_list[[2]]
+linnet_obj = network_info_list[[3]]
 
 #### creating a list representing degree for every node an use it in spatstat pattern
 graph_obj_0 = graph_from_data_frame(net_data_struct[, 5:6], directed = FALSE)
@@ -882,9 +983,9 @@ ord = order(as.numeric(names(degs)))
 degs = degs[ord]
 
 #### attach the degree information to the point pattern for proper visualization
-marks(gen.ppp) = factor(degs)
-gen.ppp$markformat = "factor"
-branch.lpp_2 = lpp(gen.ppp, linnet_obj )
+marks(gen.ppp_wo_c) = factor(degs)
+gen.ppp_wo_c$markformat = "factor"
+branch.lpp_2 = lpp(gen.ppp_wo_c, linnet_obj )
 
 plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
                                                                   "white", "maroon1", "mediumpurple"))
@@ -893,7 +994,7 @@ plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "gre
 #### compute the face features of the newly constructed network to compare the density with the original face feature
 #### Reminder: for the simulated network there are many open boundary faces
 #### additional edges are required
-new_edges = computeBoundaryEdges(gen.ppp)
+new_edges = computeBoundaryEdges(gen.ppp_wo_c)
 
 graph_obj =  graph_from_data_frame(unique(rbind(net_data_struct[, 5:6], new_edges)), directed = FALSE) # new graph object that combines the actual network and the new edges
 graph_obj = delete_edges(graph_obj, which(which_multiple(graph_obj)))
@@ -910,7 +1011,7 @@ face_list = planarFaceTraversal(g_o)
 face_node_count = sapply(face_list, length)
 
 #### applying the shoe lace formula
-face_area_list = sapply(face_list, function(x) faceArea(x, gen.ppp))
+face_area_list = sapply(face_list, function(x) faceArea(x, gen.ppp_wo_c))
 
 #### eliminating the outer face, it has the largest face area
 face_node_count = face_node_count[-which.max(face_area_list)]
