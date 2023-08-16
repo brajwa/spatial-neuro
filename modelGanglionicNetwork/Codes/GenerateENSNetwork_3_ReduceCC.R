@@ -696,7 +696,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                                                               temp_face_features$elong[face_p_index], 
                                                               temp_face_features$orient[face_p_index]))
             
-            cat("Est. abs diff: ", (org_est - temp_tri_est), "\n")
+            cat("Est. diff: ", (temp_tri_est - org_est), "\n")
             
             if(length(face_index)==2){
                 f1 = face_index[1]
@@ -708,7 +708,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                 org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
                 tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
                 
-                if((temp_tri_est - org_est) <= e-07){
+                if((org_est - temp_tri_est) >= 0){
                     edge_reject = TRUE
                 }
                 
@@ -718,7 +718,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                 org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
                 tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
                 
-                if((temp_tri_est - org_est) <= e-07){
+                if((org_est - temp_tri_est) >= 0){
                     edge_reject = TRUE
                 }
                 
