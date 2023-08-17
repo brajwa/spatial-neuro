@@ -108,7 +108,7 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
 
 #### plot the face features of two given networks for comparison 
 #### can be original vs. initial DT or original vs. final network
-comparePlotOrgSim <- function(org_face_feature, face_features){
+comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, network_extra1){
     cat("Number of faces in the original network: ", length(org_face_feature$X))
     cat("\nNumber of faces in the simulated network: ", length(face_features$area))
     
@@ -119,9 +119,11 @@ comparePlotOrgSim <- function(org_face_feature, face_features){
     den_sim_area = density(face_features$area)
     den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
     
-    print(ggplot(data = den_org_area, aes(y)) +
-              geom_density(fill = "blue", alpha = 0.3) +
-              geom_density(data = den_sim_area, aes(y), fill="red", alpha =0.3) +
+    print(ggplot() +
+              geom_line(data = den_org_area, aes(x=x, y=y), color = "blue") +
+              geom_area(data = den_org_area, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+              geom_line(data = den_sim_area, aes(x=x, y=y), color="red") +
+              geom_area(data = den_sim_area, aes(x=x, y=y), fill="red", alpha=0.3) +
               
               theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
                     legend.box.margin=margin(-10,-10,-10,-10),
@@ -141,9 +143,11 @@ comparePlotOrgSim <- function(org_face_feature, face_features){
     den_sim_elong = density(face_features$elong)
     den_sim_elong = data.frame(x=den_sim_elong$x, y= den_sim_elong$y)
     
-    print(ggplot(data = den_org_elong, aes(y)) +
-              geom_density(fill = "blue", alpha = 0.3) +
-              geom_density(data = den_sim_elong, aes(y), fill="red", alpha =0.3) +
+    print(ggplot() +
+              geom_line(data = den_org_elong, aes(x=x, y=y), color = "blue") +
+              geom_area(data = den_org_elong, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+              geom_line(data = den_sim_elong, aes(x=x, y=y), color="red") +
+              geom_area(data = den_sim_elong, aes(x=x, y=y), fill="red", alpha=0.3) +
               
               theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
                     legend.box.margin=margin(-10,-10,-10,-10),
@@ -163,9 +167,11 @@ comparePlotOrgSim <- function(org_face_feature, face_features){
     den_sim_orient = density(face_features$orient)
     den_sim_orient = data.frame(x=den_sim_orient$x, y= den_sim_orient$y)
     
-    print(ggplot(data = den_org_orient, aes(y)) +
-              geom_density(fill = "blue", alpha = 0.3) +
-              geom_density(data = den_sim_orient, aes(y), fill="red", alpha =0.3) +
+    print(ggplot() +
+              geom_line(data = den_org_orient, aes(x=x, y=y), color = "blue") +
+              geom_area(data = den_org_orient, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+              geom_line(data = den_sim_orient, aes(x=x, y=y), color="red") +
+              geom_area(data = den_sim_orient, aes(x=x, y=y), fill="red", alpha=0.3) +
               
               theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
                     legend.box.margin=margin(-10,-10,-10,-10),
@@ -177,6 +183,55 @@ comparePlotOrgSim <- function(org_face_feature, face_features){
                     panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
               xlab(expression(paste("Face Orientation"))) + ylab("Density")+
               labs(title = "Comparison of face feature of original and simulated networks")  )  # the titles needs changing for different runs
+
+    # edge length
+    den_org_e_len = density(branch.all$euclid)
+    den_org_e_len = data.frame(x=den_org_e_len$x, y=den_org_e_len$y)
+    
+    den_sim_e_len = density(network_extra1$euclidDist)
+    den_sim_e_len = data.frame(x=den_sim_e_len$x, y= den_sim_e_len$y)
+    
+    print(ggplot() +
+              geom_line(data = den_org_e_len, aes(x=x, y=y), color = "blue") +
+              geom_area(data = den_org_e_len, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+              geom_line(data = den_sim_e_len, aes(x=x, y=y), color="red") +
+              geom_area(data = den_sim_e_len, aes(x=x, y=y), fill="red", alpha=0.3) +
+              
+              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+                    legend.box.margin=margin(-10,-10,-10,-10),
+                    plot.title = element_text(hjust = 0.5, size=18),
+                    plot.subtitle = element_text(hjust = 0.5, size=16),
+                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    panel.background = element_rect(fill='white', colour='black'),
+                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+              xlab(expression(paste("Edge Length"))) + ylab("Density")+
+              labs(title = "Comparison of edge feature of original and simulated networks")  )  # the titles needs changing for different runs
+    
+    # edge angle
+    den_org_e_angle = density(apply(branch.all, 1, function(x) calcAngle(x)))
+    den_org_e_angle = data.frame(x=den_org_e_angle$x, y=den_org_e_angle$y)
+    
+    den_sim_e_angle = density(network_extra1$anglecomp)
+    den_sim_e_angle = data.frame(x=den_sim_e_angle$x, y= den_sim_e_angle$y)
+    
+    print(ggplot() +
+              geom_line(data = den_org_e_angle, aes(x=x, y=y), color = "blue") +
+              geom_area(data = den_org_e_angle, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+              geom_line(data = den_sim_e_angle, aes(x=x, y=y), color="red") +
+              geom_area(data = den_sim_e_angle, aes(x=x, y=y), fill="red", alpha=0.3) +
+              
+              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+                    legend.box.margin=margin(-10,-10,-10,-10),
+                    plot.title = element_text(hjust = 0.5, size=18),
+                    plot.subtitle = element_text(hjust = 0.5, size=16),
+                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    panel.background = element_rect(fill='white', colour='black'),
+                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+              xlab(expression(paste("Edge Angle"))) + ylab("Density")+
+              labs(title = "Comparison of edge feature of original and simulated networks")  )  # the titles needs changing for different runs
+    
 }
 
 
@@ -459,7 +514,7 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
                                                                   
     ####new
     ####plot the feature densities of the initial triangulation vs the original network for comparison
-    comparePlotOrgSim(org_face_feature, face_features)
+    comparePlotOrgSim(org_face_feature, face_features, branch.all, network_extra1)
     ####new end
     
     #### degree list of the constructed Delaunay graph again for edge weight calculation
@@ -468,9 +523,11 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g_o_degree, x))
     network_extra$weight = range01(network_extra$weight)
     
-    triKDE_face_feat = kde(as.matrix(data.frame(face_area_list, 
-                                                face_features$elong, 
-                                                face_features$orient)))
+    # triKDE_face_feat = kde(as.matrix(data.frame(face_area_list, 
+    #                                             face_features$elong, 
+    #                                             face_features$orient)))
+    
+    triKDE_face_feat = kde(as.matrix(data.frame(face_area_list)))
     
     return(list(network_extra, face_list, face_area_list, face_node_count, triKDE_face_feat, g_o_degree, face_features))
 }
@@ -514,10 +571,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
     
     noChange = 0
     while (TRUE) {
-        # q = readline()
-        # if(q=="q"){
-        #     break
-        # }
+        q = readline()
+        if(q=="q"){
+            break
+        }
         
         if(noChange == 200){    # if the network has not been changed for 200 iterations
             cat("No edges rejected for 200 iterations.\n")
@@ -668,9 +725,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                 
             }# loop ends for each face of the temp network
             
-            temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
-                                                        temp_face_features$elong, 
-                                                        temp_face_features$orient)))
+            # temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
+            #                                             temp_face_features$elong, 
+            #                                             temp_face_features$orient)))
+            
+            temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list)))
             
             ####finding the new face
             face_p = c()
@@ -689,12 +748,17 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             edge_reject = FALSE
             
             #### prediction
-            org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index], 
-                                                    temp_face_features$elong[face_p_index], 
-                                                    temp_face_features$orient[face_p_index]))
-            temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index], 
-                                                              temp_face_features$elong[face_p_index], 
-                                                              temp_face_features$orient[face_p_index]))
+            # org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index], 
+            #                                         temp_face_features$elong[face_p_index], 
+            #                                         temp_face_features$orient[face_p_index]))
+            # temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index], 
+            #                                                   temp_face_features$elong[face_p_index], 
+            #                                                   temp_face_features$orient[face_p_index]))
+            #
+            
+            org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index]))
+            
+            temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index]))
             
             cat("Est. diff: ", (temp_tri_est - org_est), "\n")
             
@@ -702,12 +766,12 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
                 f1 = face_index[1]
                 f2 = face_index[2]
                 
-                org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                
-                org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
-                tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
-                
+                # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                # 
+                # org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
+                # tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
+                # 
                 if((org_est - temp_tri_est) >= 0){
                     edge_reject = TRUE
                 }
@@ -715,9 +779,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, network_extra1,
             }else if(length(face_index)==1){
                 f1 = face_index[1]
 
-                org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                
+                # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                # 
                 if((org_est - temp_tri_est) >= 0){
                     edge_reject = TRUE
                 }
@@ -953,9 +1017,11 @@ org_max_deg = max(igraph::degree(g1))
 #### similar thing should be done for the new network too (where needed).
 face_feature = face_features_combined[face_features_combined$sample_id == sample_id, ]
 
-orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL, 
-                                            face_feature$Elong., 
-                                            face_feature$Orient.))) # this will be also tested by replacing by PC1 of all the face features we want
+# orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL, 
+#                                             face_feature$Elong., 
+#                                             face_feature$Orient.))) # this will be also tested by replacing by PC1 of all the face features we want
+
+orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL)))
 
 ####At this point, new point pattern will be simulated. 
 ####For now we are generating networks on the original point pattern.
@@ -1029,7 +1095,7 @@ for(f in c(1: length(face_list))){
     
 }# loop ends for each face of the simulated network
 
-comparePlotOrgSim(face_feature, face_features_sim)
+comparePlotOrgSim(face_feature, face_features_sim, branch.all, net_data_struct)
 
 #########################################################################
 #(org_est1 < tri_est1) & (org_est2 < tri_est2) & (org_est >= temp_tri_est)
