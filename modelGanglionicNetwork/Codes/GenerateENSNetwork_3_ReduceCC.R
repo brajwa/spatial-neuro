@@ -246,30 +246,30 @@ computeEdgeWeight <- function(g2_degree, x){
 ####Given the degree of vertices of the current network and the max degree of the original network,
 #### compute the probability of each vertex
 computeVertexProb <- function(org_max_deg, g2_degree){
-    # cur_max_deg = max(g2_degree)
-    # 
-    # if(cur_max_deg > org_max_deg){
-    #     max_deg_vs = which.max(g2_degree)
-    #     if(length(max_deg_vs) == 1){
-    #         #### find the second max degree
-    #         n = length(g2_degree)
-    #         cur_s_max_deg = sort(g2_degree, partial=n-1)[n-1]
-    #         s_max_deg_vs = which(g2_degree == cur_s_max_deg)
-    # 
-    #         v_prob = numeric(length(g2_degree))
-    #         v_prob[max_deg_vs] = 1
-    #         v_prob[s_max_deg_vs] = 1
-    #         return(v_prob)
-    #     }else{
-    #         v_prob = numeric(length(g2_degree))
-    #         v_prob[max_deg_vs] = 1
-    #         return(v_prob)
-    #     }
-    # }else{
-    #     return(g2_degree / sum(g2_degree))
-    # }
+    cur_max_deg = max(g2_degree)
+
+    if(cur_max_deg > org_max_deg){
+        max_deg_vs = which.max(g2_degree)
+        if(length(max_deg_vs) == 1){
+            #### find the second max degree
+            n = length(g2_degree)
+            cur_s_max_deg = sort(g2_degree, partial=n-1)[n-1]
+            s_max_deg_vs = which(g2_degree == cur_s_max_deg)
+
+            v_prob = numeric(length(g2_degree))
+            v_prob[max_deg_vs] = 1
+            v_prob[s_max_deg_vs] = 1
+            return(v_prob)
+        }else{
+            v_prob = numeric(length(g2_degree))
+            v_prob[max_deg_vs] = 1
+            return(v_prob)
+        }
+    }else{
+        return(g2_degree / sum(g2_degree))
+    }
     
-    return(g2_degree / sum(g2_degree))
+    #return(g2_degree / sum(g2_degree))
 }
 
 
@@ -340,8 +340,19 @@ computeBoundaryEdges <- function(branch.ppp){
 }
 
 
-compuateFaceEdges <- function(face, network_extra){
-    
+compuateFaceEdges <- function(face, network_extra, gen.ppp){
+    n = length(face)
+    edges = c()
+    for (i in c(1:(n-1))) {
+        for (j in c((i+1):n)) {
+            v1 = as.numeric(face[i])
+            v2 = as.numeric(face[j])
+            lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="blue", lwd=3)
+            edges = c(edges, which((network_extra$ind1 == v1 & network_extra$ind2 == v2) |
+                      (network_extra$ind1 == v2 & network_extra$ind2 == v1)) )
+        }
+    }
+    return(edges)
 }
 
 
@@ -592,10 +603,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     
     noChange = 0
     while (TRUE) {
-        q = readline()
-        if(q=="q"){
-            break
-        }
+        # q = readline()
+        # if(q=="q"){
+        #     break
+        # }
         
         cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
         if(noChange == 200){    # if the network has not been changed for 200 iterations
@@ -623,7 +634,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         ####edge can be picked in two ways
         small_face_list = which(face_area_list < org_min_face_area)
         if(length(small_face_list) > 1){
-            pick_edge = 2
+            pick_edge = sample.int(2, 1)
         }else{
             pick_edge = 1
         }
@@ -682,7 +693,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             
         }else if(pick_edge == 2){
             chosen_face = small_face_list[sample.int(length(small_face_list), 1)]
-            face_edges = compuateFaceEdges(face_list[[chosen_face]], network_extra1)
+            face_edges = compuateFaceEdges(face_list[[chosen_face]], network_extra1, gen.ppp)
             
             #### pick an edge random from the face edges
             selected_edge = sample(face_edges, 1)
@@ -788,7 +799,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             }
 
             edge_reject = FALSE
-            epsilon = 5e-06
+            epsilon_f = 1.5e-05
+            epsilon_e = 4e-03
             
             #### prediction
             # org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index],
@@ -812,39 +824,33 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
 
             cat("\nEdge est. diff: ", (tri_edge_est - org_edge_est), "\n")
 
-            if(temp_face_area_list[face_p_index] <= org_min_face_area){
-                cat("\nSmall face area\n")
-                cat("New face area: ", temp_face_area_list[face_p_index], ", Original min face area: ", org_min_face_area, "\n")
-                edge_reject = TRUE
-            }else{
-                if(length(face_index)==2){
-                    f1 = face_index[1]
-                    f2 = face_index[2]
-    
-                    # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    #
-                    # org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
-                    # tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
-                    #
-                    if((tri_edge_est >= org_edge_est) & ((org_est + epsilon) >= temp_tri_est)){
-                        edge_reject = TRUE
-                    }
-    
-                }else if(length(face_index)==1){
-                    f1 = face_index[1]
-    
-                    # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    #
-                    if((tri_edge_est >= org_edge_est) & ((org_est + epsilon) >= temp_tri_est)){
-                        edge_reject = TRUE
-                    }
-    
-                }else{
-                    cat("\nError in face identification 1\n")
-                    quit()
+            if(length(face_index)==2){
+                f1 = face_index[1]
+                f2 = face_index[2]
+
+                # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                #
+                # org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
+                # tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
+                #
+                if(((tri_edge_est + epsilon_e) >= org_edge_est) & ((org_est + epsilon_f) >= temp_tri_est)){
+                    edge_reject = TRUE
                 }
+
+            }else if(length(face_index)==1){
+                f1 = face_index[1]
+
+                # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
+                #
+                if(((tri_edge_est + epsilon_e) >= org_edge_est) & ((org_est + epsilon_f) >= temp_tri_est)){
+                    edge_reject = TRUE
+                }
+
+            }else{
+                cat("\nError in face identification 1\n")
+                quit()
             }
 
             if(edge_reject){
