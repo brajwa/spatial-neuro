@@ -140,7 +140,7 @@ branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "
 max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
 
 #### a combined dataframe for all the face features of all the samples
-columns_combined = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
+columns_combined = c("Node_Count", "Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
 face_features_combined = data.frame(matrix(nrow = 0, ncol = length(columns_combined)))
 colnames(face_features_combined) = columns_combined
 
@@ -330,8 +330,8 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
         
     }# loop ends for each face of the current iteration sample
     
-    face_features = cbind(face_features, face_area_list, rep(ens_location, length(face_area_list)), rep(sample_id, length(face_area_list)))
-    columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
+    face_features = cbind(face_node_count, face_features, face_area_list, rep(ens_location, length(face_area_list)), rep(sample_id, length(face_area_list)))
+    columns = c("Node_Count", "Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
     colnames(face_features) = columns
     
     face_features_combined = rbind(face_features_combined, face_features)
@@ -344,11 +344,11 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
 }# loop ends for each sample
 
 # figure_folder = paste(parent, "Outputs/ENSMouse/FaceFeature/", sep="")
-# write.csv(face_features_combined, paste(figure_folder, "FaceFeatures_2.csv", sep = ""))
-# 
+# write.csv(face_features_combined, paste(figure_folder, "FaceFeatures_3.csv", sep = ""))
+
 # colnames(face_features_per_sample) = columns_per_sample
 # face_features_per_sample = face_features_per_sample[, c(1, 9, 2, 10, 3, 11, 4 , 12, 5, 13, 6, 14, 7, 15, 8, 16, 17, 18)]
-# write.csv(face_features_per_sample, paste(figure_folder, "FaceFeaturesperSample_2.csv", sep = ""))
+# write.csv(face_features_per_sample, paste(figure_folder, "FaceFeaturesperSample_3.csv", sep = ""))
 
 
 
