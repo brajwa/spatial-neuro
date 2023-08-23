@@ -137,7 +137,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
               labs(title = "Comparison of face feature of original and simulated networks") )   # the titles needs changing for different runs
     
     # area
-    den_org_area = density(org_face_feature$Area_CF)
+    den_org_area = density(org_face_feature$Area_SL)
     den_org_area = data.frame(x=den_org_area$x, y=den_org_area$y)
     
     den_sim_area = density(face_features$area)
@@ -450,16 +450,9 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     }# loop ends for each face of the network
     temp_face_features$Node_Count = temp_face_node_count
     
-    # temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
-    #                                                  temp_face_features$elong, 
-    #                                                  temp_face_features$orient)))
-    
-    # temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list, 
-    #                                                  temp_face_features$elong)))
-    
-    temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list,
-                                                     temp_face_node_count)))
-    
+    temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list)))
+    temp_triKDE_face_feat_2 = kde(as.matrix(data.frame(temp_face_node_count)), 
+                                  h=density(temp_face_node_count)$bw)
     temp_triKDE_edge_feat = kde(as.matrix(data.frame(network_extra1$anglecomp)))
     
     #### remove the edges, there is a change
@@ -474,7 +467,8 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     face_list = temp_face_list
     face_area_list = temp_face_area_list
     face_node_count = temp_face_node_count
-    triKDE_face_feat = temp_triKDE_face_feat
+    triKDE_face_feat_1 = temp_triKDE_face_feat_1
+    triKDE_face_feat_2 = temp_triKDE_face_feat_2
     triKDE_edge_feat = temp_triKDE_edge_feat
     tri_face_features = temp_face_features
     
@@ -483,7 +477,25 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     }
     
     return(list(noChange, network_extra1, g2_degree, face_list, face_area_list, face_node_count,
-                triKDE_face_feat, triKDE_edge_feat, tri_face_features))
+                triKDE_face_feat_1, triKDE_face_feat_2, triKDE_edge_feat, tri_face_features))
+}
+
+
+#### given a list of tentative edges to reject, and the edge feature estimations of the
+#### original and the current networks, selects an edge to reject
+selectEdge <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat){
+    for (te in tent_edges) {
+        org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[te])
+        tri_edge_est = predict(triKDE_edge_feat, x=network_extra1$anglecomp[te])
+        
+        if(tri_edge_est > org_edge_est){
+            return(te)
+        }
+    }
+    
+    #### if none of them satisfies the criterion, return a random one of them
+    cat("Random edge selected\n")
+    return(sample(tent_edges, 1))
 }
 
 
@@ -499,7 +511,6 @@ isCornerV <- function(v, gen.ppp){
 deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id){
     #### construct the Delaunay triangulation on the parent points as a starter network
     #### ord_point_list: to maintain the order of the points
-    set.seed(Sys.time())
     ord_point_list = data.frame(x = gen.ppp$x, y = gen.ppp$y)
     
     network_triangulation = deldir(ord_point_list[, 1:2])
@@ -540,9 +551,10 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     face_list = after_elim[[4]]
     face_area_list = after_elim[[5]]
     face_node_count = after_elim[[6]]
-    triKDE_face_feat = after_elim[[7]]
-    triKDE_edge_feat = after_elim[[8]]
-    face_features = after_elim[[9]]
+    triKDE_face_feat_1 = after_elim[[7]]
+    triKDE_face_feat_2 = after_elim[[8]]
+    triKDE_edge_feat = after_elim[[9]]
+    face_features = after_elim[[10]]
     ###################################################################################
     
     #### new
@@ -572,7 +584,7 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     
     ####new
     ####plot the feature densities of the initial triangulation vs the original network for comparison
-    comparePlotOrgSim(org_face_feature, face_features, branch.all, network_extra1)
+    comparePlotOrgSim(org_face_feature, face_features, branch.all, network_extra)
     ####new end
     
     plot(branch.lpp_dt, main="Initial DT", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", 
@@ -585,24 +597,12 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     network_extra$weight = apply(network_extra, 1, function(x) computeEdgeWeight(g_o_degree, x))
     network_extra$weight = range01(network_extra$weight)
     
-    # triKDE_face_feat = kde(as.matrix(data.frame(face_area_list, 
-    #                                             face_features$elong, 
-    #                                             face_features$orient)))
-    
-    # triKDE_face_feat = kde(as.matrix(data.frame(face_area_list,
-    #                                             face_features$elong)))
-    
-    # triKDE_face_feat = kde(as.matrix(data.frame(face_area_list,
-    #                                             face_node_count)))
-    # 
-    # triKDE_edge_feat = kde(as.matrix(data.frame(network_extra$anglecomp)))
-    
-    return(list(network_extra, face_list, face_area_list, face_node_count, triKDE_face_feat, triKDE_edge_feat, g_o_degree, face_features))
+    return(list(network_extra, face_list, face_area_list, face_node_count, triKDE_face_feat_1, triKDE_face_feat_2, triKDE_edge_feat, g_o_degree, face_features))
 }
 
 
 rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, network_extra1, face_list, face_area_list, face_node_count, 
-                    g2_degree, orgKDE_face_feat, triKDE_face_feat, orgKDE_edge_feat, triKDE_edge_feat,
+                    g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                     meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                     sample_id, tri_face_features){
     
@@ -647,74 +647,60 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             break
         }
         
-        ####edge can be picked in two ways
-        small_face_list = which(face_area_list < org_min_face_area)
-        if(length(small_face_list) > 1){
-            pick_edge = 1
-        }else{
-            pick_edge = 1
-        }
+        #### prepare the vertex probability from degree values
+        prob_vertex = computeVertexProb(org_max_deg, g2_degree)
         
-        if(pick_edge == 1){
-            #### prepare the vertex probability from degree values
-            prob_vertex = computeVertexProb(org_max_deg, g2_degree)
-            #### select a vertex at random or based on high degree
-            selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
+        #### select a vertex at random or based on high degree
+        selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
+        
+        
+        cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
+        points(gen.ppp$x[selected_vertex], gen.ppp$y[selected_vertex], col="red", cex=2, pch=19)
+        
+        #### detect the neighbors of a given vertex
+        adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
+                                 network_extra1$ind2[network_extra1$ind1==selected_vertex])
+        
+        #### list of the edges that are between those neighboring vertices (if any)
+        #### the indices are of network_extra1
+        edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
+                                          (network_extra1$ind2 %in% adj_vertices_from_df))
+        
+        #### when there is no edges between the neighbor vertices, select an edge at random
+        if(length(edge_bet_adj_vertices)==0){
+            cat("No edges between neighboring vertices.\n")
             
+            #### select an totally edge at random
+            selected_edge = sample(length(network_extra1$x1), 1)
             
-            cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
-            points(gen.ppp$x[selected_vertex], gen.ppp$y[selected_vertex], col="red", cex=2, pch=19)
+        }else if(length(edge_bet_adj_vertices)==1){
+            e = edge_bet_adj_vertices
             
-            #### detect the neighbors of a given vertex
-            adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
-                                     network_extra1$ind2[network_extra1$ind1==selected_vertex])
+            e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
+                           ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
             
-            #### list of the edges that are between those neighboring vertices (if any)
-            #### the indices are of network_extra1
-            edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
-                                              (network_extra1$ind2 %in% adj_vertices_from_df))
+            e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
+                           ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
+            cat(e, e1, e2, "\n")
             
-            #### when there is no edges between the neighbor vertices, select an edge at random
-            if(length(edge_bet_adj_vertices)==0){
-                cat("No edges between neighboring vertices.\n")
-                
-                #### select an totally edge at random
-                selected_edge = sample(length(network_extra1$x1), 1)
-                
-            }else if(length(edge_bet_adj_vertices)==1){
-                e = edge_bet_adj_vertices
-                
+            #### pick an edge depending on their edge feature
+            selected_edge = selectEdge(c(e, e1, e2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+        }else{
+            tentative_edges = c()
+            for (e in edge_bet_adj_vertices) {
                 e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
                                ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
                 
                 e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
                                ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
                 cat(e, e1, e2, "\n")
-                
-                #### pick an edge random from these two ones
-                selected_edge = sample(c(e, e1, e2), 1)
-            }else{
-                e = sample(edge_bet_adj_vertices, 1)
-                
-                e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
-                               ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
-                
-                e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
-                               ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
-                cat(e, e1, e2, "\n")
-                
-                #### pick an edge random from these two ones
-                selected_edge = sample(c(e, e1, e2), 1)
+                tentative_edges = c(tentative_edges, e, e1, e2)
             }
             
-        }else if(pick_edge == 2){
-            chosen_face = small_face_list[sample.int(length(small_face_list), 1)]
-            face_edges = compuateFaceEdges(face_list[[chosen_face]], network_extra1, gen.ppp)
-            
-            #### pick an edge random from the face edges
-            selected_edge = sample(face_edges, 1)
+            #### pick an edge depending on their edge feature
+            selected_edge = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
         }
-
+            
         cat("Selected edge ID: ", selected_edge, "\n\n")
 
         #### check for the degree of the end vertices
@@ -792,16 +778,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             }# loop ends for each face of the temp network
             temp_face_features$Node_Count = temp_face_node_count
 
-            # temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list,
-            #                                             temp_face_features$elong,
-            #                                             temp_face_features$orient)))
-
-            # temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list,
-            #                                                  temp_face_features$elong)))
-            
-            temp_triKDE_face_feat = kde(as.matrix(data.frame(temp_face_area_list,
-                                                             temp_face_node_count)))
-
+            temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list)))
+            temp_triKDE_face_feat_2 = kde(as.matrix(data.frame(temp_face_node_count)), 
+                                          h=density(temp_face_node_count)$bw)
             temp_triKDE_edge_feat = kde(as.matrix(data.frame(temp_network_extra1$anglecomp)))
 
             ####finding the new face
@@ -897,70 +876,44 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                       labs(title = "Comparison of edge feature of original and simulated networks")  )
 
             edge_reject = FALSE
-            epsilon_f = 0
+            epsilon_f = 2e-06
             epsilon_e = 0
             
             #### prediction
-            # org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index],
-            #                                         temp_face_features$elong[face_p_index],
-            #                                         temp_face_features$orient[face_p_index]))
-            # temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index],
-            #                                                   temp_face_features$elong[face_p_index],
-            #                                                   temp_face_features$orient[face_p_index]))
-            #
-
-            # org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index],
-            #                                         temp_face_features$elong[face_p_index]))
-            # 
-            # temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index],
-            #                                                   temp_face_features$elong[face_p_index]))
+            org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index]))
+            org_est_2 = predict(orgKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
             
-            org_est = predict(orgKDE_face_feat, x=c(temp_face_area_list[face_p_index],
-                                                    temp_face_node_count[face_p_index]))
+            temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index]))
+            temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
             
-            temp_tri_est = predict(temp_triKDE_face_feat, x=c(temp_face_area_list[face_p_index],
-                                                              temp_face_node_count[face_p_index]))
-            
-            cat("\nFace est. diff: ", (org_est - temp_tri_est), "\n")
+            cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
+            cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
 
             org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
             tri_edge_est = predict(temp_triKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
 
             cat("\nEdge est. diff: ", (tri_edge_est - org_edge_est), "\n")
 
-            # if(pick_edge == 2){
-            #     cat("New face area smaller than original min area\n")
-            #     edge_reject = TRUE
-            # }else{
-                if(length(face_index)==2){
-                    f1 = face_index[1]
-                    f2 = face_index[2]
-    
-                    # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    #
-                    # org_est2 = predict(orgKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
-                    # tri_est2 = predict(triKDE_face_feat, x=c(face_area_list[f2], tri_face_features$elong[f2], tri_face_features$orient[f2]))
-                    #
-                    if(((tri_edge_est) >= org_edge_est) & ((org_est) >= temp_tri_est)){
-                        edge_reject = TRUE
-                    }
-    
-                }else if(length(face_index)==1){
-                    f1 = face_index[1]
-    
-                    # org_est1 = predict(orgKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    # tri_est1 = predict(triKDE_face_feat, x=c(face_area_list[f1], tri_face_features$elong[f1], tri_face_features$orient[f1]))
-                    #
-                    if(((tri_edge_est) >= org_edge_est) & ((org_est) >= temp_tri_est)){
-                        edge_reject = TRUE
-                    }
-    
-                }else{
-                    cat("\nError in face identification 1\n")
-                    quit()
+            if(length(face_index)==2){
+                f1 = face_index[1]
+                f2 = face_index[2]
+
+                if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
+                    edge_reject = TRUE
                 }
-            #}
+
+            }else if(length(face_index)==1){
+                f1 = face_index[1]
+
+                if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
+                    edge_reject = TRUE
+                }
+
+            }else{
+                cat("\nError in face identification 1\n")
+                quit()
+            }
+            
 
             if(edge_reject){
                 #### remove the edge, there is a change
@@ -976,7 +929,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 face_list = temp_face_list
                 face_area_list = temp_face_area_list
                 face_node_count = temp_face_node_count
-                triKDE_face_feat = temp_triKDE_face_feat
+                triKDE_face_feat_1 = temp_triKDE_face_feat_1
+                triKDE_face_feat_2 = temp_triKDE_face_feat_2
                 triKDE_edge_feat =  temp_triKDE_edge_feat
                 tri_face_features = temp_face_features
 
@@ -1032,9 +986,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     face_list = after_elim_0[[4]]
     face_area_list = after_elim_0[[5]]
     face_node_count = after_elim_0[[6]]
-    triKDE_face_feat = after_elim_0[[7]]
-    triKDE_edge_feat = after_elim_0[[8]]
-    tri_face_features = after_elim_0[[9]]
+    triKDE_face_feat_1 = after_elim_0[[7]]
+    triKDE_face_feat_2 = after_elim_0[[8]]
+    triKDE_edge_feat = after_elim_0[[9]]
+    tri_face_features = after_elim_0[[10]]
     
     #### figure out the vertex id of the corner points
     c_v = c()
@@ -1061,9 +1016,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     face_list = after_elim_1[[4]]
     face_area_list = after_elim_1[[5]]
     face_node_count = after_elim_1[[6]]
-    triKDE_face_feat = after_elim_1[[7]]
-    triKDE_edge_feat = after_elim_1[[8]]
-    tri_face_features = after_elim_1[[9]]
+    triKDE_face_feat_1 = after_elim_1[[7]]
+    triKDE_face_feat_2 = after_elim_1[[8]]
+    triKDE_edge_feat = after_elim_1[[9]]
+    tri_face_features = after_elim_1[[10]]
     
     #### final simulated network
     graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp_2$n)
@@ -1093,7 +1049,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
 }
 
 
-generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_feature, orgKDE_face_feat, orgKDE_edge_feat,
+generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_feature, orgKDE_face_feat_1, orgKDE_face_feat_2, orgKDE_edge_feat,
                                    meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                                    sample_id){
     
@@ -1107,15 +1063,16 @@ generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_fea
     face_area_list = triangulation_info_list[[3]]
     face_node_count = triangulation_info_list[[4]]
     
-    triKDE_face_feat = triangulation_info_list[[5]]
-    triKDE_edge_feat = triangulation_info_list[[6]]
+    triKDE_face_feat_1 = triangulation_info_list[[5]]
+    triKDE_face_feat_2 = triangulation_info_list[[6]]
+    triKDE_edge_feat = triangulation_info_list[[7]]
     
-    g2_degree = triangulation_info_list[[7]]
-    tri_face_features = triangulation_info_list[[8]]
+    g2_degree = triangulation_info_list[[8]]
+    tri_face_features = triangulation_info_list[[9]]
     
     #### remove edges from the initial triangulation by rejection sampling
     sampled_net = rejectionSampling_3(gen.ppp, branch.ppp, branch.all, org_face_feature, network_extra1, face_list, face_area_list, face_node_count, 
-                                        g2_degree, orgKDE_face_feat, triKDE_face_feat, orgKDE_edge_feat, triKDE_edge_feat,
+                                        g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                                         meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                                         sample_id, tri_face_features)
     
@@ -1194,16 +1151,9 @@ org_max_deg = max(igraph::degree(g1))
 #### similar thing should be done for the new network too (where needed).
 face_feature = face_features_combined[face_features_combined$sample_id == sample_id, ]
 
-# orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL, 
-#                                             face_feature$Elong., 
-#                                             face_feature$Orient.))) # this will be also tested by replacing by PC1 of all the face features we want
-
-# orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL,
-#                                             face_feature$Elong.)))
-
-orgKDE_face_feat = kde(as.matrix(data.frame(face_feature$Area_SL,
-                                            face_feature$Node_Count)))
-
+orgKDE_face_feat_1 = kde(as.matrix(data.frame(face_feature$Area_SL)))
+orgKDE_face_feat_2 = kde(as.matrix(data.frame(face_feature$Node_Count)),
+                         h=density(face_feature$Node_Count)$bw)
 orgKDE_edge_feat = kde(as.matrix(data.frame(apply(branch.all, 1, function(x) calcAngle(x)))))
 
 ####At this point, new point pattern will be simulated. 
@@ -1216,7 +1166,7 @@ gen_corner.ppp = ppp(x=c(gen.ppp$window$xrange[1], gen.ppp$window$xrange[2], gen
 gen.ppp = superimpose(gen.ppp, gen_corner.ppp)
 
 #### call the network generation functions
-network_info_list = generateNetworkEdges_3(gen.ppp, branch.ppp, branch_all, face_feature, orgKDE_face_feat, orgKDE_edge_feat,
+network_info_list = generateNetworkEdges_3(gen.ppp, branch.ppp, branch_all, face_feature, orgKDE_face_feat_1, orgKDE_face_feat_2, orgKDE_edge_feat,
                                            meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                                            sample_id)
 
