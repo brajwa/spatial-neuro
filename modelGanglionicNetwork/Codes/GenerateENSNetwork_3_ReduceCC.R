@@ -460,9 +460,13 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
     colnames(temp_face_features) = temp_columns
     
+    temp_face_convexity_list = c()
+    
     for(f in c(1: length(temp_face_list))){
         temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
         temp_face_features = rbind(temp_face_features, temp_f_feat)
+        
+        temp_face_convexity_list = c(temp_face_convexity_list, computeFaceConvexity(temp_face_list[[f]], gen.ppp))
         
     }# loop ends for each face of the network
     temp_face_features$Node_Count = temp_face_node_count
@@ -489,12 +493,14 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     triKDE_edge_feat = temp_triKDE_edge_feat
     tri_face_features = temp_face_features
     
+    tri_face_convexity_mean = mean(temp_face_convexity_list)
+    
     if(!is_connected(temp_graph_obj)){
         cat("NETWORK GOT DISCONNECTED\n")
     }
     
     return(list(noChange, network_extra1, g2_degree, face_list, face_area_list, face_node_count,
-                triKDE_face_feat_1, triKDE_face_feat_2, triKDE_edge_feat, tri_face_features))
+                triKDE_face_feat_1, triKDE_face_feat_2, triKDE_edge_feat, tri_face_features, tri_face_convexity_mean))
 }
 
 
@@ -552,7 +558,7 @@ isCornerV <- function(v, gen.ppp){
 }
 
 
-deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id){
+deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id, org_face_convexity_mean){
     #### construct the Delaunay triangulation on the parent points as a starter network
     #### ord_point_list: to maintain the order of the points
     ord_point_list = data.frame(x = gen.ppp$x, y = gen.ppp$y)
@@ -599,6 +605,9 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     triKDE_face_feat_2 = after_elim[[8]]
     triKDE_edge_feat = after_elim[[9]]
     face_features = after_elim[[10]]
+    face_convexity_mean = after_elim[[11]]
+    
+    cat("tri avg face convexity:", face_convexity_mean, "\n")
     ###################################################################################
     
     #### new
@@ -648,7 +657,7 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
 rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_feature, network_extra1, face_list, face_area_list, face_node_count, 
                     g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                     meshedness, network_density, compactness, cluster_coeff, org_max_deg,
-                    sample_id, tri_face_features){
+                    sample_id, tri_face_features, org_face_convexity_mean){
     
     set.seed(Sys.time())
     
@@ -663,10 +672,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     
     noChange = 0
     while (TRUE) {
-        # q = readline()
-        # if(q=="q"){
-        #     break
-        # }
+        q = readline()
+        if(q=="q"){
+            break
+        }
         
         cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
         if(noChange >= 300){    # if the network has not been changed for 200 iterations
@@ -816,10 +825,14 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
                 temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
                 colnames(temp_face_features) = temp_columns
+                
+                temp_face_convexity_list = c()
     
                 for(f in c(1: length(temp_face_list))){
                     temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
                     temp_face_features = rbind(temp_face_features, temp_f_feat)
+                    
+                    temp_face_convexity_list = c(temp_face_convexity_list, computeFaceConvexity(temp_face_list[[f]], gen.ppp))
     
                 }# loop ends for each face of the temp network
                 temp_face_features$Node_Count = temp_face_node_count
@@ -934,30 +947,38 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 
                 cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
                 cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
+                
+                cat("Face convexity of the new face: ", temp_face_convexity_list[face_p_index], "\n")
     
                 # org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
                 # tri_edge_est = predict(temp_triKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
                 # 
                 # cat("\nEdge est. diff: ", (tri_edge_est - org_edge_est), "\n")
     
-                if(length(face_index)==2){
-                    f1 = face_index[1]
-                    f2 = face_index[2]
-    
-                    if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
-                        edge_reject = TRUE
-                    }
-    
-                }else if(length(face_index)==1){
-                    f1 = face_index[1]
-    
-                    if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
-                        edge_reject = TRUE
-                    }
-    
+                if(temp_face_convexity_list[face_p_index] < org_face_convexity_mean){ # another option: mean(temp_face_convexity_list) < org_face_convexity_mean 
+                    #### keep the edge, no change
+                    noChange = noChange + 1
+                    cat("\nEdge kept [Face convexity constraint]\n")
                 }else{
-                    cat("\nError in face identification 1\n")
-                    quit()
+                    if(length(face_index)==2){
+                        f1 = face_index[1]
+                        f2 = face_index[2]
+        
+                        if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
+                            edge_reject = TRUE
+                        }
+        
+                    }else if(length(face_index)==1){
+                        f1 = face_index[1]
+        
+                        if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
+                            edge_reject = TRUE
+                        }
+        
+                    }else{
+                        cat("\nError in face identification 1\n")
+                        quit()
+                    }
                 }
                 
     
@@ -1037,6 +1058,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     triKDE_face_feat_2 = after_elim_0[[8]]
     triKDE_edge_feat = after_elim_0[[9]]
     tri_face_features = after_elim_0[[10]]
+    face_convexity_mean = after_elim_0[[11]]
     
     #### figure out the vertex id of the corner points
     c_v = c()
@@ -1067,6 +1089,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     triKDE_face_feat_2 = after_elim_1[[8]]
     triKDE_edge_feat = after_elim_1[[9]]
     tri_face_features = after_elim_1[[10]]
+    face_convexity_mean = after_elim_1[[11]]
     
     #### final simulated network
     graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp_2$n)
@@ -1098,10 +1121,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
 
 generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_feature, orgKDE_face_feat_1, orgKDE_face_feat_2, orgKDE_edge_feat,
                                    meshedness, network_density, compactness, cluster_coeff, org_max_deg,
-                                   sample_id){
+                                   sample_id, org_face_convexity_mean){
     
     #### constructing the deterministic Delaunay triangulation as the initial ganglionic network
-    triangulation_info_list = deterministicEdges_3(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id)
+    triangulation_info_list = deterministicEdges_3(gen.ppp, branch.ppp, branch.all, org_face_feature, sample_id, org_face_convexity_mean)
     
     #### returned values
     network_extra1 = triangulation_info_list[[1]]
@@ -1121,7 +1144,7 @@ generateNetworkEdges_3 <- function(gen.ppp, branch.ppp, branch_all, org_face_fea
     sampled_net = rejectionSampling_3(gen.ppp, branch.ppp, branch.all, org_face_feature, network_extra1, face_list, face_area_list, face_node_count, 
                                         g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                                         meshedness, network_density, compactness, cluster_coeff, org_max_deg,
-                                        sample_id, tri_face_features)
+                                        sample_id, tri_face_features, org_face_convexity_mean)
     
     gen.ppp = sampled_net[[1]]
     network_extra = sampled_net[[2]]
@@ -1198,6 +1221,10 @@ org_max_deg = max(igraph::degree(g1))
 #### similar thing should be done for the new network too (where needed).
 face_feature = face_features_combined[face_features_combined$sample_id == sample_id, ]
 
+org_face_convexity_mean = mean(face_feature$Convexity)
+org_face_convexity_sd = sd(face_feature$Convexity)
+cat("original avg face convexity: ", org_face_convexity_mean, "\n")
+
 orgKDE_face_feat_1 = kde(as.matrix(data.frame(face_feature$Area_SL)))
 orgKDE_face_feat_2 = kde(as.matrix(data.frame(face_feature$Node_Count)),
                          h=density(face_feature$Node_Count)$bw)
@@ -1215,7 +1242,7 @@ gen.ppp = superimpose(gen.ppp, gen_corner.ppp)
 #### call the network generation functions
 network_info_list = generateNetworkEdges_3(gen.ppp, branch.ppp, branch_all, face_feature, orgKDE_face_feat_1, orgKDE_face_feat_2, orgKDE_edge_feat,
                                            meshedness, network_density, compactness, cluster_coeff, org_max_deg,
-                                           sample_id)
+                                           sample_id, org_face_convexity_mean)
 
 #### returned values
 gen.ppp_wo_c = network_info_list[[1]]
@@ -1281,9 +1308,13 @@ columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.
 face_features_sim = data.frame(matrix(nrow = 0, ncol = length(columns)))
 colnames(face_features_sim) = columns
 
+face_convexity_list = c()
+
 for(f in c(1: length(face_list))){
     f_feat = computeFacefeatures(f, face_list, gen.ppp, NULL)
     face_features_sim = rbind(face_features_sim, f_feat)
+    
+    face_convexity_list = c(face_convexity_list, computeFaceConvexity(face_list[[f]], gen.ppp))
     
 }# loop ends for each face of the simulated network
 face_features_sim$Node_Count = face_node_count
