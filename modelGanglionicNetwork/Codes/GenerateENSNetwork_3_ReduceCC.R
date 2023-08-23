@@ -16,6 +16,23 @@ setwd("~/GitHub/spatial-neuro/modelGanglionicNetwork/Codes")
 source("AnalyzeGanglionicNetwork.R")
 
 
+computeFaceConvexity <- function(face, pp){
+    face_node_coords = contourNodeCoord(face, pp)
+    face_contour = as.matrix(face_node_coords)
+    perim = contourPerimeter(face_contour)
+    #cat("perimeter: ", perim, "\n")
+    
+    c_hull = chull(x=face_node_coords$x, y=face_node_coords$y)
+    
+    c_hull_coordinates = face_node_coords[c_hull,]
+    hull_contour = as.matrix(c_hull_coordinates)
+    hull_perim = contourPerimeter(hull_contour)
+    #cat("convex hull perimeter: ", hull_perim, "\n")
+    
+    return(hull_perim / perim)
+}
+
+
 #### shoelace formula for computing the face area
 faceArea <- function(face, branch.ppp){
     n = length(face)
