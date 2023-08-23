@@ -672,8 +672,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         if(length(edge_bet_adj_vertices)==0){
             cat("No edges between neighboring vertices.\n")
             
-            #### select an totally edge at random
-            selected_edge = sample(length(network_extra1$x1), 1)
+            #### select an edge from all the edges
+            tentative_edges = c(1: length(network_extra1))
+            selected_edge = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
             
         }else if(length(edge_bet_adj_vertices)==1){
             e = edge_bet_adj_vertices
