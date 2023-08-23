@@ -11,6 +11,23 @@ sapply(load_lib, require, character=TRUE)
 devtools::install_github("swarm-lab/Rvision")
 require("Rvision")
 
+####
+computeFaceConvexity <- function(face, pp){
+    face_node_coords = contourNodeCoord(face, pp)
+    face_contour = as.matrix(face_node_coords)
+    perim = contourPerimeter(face_contour)
+    #cat("perimeter: ", perim, "\n")
+    
+    c_hull = chull(x=face_node_coords$x, y=face_node_coords$y)
+    
+    c_hull_coordinates = face_node_coords[c_hull,]
+    hull_contour = as.matrix(c_hull_coordinates)
+    hull_perim = contourPerimeter(hull_contour)
+    #cat("convex hull perimeter: ", hull_perim, "\n")
+    
+    return(hull_perim / perim)
+}
+
 
 #### shoelace formula for computing the face area
 faceArea <- function(face, branch.ppp){
@@ -140,7 +157,7 @@ branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "
 max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
 
 #### a combined dataframe for all the face features of all the samples
-columns_combined = c("Node_Count", "Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
+columns_combined = c("Node_Count", "Convexity", "Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") 
 face_features_combined = data.frame(matrix(nrow = 0, ncol = length(columns_combined)))
 colnames(face_features_combined) = columns_combined
 
@@ -311,7 +328,7 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     face_list = face_list[-which.max(face_area_list)]
     face_area_list = face_area_list[-which.max(face_area_list)]
     
-    plot(density(face_node_count))
+    #plot(density(face_node_count))
 
     # ggplot(data.frame(area=face_area_list)) + 
     #    geom_density(aes(x=area, y=after_stat(density)), alpha=1, colour="black", linewidth=1.5) +
@@ -324,14 +341,18 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     face_features = data.frame(matrix(nrow = 0, ncol = length(columns)))
     colnames(face_features) = columns
     
+    face_convexity_list = c()
+    
     for(f in c(1: length(face_list))){
         f_feat = computeFacefeatures(f, face_list, u_branch.ppp, corner.ppp)
         face_features = rbind(face_features, f_feat)
         
+        face_convexity_list = c(face_convexity_list, computeFaceConvexity(face_list[[f]], superimpose.ppp(u_branch.ppp, corner.ppp)))
+        
     }# loop ends for each face of the current iteration sample
     
-    face_features = cbind(face_node_count, face_features, face_area_list, rep(ens_location, length(face_area_list)), rep(sample_id, length(face_area_list)))
-    columns = c("Node_Count", "Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
+    face_features = cbind(face_node_count, face_convexity_list, face_features, face_area_list, rep(ens_location, length(face_area_list)), rep(sample_id, length(face_area_list)))
+    columns = c("Node_Count", "Convexity", "Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.", "Area_SL", "ens_location", "sample_id") # Area_SL: from shoelace formula, Area_CF: from contour function
     colnames(face_features) = columns
     
     face_features_combined = rbind(face_features_combined, face_features)
