@@ -501,6 +501,31 @@ selectEdge <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge
 }
 
 
+#### given a list of tentative edges to reject, and the edge feature estimations of the
+#### original and the current networks, selects many edge to reject
+selectMultEdges <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat){
+    set.seed(Sys.time())
+    tent_edges = sample(tent_edges)
+    e_list = c()
+    for (te in tent_edges) {
+        org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[te])
+        tri_edge_est = predict(triKDE_edge_feat, x=network_extra1$anglecomp[te])
+        
+        if(tri_edge_est > org_edge_est){
+            e_list = c(e_list, te)
+        }
+    }
+    
+    if(length(e_list) == 0){
+        #### if none of them satisfies the criterion, return a random one of them
+        cat("Random edge selected\n")
+        return(sample(tent_edges, 1))
+    }else{
+        return(e_list)
+    }
+}
+
+
 #### detects if a vertex is a corner of the pp boundary
 isCornerV <- function(v, gen.ppp){
     v_x = gen.ppp$x[v]
@@ -627,7 +652,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         # }
         
         cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        if(noChange == 300){    # if the network has not been changed for 200 iterations
+        if(noChange >= 300){    # if the network has not been changed for 200 iterations
             cat("\nNo edges rejected for 200 iterations.\n")
             break
         }
@@ -674,7 +699,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             
             #### select an edge from all the edges
             tentative_edges = c(1: length(network_extra1))
-            selected_edge = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            selected_edges = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
             
         }else if(length(edge_bet_adj_vertices)==1){
             e = edge_bet_adj_vertices
@@ -687,7 +712,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #cat(e, e1, e2, "\n")
             
             #### pick an edge depending on their edge feature
-            selected_edge = selectEdge(c(e, e1, e2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            selected_edges = selectEdge(c(e, e1, e2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
         }else{
             tentative_edges = c()
             for (e in edge_bet_adj_vertices) {
@@ -699,280 +724,282 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 #cat(e, e1, e2, "\n")
                 tentative_edges = c(tentative_edges, e, e1, e2)
             }
-            
-            #### pick an edge depending on their edge feature
-            selected_edge = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            tentative_edges = unique(tentative_edges)
+            #### pick many edges depending on their edge feature
+            selected_edges = selectMultEdges(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
         }
-            
-        cat("Selected edge ID: ", selected_edge, "\n\n")
-
-        #### check for the degree of the end vertices
-        #### degree-one vertices only at the boundary
-        v1 = network_extra1$ind1[selected_edge]
-        v2 = network_extra1$ind2[selected_edge]
-        lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="red", lwd=2.5)
-
-        #### if any of the end vertices of the selected edge has degree 3,
-        #### and if that is on the boundary we won't allow it
-        #### cause in the end after deleting the boundary edges it will disconnect the network
-        if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
-           (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
-            noChange = noChange + 1
-            cat("\nEdge kept [Boundary degree constraint]\n")
-            next
-        }
-
-        #### if v1 and v2 both are boundary vertices, we keep the edge for now
-        if((vertex_dist_boundary[v1]==0 & vertex_dist_boundary[v2]==0)){
-            noChange = noChange + 1
-            cat("\nEdge kept [Boundary edge constraint]\n")
-            next
-        }
-
-        #### just to see what happens
-        if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
-            noChange = noChange + 1
-            cat("\nEdge kept [Internal degree constraint]\n")
-            next
-        }
-
-        #### check if removing that edge disconnects the network
-        temp_network_extra1 = network_extra1[-c(selected_edge), ]
-        #rownames(temp_network_extra1) = NULL # to reset the row index after row deletion
-
-        temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
-        temp_graph_obj = add_edges(as.undirected(temp_graph_obj),
-                                   as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
-
-        if(is_connected(temp_graph_obj)){
-            #### ensured that removing the edge will not disconnect the network
-            #### now check for distribution of face features
-
-            #### finding out the faces the chosen edge is a part of
-            face_index = which(unlist(lapply(face_list,
-                                             function(x) isEdgeOnFace(x, c(network_extra1[selected_edge, ]$ind1,
-                                                                           network_extra1[selected_edge, ]$ind2)))))
-
-            #### recompute the face features and KDE assuming the edge has been removed
-            #### and there's a new face now
-            temp_g_o <- as_graphnel(temp_graph_obj)
-            boyerMyrvoldPlanarityTest(temp_g_o)
-
-            temp_face_list = planarFaceTraversal(temp_g_o)
-            temp_face_node_count = sapply(temp_face_list, length)
-
-            #### applying the shoe lace formula
-            temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, gen.ppp))
-
-            #### eliminating the outer face, it has the largest face area
-            temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
-            temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
-            temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
-
-            #### face features computation
-            temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
-            temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
-            colnames(temp_face_features) = temp_columns
-
-            for(f in c(1: length(temp_face_list))){
-                temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
-                temp_face_features = rbind(temp_face_features, temp_f_feat)
-
-            }# loop ends for each face of the temp network
-            temp_face_features$Node_Count = temp_face_node_count
-
-            temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list)))
-            temp_triKDE_face_feat_2 = kde(as.matrix(data.frame(temp_face_node_count)), 
-                                          h=density(temp_face_node_count)$bw)
-            temp_triKDE_edge_feat = kde(as.matrix(data.frame(temp_network_extra1$anglecomp)))
-
-            ####finding the new face
-            face_p = c()
-            for(f_i in face_index){
-                face_p = c(face_p, as.numeric(unlist(face_list[f_i])))
-            }
-            face_p = unique(face_p)
-            face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))),
-                                        identical, sort(face_p)))
-
-            if(length(face_p_index)==0){
-                cat("\nError in face identification 2\n")
+          
+        for(selected_edge in selected_edges){
+            cat("Selected edge ID: ", selected_edge, "\n\n")
+    
+            #### check for the degree of the end vertices
+            #### degree-one vertices only at the boundary
+            v1 = network_extra1$ind1[selected_edge]
+            v2 = network_extra1$ind2[selected_edge]
+            lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="red", lwd=2.5)
+    
+            #### if any of the end vertices of the selected edge has degree 3,
+            #### and if that is on the boundary we won't allow it
+            #### cause in the end after deleting the boundary edges it will disconnect the network
+            if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
+               (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
+                noChange = noChange + 1
+                cat("\nEdge kept [Boundary degree constraint]\n")
                 next
             }
-            
-            # #### node count
-            # den_org_nc = density(org_face_feature$Node_Count)
-            # den_org_nc = data.frame(x=den_org_nc$x, y=den_org_nc$y)
-            # 
-            # den_sim_nc = density(temp_face_features$Node_Count)
-            # den_sim_nc = data.frame(x=den_sim_nc$x, y=den_sim_nc$y)
-            # 
-            # print(ggplot() +
-            #           geom_line(data = den_org_nc, aes(x=x, y=y), color = "blue") +
-            #           geom_area(data = den_org_nc, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-            #           geom_line(data = den_sim_nc, aes(x=x, y=y), color="red") +
-            #           geom_area(data = den_sim_nc, aes(x=x, y=y), fill="red", alpha=0.3) +
-            #           
-            #           geom_vline(xintercept = temp_face_node_count[face_p_index],color = "black") +
-            #           
-            #           theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
-            #                 legend.box.margin=margin(-10,-10,-10,-10),
-            #                 plot.title = element_text(hjust = 0.5, size=18),
-            #                 plot.subtitle = element_text(hjust = 0.5, size=16),
-            #                 axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-            #                 axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
-            #                 panel.background = element_rect(fill='white', colour='black'),
-            #                 panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-            #           xlab(expression(paste("Face Node Count"))) + ylab("Density")+
-            #           labs(title = "Comparison of face feature of original and simulated networks") )   # the titles needs changing for different runs
-            # 
-            # #### area
-            # den_org_area = density(org_face_feature$Area_CF)
-            # den_org_area = data.frame(x=den_org_area$x, y=den_org_area$y)
-            # 
-            # den_sim_area = density(temp_face_area_list)
-            # den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
-            # 
-            # print(ggplot() +
-            #           geom_line(data = den_org_area, aes(x=x, y=y), color = "blue") +
-            #           geom_area(data = den_org_area, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-            #           geom_line(data = den_sim_area, aes(x=x, y=y), color="red") +
-            #           geom_area(data = den_sim_area, aes(x=x, y=y), fill="red", alpha=0.3) +
-            #           
-            #           geom_vline(xintercept = temp_face_area_list[face_p_index],color = "black") +
-            #           
-            #           theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
-            #                 legend.box.margin=margin(-10,-10,-10,-10),
-            #                 plot.title = element_text(hjust = 0.5, size=18),
-            #                 plot.subtitle = element_text(hjust = 0.5, size=16),
-            #                 axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-            #                 axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
-            #                 panel.background = element_rect(fill='white', colour='black'),
-            #                 panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-            #           xlab(expression(paste("Face Area"))) + ylab("Density")+
-            #           labs(title = "Comparison of face feature of original and simulated networks") ) 
-            # 
-            # # edge angle
-            # den_org_e_angle = density(apply(branch.all, 1, function(x) calcAngle(x)))
-            # den_org_e_angle = data.frame(x=den_org_e_angle$x, y=den_org_e_angle$y)
-            # 
-            # den_sim_e_angle = density(network_extra1$anglecomp)
-            # den_sim_e_angle = data.frame(x=den_sim_e_angle$x, y= den_sim_e_angle$y)
-            # 
-            # print(ggplot() +
-            #           geom_line(data = den_org_e_angle, aes(x=x, y=y), color = "blue") +
-            #           geom_area(data = den_org_e_angle, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-            #           geom_line(data = den_sim_e_angle, aes(x=x, y=y), color="red") +
-            #           geom_area(data = den_sim_e_angle, aes(x=x, y=y), fill="red", alpha=0.3) +
-            #           
-            #           geom_vline(xintercept = network_extra1$anglecomp[selected_edge],color = "black") +
-            #           
-            #           theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
-            #                 legend.box.margin=margin(-10,-10,-10,-10),
-            #                 plot.title = element_text(hjust = 0.5, size=18),
-            #                 plot.subtitle = element_text(hjust = 0.5, size=16),
-            #                 axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-            #                 axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
-            #                 panel.background = element_rect(fill='white', colour='black'),
-            #                 panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-            #           xlab(expression(paste("Edge Angle"))) + ylab("Density")+
-            #           labs(title = "Comparison of edge feature of original and simulated networks")  )
-
-            edge_reject = FALSE
-            epsilon_f = 2e-06
-            epsilon_e = 0
-            
-            #### prediction
-            org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index]))
-            org_est_2 = predict(orgKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
-            
-            temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index]))
-            temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
-            
-            cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
-            cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
-
-            # org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
-            # tri_edge_est = predict(temp_triKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
-            # 
-            # cat("\nEdge est. diff: ", (tri_edge_est - org_edge_est), "\n")
-
-            if(length(face_index)==2){
-                f1 = face_index[1]
-                f2 = face_index[2]
-
-                if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
-                    edge_reject = TRUE
-                }
-
-            }else if(length(face_index)==1){
-                f1 = face_index[1]
-
-                if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
-                    edge_reject = TRUE
-                }
-
-            }else{
-                cat("\nError in face identification 1\n")
-                quit()
+    
+            #### if v1 and v2 both are boundary vertices, we keep the edge for now
+            if((vertex_dist_boundary[v1]==0 & vertex_dist_boundary[v2]==0)){
+                noChange = noChange + 1
+                cat("\nEdge kept [Boundary edge constraint]\n")
+                next
             }
-            
-
-            if(edge_reject){
-                #### remove the edge, there is a change
-                noChange = 0
-                cat("\nEdge deleted\n")
-
-                #### make necessary changes permanent
-                network_extra1 = temp_network_extra1
-                g2_degree = igraph::degree(temp_graph_obj, mode="total")
-                cat("Degree of vertices after edge deletion: ", g2_degree[v1], g2_degree[v2], "\n")
-                print(table(g2_degree))
-
-                face_list = temp_face_list
-                face_area_list = temp_face_area_list
-                face_node_count = temp_face_node_count
-                triKDE_face_feat_1 = temp_triKDE_face_feat_1
-                triKDE_face_feat_2 = temp_triKDE_face_feat_2
-                triKDE_edge_feat =  temp_triKDE_edge_feat
-                tri_face_features = temp_face_features
-
+    
+            #### just to see what happens
+            if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
+                noChange = noChange + 1
+                cat("\nEdge kept [Internal degree constraint]\n")
+                next
+            }
+    
+            #### check if removing that edge disconnects the network
+            temp_network_extra1 = network_extra1[-c(selected_edge), ]
+            #rownames(temp_network_extra1) = NULL # to reset the row index after row deletion
+    
+            temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
+            temp_graph_obj = add_edges(as.undirected(temp_graph_obj),
+                                       as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+    
+            if(is_connected(temp_graph_obj)){
+                #### ensured that removing the edge will not disconnect the network
+                #### now check for distribution of face features
+    
+                #### finding out the faces the chosen edge is a part of
+                face_index = which(unlist(lapply(face_list,
+                                                 function(x) isEdgeOnFace(x, c(network_extra1[selected_edge, ]$ind1,
+                                                                               network_extra1[selected_edge, ]$ind2)))))
+    
+                #### recompute the face features and KDE assuming the edge has been removed
+                #### and there's a new face now
+                temp_g_o <- as_graphnel(temp_graph_obj)
+                boyerMyrvoldPlanarityTest(temp_g_o)
+    
+                temp_face_list = planarFaceTraversal(temp_g_o)
+                temp_face_node_count = sapply(temp_face_list, length)
+    
+                #### applying the shoe lace formula
+                temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, gen.ppp))
+    
+                #### eliminating the outer face, it has the largest face area
+                temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
+                temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
+                temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
+    
+                #### face features computation
+                temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+                temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
+                colnames(temp_face_features) = temp_columns
+    
+                for(f in c(1: length(temp_face_list))){
+                    temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
+                    temp_face_features = rbind(temp_face_features, temp_f_feat)
+    
+                }# loop ends for each face of the temp network
+                temp_face_features$Node_Count = temp_face_node_count
+    
+                temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list)))
+                temp_triKDE_face_feat_2 = kde(as.matrix(data.frame(temp_face_node_count)), 
+                                              h=density(temp_face_node_count)$bw)
+                temp_triKDE_edge_feat = kde(as.matrix(data.frame(temp_network_extra1$anglecomp)))
+    
+                ####finding the new face
+                face_p = c()
+                for(f_i in face_index){
+                    face_p = c(face_p, as.numeric(unlist(face_list[f_i])))
+                }
+                face_p = unique(face_p)
+                face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))),
+                                            identical, sort(face_p)))
+    
+                if(length(face_p_index)==0){
+                    cat("\nError in face identification 2\n")
+                    next
+                }
+                
+                # #### node count
+                # den_org_nc = density(org_face_feature$Node_Count)
+                # den_org_nc = data.frame(x=den_org_nc$x, y=den_org_nc$y)
+                # 
+                # den_sim_nc = density(temp_face_features$Node_Count)
+                # den_sim_nc = data.frame(x=den_sim_nc$x, y=den_sim_nc$y)
+                # 
+                # print(ggplot() +
+                #           geom_line(data = den_org_nc, aes(x=x, y=y), color = "blue") +
+                #           geom_area(data = den_org_nc, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+                #           geom_line(data = den_sim_nc, aes(x=x, y=y), color="red") +
+                #           geom_area(data = den_sim_nc, aes(x=x, y=y), fill="red", alpha=0.3) +
+                #           
+                #           geom_vline(xintercept = temp_face_node_count[face_p_index],color = "black") +
+                #           
+                #           theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+                #                 legend.box.margin=margin(-10,-10,-10,-10),
+                #                 plot.title = element_text(hjust = 0.5, size=18),
+                #                 plot.subtitle = element_text(hjust = 0.5, size=16),
+                #                 axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+                #                 axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                #                 panel.background = element_rect(fill='white', colour='black'),
+                #                 panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                #           xlab(expression(paste("Face Node Count"))) + ylab("Density")+
+                #           labs(title = "Comparison of face feature of original and simulated networks") )   # the titles needs changing for different runs
+                # 
+                # #### area
+                # den_org_area = density(org_face_feature$Area_CF)
+                # den_org_area = data.frame(x=den_org_area$x, y=den_org_area$y)
+                # 
+                # den_sim_area = density(temp_face_area_list)
+                # den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
+                # 
+                # print(ggplot() +
+                #           geom_line(data = den_org_area, aes(x=x, y=y), color = "blue") +
+                #           geom_area(data = den_org_area, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+                #           geom_line(data = den_sim_area, aes(x=x, y=y), color="red") +
+                #           geom_area(data = den_sim_area, aes(x=x, y=y), fill="red", alpha=0.3) +
+                #           
+                #           geom_vline(xintercept = temp_face_area_list[face_p_index],color = "black") +
+                #           
+                #           theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+                #                 legend.box.margin=margin(-10,-10,-10,-10),
+                #                 plot.title = element_text(hjust = 0.5, size=18),
+                #                 plot.subtitle = element_text(hjust = 0.5, size=16),
+                #                 axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+                #                 axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                #                 panel.background = element_rect(fill='white', colour='black'),
+                #                 panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                #           xlab(expression(paste("Face Area"))) + ylab("Density")+
+                #           labs(title = "Comparison of face feature of original and simulated networks") ) 
+                # 
+                # # edge angle
+                # den_org_e_angle = density(apply(branch.all, 1, function(x) calcAngle(x)))
+                # den_org_e_angle = data.frame(x=den_org_e_angle$x, y=den_org_e_angle$y)
+                # 
+                # den_sim_e_angle = density(network_extra1$anglecomp)
+                # den_sim_e_angle = data.frame(x=den_sim_e_angle$x, y= den_sim_e_angle$y)
+                # 
+                # print(ggplot() +
+                #           geom_line(data = den_org_e_angle, aes(x=x, y=y), color = "blue") +
+                #           geom_area(data = den_org_e_angle, aes(x=x, y=y), fill = "blue", alpha=0.3) +
+                #           geom_line(data = den_sim_e_angle, aes(x=x, y=y), color="red") +
+                #           geom_area(data = den_sim_e_angle, aes(x=x, y=y), fill="red", alpha=0.3) +
+                #           
+                #           geom_vline(xintercept = network_extra1$anglecomp[selected_edge],color = "black") +
+                #           
+                #           theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+                #                 legend.box.margin=margin(-10,-10,-10,-10),
+                #                 plot.title = element_text(hjust = 0.5, size=18),
+                #                 plot.subtitle = element_text(hjust = 0.5, size=16),
+                #                 axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
+                #                 axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                #                 panel.background = element_rect(fill='white', colour='black'),
+                #                 panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                #           xlab(expression(paste("Edge Angle"))) + ylab("Density")+
+                #           labs(title = "Comparison of edge feature of original and simulated networks")  )
+    
+                edge_reject = FALSE
+                epsilon_f = 2e-06
+                epsilon_e = 0
+                
+                #### prediction
+                org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index]))
+                org_est_2 = predict(orgKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
+                
+                temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index]))
+                temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
+                
+                cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
+                cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
+    
+                # org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
+                # tri_edge_est = predict(temp_triKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
+                # 
+                # cat("\nEdge est. diff: ", (tri_edge_est - org_edge_est), "\n")
+    
+                if(length(face_index)==2){
+                    f1 = face_index[1]
+                    f2 = face_index[2]
+    
+                    if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
+                        edge_reject = TRUE
+                    }
+    
+                }else if(length(face_index)==1){
+                    f1 = face_index[1]
+    
+                    if((org_est_1+epsilon_f >= temp_tri_est_1) & (org_est_2 >= temp_tri_est_2)){
+                        edge_reject = TRUE
+                    }
+    
+                }else{
+                    cat("\nError in face identification 1\n")
+                    quit()
+                }
+                
+    
+                if(edge_reject){
+                    #### remove the edge, there is a change
+                    noChange = 0
+                    cat("\nEdge deleted\n")
+    
+                    #### make necessary changes permanent
+                    network_extra1 = temp_network_extra1
+                    g2_degree = igraph::degree(temp_graph_obj, mode="total")
+                    cat("Degree of vertices after edge deletion: ", g2_degree[v1], g2_degree[v2], "\n")
+                    print(table(g2_degree))
+    
+                    face_list = temp_face_list
+                    face_area_list = temp_face_area_list
+                    face_node_count = temp_face_node_count
+                    triKDE_face_feat_1 = temp_triKDE_face_feat_1
+                    triKDE_face_feat_2 = temp_triKDE_face_feat_2
+                    triKDE_edge_feat =  temp_triKDE_edge_feat
+                    tri_face_features = temp_face_features
+    
+                }else{
+                    #### keep the edge, no change
+                    noChange = noChange + 1
+                    cat("\nEdge kept [Face feature and/or edge estimation constraint]\n")
+                }
+    
             }else{
                 #### keep the edge, no change
                 noChange = noChange + 1
-                cat("\nEdge kept [Face feature and/or edge estimation constraint]\n")
+                cat("\nEdge kept [Connectivity constraint]\n")
             }
-
-        }else{
-            #### keep the edge, no change
-            noChange = noChange + 1
-            cat("\nEdge kept [Connectivity constraint]\n")
+    
+            #### temporarily plotting each iteration
+            graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
+            graph_obj = add_edges(as.undirected(graph_obj),
+                                  as.vector(t(as.matrix(network_extra1[,5:6]))))
+    
+            #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
+            #### This is sometimes also called the clustering coefficient.
+            cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+            cat("\nCC Sim: ", cluster_coeff_s, "\n")
+    
+            #### construct and display as corresponding ppp and linnet
+            degs = igraph::degree(graph_obj, mode="total")
+            # ord = order(as.numeric(names(degs)))
+            # degs = degs[ord]
+    
+            #### attach the degree information to the point pattern for proper visualization
+            marks(gen.ppp) = factor(degs)
+            gen.ppp$markformat = "factor"
+            g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
+            branch.lpp_s = lpp(gen.ppp, g_o_lin )
+    
+            plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange",
+                                                                        "dodgerblue", "white", "maroon1",
+                                                                        "mediumpurple", "yellow", "cyan"))
         }
-
-        #### temporarily plotting each iteration
-        graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
-        graph_obj = add_edges(as.undirected(graph_obj),
-                              as.vector(t(as.matrix(network_extra1[,5:6]))))
-
-        #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
-        #### This is sometimes also called the clustering coefficient.
-        cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
-        cat("\nCC Sim: ", cluster_coeff_s, "\n")
-
-        #### construct and display as corresponding ppp and linnet
-        degs = igraph::degree(graph_obj, mode="total")
-        # ord = order(as.numeric(names(degs)))
-        # degs = degs[ord]
-
-        #### attach the degree information to the point pattern for proper visualization
-        marks(gen.ppp) = factor(degs)
-        gen.ppp$markformat = "factor"
-        g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
-        branch.lpp_s = lpp(gen.ppp, g_o_lin )
-
-        plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange",
-                                                                    "dodgerblue", "white", "maroon1",
-                                                                    "mediumpurple", "yellow", "cyan"))
     }
 
     #### compute index of the boundary edges again
