@@ -2,7 +2,8 @@
 load_lib = c("deldir", "spatstat", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
              "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
              "officer", "rvg", "truncnorm", "emdist", "ks", "rlist", "readxl", "OneR", "MASS", "RColorBrewer", "this.path", 
-             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools", "geosphere", "philentropy")
+             "causaloptim", "RBGL", "svglite", "ggrepel", "devtools", "geosphere", "philentropy",
+             "collections")
 
 install_lib = load_lib[!load_lib %in% installed.packages()]
 for(lib in install_lib) install.packages(lib, dependencies=TRUE)
@@ -14,6 +15,21 @@ require("Rvision")
 setwd("~/GitHub/spatial-neuro/modelGanglionicNetwork/Codes")
 #### source the functions from other files
 source("AnalyzeGanglionicNetwork.R")
+
+
+mySoftMax <- function(y){
+    num = exp(y)
+    denom = sum(num)
+    soft_max = num / denom
+    
+    deg_prob = dict()
+    
+    for (i in c(1:length(y))) {
+        deg_prob$set(as.character(y[i]), soft_max[i])
+    }
+    
+    return(deg_prob)
+}
 
 
 computeFaceConvexity <- function(face, pp){
@@ -288,18 +304,26 @@ computeEdgeWeight <- function(g2_degree, x){
 ####Given the degree of vertices of the current network and the max degree of the original network,
 #### compute the probability of each vertex
 computeVertexProb <- function(org_max_deg, g2_degree){
-    # cur_max_deg = max(g2_degree)
-    # 
+    y = c(min(g2_degree):max(g2_degree))
+    deg_prob = mySoftMax(y)
+    
+    v_prob = c()
+    for (d in g2_degree) {
+        v_prob = c(v_prob, deg_prob$get(as.character(d)))
+    }
+    
+    return(v_prob)
+    
+    #cur_max_deg = max(g2_degree)
     # if(cur_max_deg > org_max_deg){
     #     large_deg_vs = which(g2_degree > org_max_deg)
-    #     
+    # 
     #     v_prob = numeric(length(g2_degree))
     #     v_prob[large_deg_vs] = 1
     #     return(v_prob)
     # }else{
     #     return(g2_degree / sum(g2_degree))
     # }
-
     # if(cur_max_deg > org_max_deg){
     #     max_deg_vs = which.max(g2_degree)
     #     if(length(max_deg_vs) == 1){
@@ -320,8 +344,7 @@ computeVertexProb <- function(org_max_deg, g2_degree){
     # }else{
     #     return(g2_degree / sum(g2_degree))
     # }
-
-    return(g2_degree / sum(g2_degree))
+    #return(g2_degree / sum(g2_degree))
 }
 
 
@@ -703,7 +726,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         # }
         
         cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        if(noChange >= 300){    # if the network has not been changed for 200 iterations
+        if(noChange >= length(network_extra1$x1)){    # if the network has not been changed for 200 iterations
             cat("\nNo edges rejected for 200 iterations.\n")
             break
         }
@@ -733,7 +756,6 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         
         
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
-        points(gen.ppp$x[selected_vertex], gen.ppp$y[selected_vertex], col="red", cex=2, pch=19)
         
         #### detect the neighbors of a given vertex
         adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
@@ -767,10 +789,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         }else{
             tentative_edges = c()
             for (e in edge_bet_adj_vertices) {
-                e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
+                e1 = which( ((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
                                ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
                 
-                e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
+                e2 = which( ((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
                                ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
                 #cat(e, e1, e2, "\n")
                 tentative_edges = c(tentative_edges, e, e1, e2)
@@ -786,7 +808,18 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         }
           
         for(selected_edge in selected_edges){
+            # q = readline()
+            # if(q=="q"){
+            #     break
+            # }
+            
             cat("Selected edge ID: ", selected_edge, "\n\n")
+            print(network_extra1[selected_edge, ])
+            
+            if(is.na(network_extra1$ind1[selected_edge])){
+                cat("Error in finding edge\n")
+                next
+            }
     
             #### check for the degree of the end vertices
             #### degree-one vertices only at the boundary
@@ -797,9 +830,16 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #### if any of the end vertices of the selected edge has degree 3,
             #### and if that is on the boundary we won't allow it
             #### cause in the end after deleting the boundary edges it will disconnect the network
+            cat("End vertices: ", v1, v2, "\n")
+            
+            points(gen.ppp$x[v1], gen.ppp$y[v1], col="blue", cex=2, pch=19)
+            points(gen.ppp$x[v2], gen.ppp$y[v2], col="blue", cex=2, pch=19)
+            
+            # cat("\nboundary distance: ", bdist.points(gen.ppp), "\n")
+            # cat("\nDegree list: ", g2_degree, "\n")
             
             cat("Boundary dist: ", vertex_dist_boundary[v1], vertex_dist_boundary[v2], "\n")
-            cat("Degree: ", g2_degree[v1], g2_degree[v2], "\n")
+            cat("Degree: ", g2_degree[v1], g2_degree[v2], "\n\n")
             
             if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
                (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
