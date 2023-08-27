@@ -504,7 +504,7 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     }# loop ends for each face of the network
     temp_face_features$Node_Count = temp_face_node_count
     
-    temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list, temp_face_features$elong)))
+    temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list, temp_face_features$elong, temp_face_features$orient)))
     temp_triKDE_face_feat_2 = kde(as.matrix(data.frame(temp_face_node_count)), 
                                   h=density(temp_face_node_count)$bw)
     temp_triKDE_edge_feat = kde(as.matrix(data.frame(network_extra1$anglecomp,
@@ -585,14 +585,14 @@ selectMultEdges <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE
 
 #### detects if a vertex is a corner of the pp boundary
 isCornerV <- function(v, gen.ppp){
-    cat("!!!!!!!!!!!!!!!!!!!!!!!!Inside isCornerV 1!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+    #cat("!!!!!!!!!!!!!!!!!!!!!!!!Inside isCornerV 1!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
     v_x = gen.ppp$x[v]
     v_y = gen.ppp$y[v]
     
     cond1 = (v_x %in% gen.ppp$window$xrange)
     cond2 = (v_y %in% gen.ppp$window$yrange)
     
-    cat("!!!!!!!!!!!!!!!!!!!!!!!!Inside isCornerV 2!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+    #cat("!!!!!!!!!!!!!!!!!!!!!!!!Inside isCornerV 2!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
     
     if(is.na(cond1) | is.na(cond2)){
         return(FALSE)
@@ -627,7 +627,9 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
     
     ####index of the boundary edges
     bb_edges = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
-                         (vertex_dist_boundary[network_extra1$ind2]==0))
+                         (vertex_dist_boundary[network_extra1$ind2]==0) &
+                         ((gen.ppp$x[network_extra1$ind1]==gen.ppp$x[network_extra1$ind2])|
+                              (gen.ppp$y[network_extra1$ind1]==gen.ppp$y[network_extra1$ind2]) ) )
     
     #### eliminate the edges from the triangulation whose length is larger/smaller than the max/min edge length
     #### in the original network
@@ -715,9 +717,6 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     org_max_edge_length = max(branch.all$euclid)
     org_min_edge_length = min(branch.all$euclid)
     
-    #### find out the faces in the triangulation that have smaller area than the min of the original network
-    org_min_face_area = min(org_face_feature$Area_SL)
-    
     noChange = 0
     while (TRUE) {
         # q = readline()
@@ -726,8 +725,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         # }
         
         cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        if(noChange >= length(network_extra1$x1)){    # if the network has not been changed for 200 iterations
-            cat("\nNo edges rejected for 200 iterations.\n")
+        if(noChange >= 400){    # if the network has not been changed for 200 iterations
+            cat("\nNo edges rejected for 400 iterations.\n")
             break
         }
 
@@ -747,14 +746,12 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             cat("\nRejection sampling ended [Net metrics reached target]\n")
             break
         }
-        
+
         #### prepare the vertex probability from degree values
         prob_vertex = computeVertexProb(org_max_deg, g2_degree)
         
         #### select a vertex at random or based on high degree
         selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
-        
-        
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
         
         #### detect the neighbors of a given vertex
@@ -766,7 +763,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
                                           (network_extra1$ind2 %in% adj_vertices_from_df))
         
-        #### when there is no edges between the neighbor vertices, select an edge at random
+        #### when there is no edges between the neighbor vertices, select an edge from the entire edge set
         if(length(edge_bet_adj_vertices)==0){
             cat("No edges between neighboring vertices.\n")
             
@@ -795,9 +792,12 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 e2 = which( ((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
                                ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
                 #cat(e, e1, e2, "\n")
+                
                 tentative_edges = c(tentative_edges, e, e1, e2)
             }
+            
             tentative_edges = unique(tentative_edges)
+            
             #### pick many edges depending on their edge feature
             selected_edges = selectMultEdges(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
         }
@@ -825,21 +825,20 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #### degree-one vertices only at the boundary
             v1 = network_extra1$ind1[selected_edge]
             v2 = network_extra1$ind2[selected_edge]
-            lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="red", lwd=2.5)
+            lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="red", lwd=2.6)
     
             #### if any of the end vertices of the selected edge has degree 3,
             #### and if that is on the boundary we won't allow it
             #### cause in the end after deleting the boundary edges it will disconnect the network
-            cat("End vertices: ", v1, v2, "\n")
+            #cat("End vertices: ", v1, v2, "\n")
             
-            points(gen.ppp$x[v1], gen.ppp$y[v1], col="blue", cex=2, pch=19)
-            points(gen.ppp$x[v2], gen.ppp$y[v2], col="blue", cex=2, pch=19)
+            # points(gen.ppp$x[v1], gen.ppp$y[v1], col="blue", cex=2, pch=19)
+            # points(gen.ppp$x[v2], gen.ppp$y[v2], col="blue", cex=2, pch=19)
             
             # cat("\nboundary distance: ", bdist.points(gen.ppp), "\n")
             # cat("\nDegree list: ", g2_degree, "\n")
-            
-            cat("Boundary dist: ", vertex_dist_boundary[v1], vertex_dist_boundary[v2], "\n")
-            cat("Degree: ", g2_degree[v1], g2_degree[v2], "\n\n")
+            # cat("Boundary dist: ", vertex_dist_boundary[v1], vertex_dist_boundary[v2], "\n")
+            # cat("Degree: ", g2_degree[v1], g2_degree[v2], "\n\n")
             
             if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
                (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
@@ -912,7 +911,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 }# loop ends for each face of the temp network
                 temp_face_features$Node_Count = temp_face_node_count
     
-                temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list, temp_face_features$elong)))
+                temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list, temp_face_features$elong, temp_face_features$orient)))
                 temp_triKDE_face_feat_2 = kde(as.matrix(data.frame(temp_face_node_count)), 
                                               h=density(temp_face_node_count)$bw)
                 temp_triKDE_edge_feat = kde(as.matrix(data.frame(temp_network_extra1$anglecomp,
@@ -1015,10 +1014,10 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 epsilon_e = 0
                 
                 #### prediction
-                org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index]))
+                org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
                 org_est_2 = predict(orgKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
                 
-                temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index]))
+                temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
                 temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
                 
                 cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
@@ -1118,7 +1117,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
 
     #### compute index of the boundary edges again
     bb_edges_2 = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
-                         (vertex_dist_boundary[network_extra1$ind2]==0))
+                         (vertex_dist_boundary[network_extra1$ind2]==0) & 
+                           ((gen.ppp$x[network_extra1$ind1]==gen.ppp$x[network_extra1$ind2])|
+                                 (gen.ppp$y[network_extra1$ind1]==gen.ppp$y[network_extra1$ind2]) ) )
     
     #### eliminate boundary-boundary edges
     cat("Eliminating boundary edges\n")
@@ -1301,7 +1302,7 @@ org_face_convexity_mean = mean(face_feature$Convexity)
 org_face_convexity_sd = sd(face_feature$Convexity)
 cat("original avg face convexity: ", org_face_convexity_mean, "\n")
 
-orgKDE_face_feat_1 = kde(as.matrix(data.frame(face_feature$Area_SL, face_feature$Elong.)))
+orgKDE_face_feat_1 = kde(as.matrix(data.frame(face_feature$Area_SL, face_feature$Elong., face_feature$Orient.)))
 orgKDE_face_feat_2 = kde(as.matrix(data.frame(face_feature$Node_Count)),
                          h=density(face_feature$Node_Count)$bw)
 orgKDE_edge_feat = kde(as.matrix(data.frame(apply(branch.all, 1, function(x) calcAngle(x)), 
