@@ -724,11 +724,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     break
         # }
         
-        cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        if(noChange >= 400){    # if the network has not been changed for 200 iterations
-            cat("\nNo edges rejected for 400 iterations.\n")
-            break
-        }
+        # cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
+        # if(noChange >= 400){    # if the network has not been changed for 200 iterations
+        #     cat("\nNo edges rejected for 400 iterations.\n")
+        #     break
+        # }
 
         #### cc of the current network
         cc_cur = ccFromDataframe(gen.ppp, network_extra1)
