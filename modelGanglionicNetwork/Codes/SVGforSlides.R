@@ -178,6 +178,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
       labs(title = "Comparison of face feature of original and triangulated network")  )# the titles needs changing for different runs
     dev.off()
     
+    
     # area
     den_org_area = density(org_face_feature$Area_SL)
     den_org_area = data.frame(x=den_org_area$x, y=den_org_area$y)
@@ -205,6 +206,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
               xlab(expression(paste("Face Area"))) + ylab("Density")+
               labs(title = "Comparison of face feature of original and triangulated network") )  # the titles needs changing for different runs
     dev.off()
+    
     
     # elongation
     den_org_elong = density(org_face_feature$Elong.)
@@ -234,6 +236,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
               labs(title = "Comparison of face feature of original and triangulated network")  )  # the titles needs changing for different runs
     dev.off()
     
+    
     # orientation
     den_org_orient = density(org_face_feature$Orient.)
     den_org_orient = data.frame(x=den_org_orient$x, y=den_org_orient$y)
@@ -261,6 +264,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
               xlab(expression(paste("Face Orientation"))) + ylab("Density")+
               labs(title = "Comparison of face feature of original and triangulated network")  )  # the titles needs changing for different runs
     dev.off()
+    
     
     # edge length
     den_org_e_len = density(branch.all$euclid)
@@ -290,6 +294,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
               labs(title = "Comparison of edge feature of original and triangulated network")  )  # the titles needs changing for different runs
     dev.off()
     
+    
     # edge angle
     den_org_e_angle = density(apply(branch.all, 1, function(x) calcAngle(x)))
     den_org_e_angle = data.frame(x=den_org_e_angle$x, y=den_org_e_angle$y)
@@ -317,6 +322,7 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
               xlab(expression(paste("Edge Angle"))) + ylab("Density")+
               labs(title = "Comparison of edge feature of original and triangulated network") ) # the titles needs changing for different runs
     dev.off()
+    
 }
 
 
@@ -337,7 +343,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
   den_sim_nc = data.frame(x=den_sim_nc$x, y=den_sim_nc$y)
   
   svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                "init_tri_node_count.svg", sep=""), width = 8, height = 6)
+                "simulated_node_count.svg", sep=""), width = 8, height = 6)
   print(ggplot() +
           geom_line(data = den_org_nc, aes(x=x, y=y, color = "real")) +
           geom_area(data = den_org_nc, aes(x=x, y=y, fill = "real"), alpha=0.3) +
@@ -357,6 +363,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
           labs(title = "Comparison of face feature of original and simulated network")  )# the titles needs changing for different runs
   dev.off()
   
+  
   # area
   den_org_area = density(org_face_feature$Area_SL)
   den_org_area = data.frame(x=den_org_area$x, y=den_org_area$y)
@@ -365,7 +372,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
   den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
   
   svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                "init_tri_face_area.svg", sep=""), width = 8, height = 6)
+                "simulated_face_area.svg", sep=""), width = 8, height = 6)
   print(ggplot() +
           geom_line(data = den_org_area, aes(x=x, y=y, color = "real")) +
           geom_area(data = den_org_area, aes(x=x, y=y, fill = "real"), alpha=0.3) +
@@ -385,6 +392,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
           labs(title = "Comparison of face feature of original and simulated network") )  # the titles needs changing for different runs
   dev.off()
   
+  
   # elongation
   den_org_elong = density(org_face_feature$Elong.)
   den_org_elong = data.frame(x=den_org_elong$x, y=den_org_elong$y)
@@ -393,7 +401,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
   den_sim_elong = data.frame(x=den_sim_elong$x, y= den_sim_elong$y)
   
   svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                "init_tri_face_elong.svg", sep=""), width = 8, height = 6)
+                "simulated_face_elong.svg", sep=""), width = 8, height = 6)
   print(ggplot() +
           geom_line(data = den_org_elong, aes(x=x, y=y, color = "real")) +
           geom_area(data = den_org_elong, aes(x=x, y=y, fill = "real"), alpha=0.3) +
@@ -413,6 +421,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
           labs(title = "Comparison of face feature of original and simulated network")  )  # the titles needs changing for different runs
   dev.off()
   
+  
   # orientation
   den_org_orient = density(org_face_feature$Orient.)
   den_org_orient = data.frame(x=den_org_orient$x, y=den_org_orient$y)
@@ -421,7 +430,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
   den_sim_orient = data.frame(x=den_sim_orient$x, y= den_sim_orient$y)
   
   svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                "init_tri_face_orient.svg", sep=""), width = 8, height = 6)
+                "simulated_face_orient.svg", sep=""), width = 8, height = 6)
   print(ggplot() +
           geom_line(data = den_org_orient, aes(x=x, y=y, color = "real")) +
           geom_area(data = den_org_orient, aes(x=x, y=y, fill = "real"), alpha=0.3) +
@@ -441,6 +450,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
           labs(title = "Comparison of face feature of original and simulated network")  )  # the titles needs changing for different runs
   dev.off()
   
+  
   # edge length
   den_org_e_len = density(branch.all$euclid)
   den_org_e_len = data.frame(x=den_org_e_len$x, y=den_org_e_len$y)
@@ -449,7 +459,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
   den_sim_e_len = data.frame(x=den_sim_e_len$x, y= den_sim_e_len$y)
   
   svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                "init_tri_edge_len.svg", sep=""), width = 8, height = 6)
+                "simulated_edge_len.svg", sep=""), width = 8, height = 6)
   print(ggplot() +
           geom_line(data = den_org_e_len, aes(x=x, y=y, color = "real")) +
           geom_area(data = den_org_e_len, aes(x=x, y=y, fill = "real"), alpha=0.3) +
@@ -469,6 +479,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
           labs(title = "Comparison of edge feature of original and simulated network")  )  # the titles needs changing for different runs
   dev.off()
   
+  
   # edge angle
   den_org_e_angle = density(apply(branch.all, 1, function(x) calcAngle(x)))
   den_org_e_angle = data.frame(x=den_org_e_angle$x, y=den_org_e_angle$y)
@@ -477,7 +488,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
   den_sim_e_angle = data.frame(x=den_sim_e_angle$x, y= den_sim_e_angle$y)
   
   svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                "init_tri_edge_angle.svg", sep=""), width = 8, height = 6)
+                "simulated_edge_angle.svg", sep=""), width = 8, height = 6)
   print(ggplot() +
           geom_line(data = den_org_e_angle, aes(x=x, y=y, color = "real")) +
           geom_area(data = den_org_e_angle, aes(x=x, y=y, fill = "real"), alpha=0.3)+
@@ -496,6 +507,7 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
           xlab(expression(paste("Edge Angle"))) + ylab("Density")+
           labs(title = "Comparison of edge feature of original and simulated network") ) # the titles needs changing for different runs
   dev.off()
+  
 }
 
 
@@ -631,7 +643,7 @@ compuateFaceEdges <- function(face, network_extra, gen.ppp){
         for (j in c((i+1):n)) {
             v1 = as.numeric(face[i])
             v2 = as.numeric(face[j])
-            lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="blue", lwd=3)
+            #lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="blue", lwd=3)
             edges = c(edges, which((network_extra$ind1 == v1 & network_extra$ind2 == v2) |
                                        (network_extra$ind1 == v2 & network_extra$ind2 == v1)) )
         }
@@ -908,6 +920,7 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
                                                                         "mediumpurple", "yellow", "cyan"))
     dev.off()
     
+    
     #### degree list of the constructed Delaunay graph again for edge weight calculation
     g_o_degree = degs
     
@@ -1039,11 +1052,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #### degree-one vertices only at the boundary
             v1 = network_extra1$ind1[selected_edge]
             v2 = network_extra1$ind2[selected_edge]
-            
-            svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-                          "selected_edge.svg", sep=""), width = 8, height = 6)
             lines(c(gen.ppp$x[v1], gen.ppp$x[v2]), c(gen.ppp$y[v1], gen.ppp$y[v2]), col="red", lwd=2.6)
-            dev.off()
+            
             
             #### if any of the end vertices of the selected edge has degree 3,
             #### and if that is on the boundary we won't allow it
@@ -1252,6 +1262,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                               labs(title = "Comparison of edge feature of original and current network")  )
                     dev.off()
                     
+                    
                     # edge length
                     den_org_e_len = density(branch.all$euclid)
                     den_org_e_len = data.frame(x=den_org_e_len$x, y=den_org_e_len$y)
@@ -1281,6 +1292,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                             xlab(expression(paste("Edge Length"))) + ylab("Density")+
                             labs(title = "Comparison of edge feature of original and current network")  )
                     dev.off()
+                    
                     
                     #### area
                     den_org_area = density(org_face_feature$Area_SL)
@@ -1312,6 +1324,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                             labs(title = "Comparison of face feature of original and current network")  )
                     dev.off()
                     
+                    
                     #### elongation
                     den_org_elong = density(org_face_feature$Elong.)
                     den_org_elong = data.frame(x=den_org_elong$x, y=den_org_elong$y)
@@ -1341,6 +1354,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                             xlab(expression(paste("Face Elongation"))) + ylab("Density")+
                             labs(title = "Comparison of face feature of original and current network")  )
                     dev.off()
+                    
                     
                     #### orientation
                     #########################################################################
@@ -1540,16 +1554,18 @@ g1 = data_struct_list[[4]]
 hardcoreStrauss_model_param = data_struct_list[[5]]
 
 svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-              "org_network.svg", sep=""), width = 8, height = 6)
-plot(branch.lpp, main="Real ENS Network", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
-                                                               "white", "maroon1", "mediumpurple"))
-dev.off()
-
-svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
               "org_points.svg", sep=""), width = 8, height = 6)
 plot(branch.ppp, main="Points", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
                                                                        "white", "maroon1", "mediumpurple"))
 dev.off()
+
+
+svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
+              "org_network.svg", sep=""), width = 8, height = 6)
+plot(branch.lpp, main="Real ENS Network", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
+                                                             "white", "maroon1", "mediumpurple"))
+dev.off()
+
                                                               
 #L-function
 l_inhom = envelope(unmark(branch.ppp), Linhom, correction = "border", verbose = F)
@@ -1571,6 +1587,7 @@ ggplot(l_inhom)+
           xlab(expression(paste("Interaction distance (r)"))) + ylab("L(r)") +
           ggtitle("Besag's centered inhomogeneous L-function")
 dev.off()
+
 
 #### alpha, gamma, psi (meshedness, network density and compactness parameters)
 N = branch.ppp$n
