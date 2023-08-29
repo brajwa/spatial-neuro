@@ -724,11 +724,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     break
         # }
         
-        # cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        # if(noChange >= 400){    # if the network has not been changed for 200 iterations
-        #     cat("\nNo edges rejected for 400 iterations.\n")
-        #     break
-        # }
+        cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
+        if(noChange >= 600){    # if the network has not been changed for 200 iterations
+            cat("\nNo edges rejected for 400 iterations.\n")
+            break
+        }
 
         #### cc of the current network
         cc_cur = ccFromDataframe(gen.ppp, network_extra1)
@@ -1338,9 +1338,11 @@ marks(gen.ppp_wo_c) = factor(degs)
 gen.ppp_wo_c$markformat = "factor"
 branch.lpp_2 = lpp(gen.ppp_wo_c, linnet_obj )
 
-plot(branch.lpp_2, main="simulated", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
+svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
+              "simulated_network.svg", sep=""), width = 8, height = 6)
+plot(branch.lpp_2, main="Simulated Network", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
                                                                   "white", "maroon1", "mediumpurple", "yellow", "cyan"))
-                                                                  
+dev.off()                                                              
 
 #### compute the face features of the newly constructed network to compare the density with the original face feature
 #### Reminder: for the simulated network there are many open boundary faces
@@ -1397,7 +1399,7 @@ for(f in c(1: length(face_list))){
 }# loop ends for each face of the simulated network
 face_features_sim$Node_Count = face_node_count
 
-comparePlotOrgSim(face_feature, face_features_sim, branch.all, net_data_struct)
+comparePlotOrgSim2(face_feature, face_features_sim, branch.all, net_data_struct)
 
 #########################################################################
 #(org_est1 < tri_est1) & (org_est2 < tri_est2) & (org_est >= temp_tri_est)
