@@ -724,11 +724,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     break
         # }
         
-        cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        if(noChange >= 600){    # if the network has not been changed for 200 iterations
-            cat("\nNo edges rejected for 400 iterations.\n")
-            break
-        }
+        # cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
+        # if(noChange >= 600){    # if the network has not been changed for 200 iterations
+        #     cat("\nNo edges rejected for 600 iterations.\n")
+        #     break
+        # }
 
         #### cc of the current network
         cc_cur = ccFromDataframe(gen.ppp, network_extra1)
@@ -769,7 +769,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             
             #### select an edge from all the edges
             tentative_edges = c(1: length(network_extra1))
-            selected_edges = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            #selected_edges = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            selected_edges = sample.int(length(network_extra1), 1)
             
         }else if(length(edge_bet_adj_vertices)==1){
             e = edge_bet_adj_vertices
@@ -782,7 +783,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #cat(e, e1, e2, "\n")
             
             #### pick an edge depending on their edge feature
-            selected_edges = selectEdge(c(e, e1, e2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            selected_edges = selectEdge(c(e1, e2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
         }else{
             tentative_edges = c()
             for (e in edge_bet_adj_vertices) {
@@ -793,7 +794,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                                ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
                 #cat(e, e1, e2, "\n")
                 
-                tentative_edges = c(tentative_edges, e, e1, e2)
+                tentative_edges = c(tentative_edges, e1, e2)
             }
             
             tentative_edges = unique(tentative_edges)
@@ -814,7 +815,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             # }
             
             cat("Selected edge ID: ", selected_edge, "\n\n")
-            print(network_extra1[selected_edge, ])
+            #print(network_extra1[selected_edge, ])
             
             if(is.na(network_extra1$ind1[selected_edge])){
                 cat("Error in finding edge\n")
@@ -1020,11 +1021,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
                 temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(temp_face_node_count[face_p_index]))
                 
-                cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
-                cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
-                
-                cat("Face convexity of the new face: ", temp_face_convexity_list[face_p_index], "\n")
-    
+                # cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
+                # cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
+                # 
+                # cat("Face convexity of the new face: ", temp_face_convexity_list[face_p_index], "\n")
+                # 
                 # org_edge_est = predict(orgKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
                 # tri_edge_est = predict(temp_triKDE_edge_feat, x=network_extra1$anglecomp[selected_edge])
                 # 
@@ -1065,7 +1066,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                     #### make necessary changes permanent
                     network_extra1 = temp_network_extra1
                     g2_degree = igraph::degree(temp_graph_obj, mode="total")
-                    cat("Degree of vertices after edge deletion: ", g2_degree[v1], g2_degree[v2], "\n")
+                    #cat("Degree of vertices after edge deletion: ", g2_degree[v1], g2_degree[v2], "\n")
                     print(table(g2_degree))
     
                     face_list = temp_face_list
