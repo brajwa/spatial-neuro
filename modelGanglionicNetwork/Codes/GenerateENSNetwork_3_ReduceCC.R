@@ -544,8 +544,8 @@ selectEdge <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge
     set.seed(Sys.time())
     tent_edges = sample(tent_edges)
     for (te in tent_edges) {
-        org_edge_est = predict(orgKDE_edge_feat, x=c(scale(network_extra1$anglecomp[te]), scale(network_extra1$euclidDist[te])))
-        tri_edge_est = predict(triKDE_edge_feat, x=c(scale(network_extra1$anglecomp[te]), scale(network_extra1$euclidDist[te])))
+        org_edge_est = predict(orgKDE_edge_feat, x=c(scale(network_extra1$anglecomp)[te], scale(network_extra1$euclidDist)[te]))
+        tri_edge_est = predict(triKDE_edge_feat, x=c(scale(network_extra1$anglecomp)[te], scale(network_extra1$euclidDist)[te]))
         
         if(tri_edge_est > org_edge_est){
             return(te)
@@ -565,8 +565,8 @@ selectMultEdges <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE
     tent_edges = sample(tent_edges)
     e_list = c()
     for (te in tent_edges) {
-        org_edge_est = predict(orgKDE_edge_feat, x=c(scale(network_extra1$anglecomp[te]), scale(network_extra1$euclidDist[te])))
-        tri_edge_est = predict(triKDE_edge_feat, x=c(scale(network_extra1$anglecomp[te]), scale(network_extra1$euclidDist[te])))
+        org_edge_est = predict(orgKDE_edge_feat, x=c(scale(network_extra1$anglecomp)[te], scale(network_extra1$euclidDist)[te]))
+        tri_edge_est = predict(triKDE_edge_feat, x=c(scale(network_extra1$anglecomp)[te], scale(network_extra1$euclidDist)[te]))
         
         if(tri_edge_est > org_edge_est){
             e_list = c(e_list, te)
@@ -724,11 +724,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     break
         # }
         
-        # cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-        # if(noChange >= 600){    # if the network has not been changed for 200 iterations
-        #     cat("\nNo edges rejected for 600 iterations.\n")
-        #     break
-        # }
+        cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
+        if(noChange >= 600){    # if the network has not been changed for 200 iterations
+            cat("\nNo edges rejected for 600 iterations.\n")
+            break
+        }
 
         #### cc of the current network
         cc_cur = ccFromDataframe(gen.ppp, network_extra1)
@@ -1016,11 +1016,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 epsilon_e = 0
                 
                 #### prediction
-                org_est_1 = predict(orgKDE_face_feat_1, x=c(scale(temp_face_area_list[face_p_index]), scale(temp_face_features$elong[face_p_index]), scale(temp_face_features$orient[face_p_index])))
-                org_est_2 = predict(orgKDE_face_feat_2, x=c(scale(temp_face_node_count[face_p_index])))
+                org_est_1 = predict(orgKDE_face_feat_1, x=c(scale(temp_face_area_list)[face_p_index], scale(temp_face_features$elong)[face_p_index], scale(temp_face_features$orient)[face_p_index]))
+                org_est_2 = predict(orgKDE_face_feat_2, x=c(scale(temp_face_node_count)[face_p_index]))
                 
-                temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(scale(temp_face_area_list[face_p_index]), scale(temp_face_features$elong[face_p_index]), scale(temp_face_features$orient[face_p_index])))
-                temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(scale(temp_face_node_count[face_p_index])))
+                temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(scale(temp_face_area_list)[face_p_index], scale(temp_face_features$elong)[face_p_index], scale(temp_face_features$orient)[face_p_index]))
+                temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c(scale(temp_face_node_count)[face_p_index]))
                 
                 # cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
                 # cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
