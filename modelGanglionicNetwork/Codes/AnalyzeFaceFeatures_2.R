@@ -107,10 +107,10 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
     elong = log2(sqrt(lambda1 / lambda2))
     
     #### orient, eccentr, use direct spatial moments
-    orient = 0.5 * atan2((2 * moments$value[moments$moment == "m11"]) , (moments$value[moments$moment == "m20"] - moments$value[moments$moment == "m02"]))
+    orient = 0.5 * atan2((2 * moments$value[moments$moment == "mu11"]) , (moments$value[moments$moment == "mu20"] - moments$value[moments$moment == "mu02"]))
     orient = orient * 180 / pi
-    eccentr = (((moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"]) * (moments$value[moments$moment == "m02"] - moments$value[moments$moment == "m20"])) 
-               + (4 * moments$value[moments$moment == "m11"] * moments$value[moments$moment == "m11"])) / moments$value[moments$moment == "m00"]
+    eccentr = (((moments$value[moments$moment == "mu02"] - moments$value[moments$moment == "mu20"]) * (moments$value[moments$moment == "mu02"] - moments$value[moments$moment == "mu20"])) 
+               + (4 * moments$value[moments$moment == "mu11"] * moments$value[moments$moment == "mu11"])) / moments$value[moments$moment == "m00"]
     
     return(data.frame(area, perim, ext, disp, elong, eccentr, orient))
 }
