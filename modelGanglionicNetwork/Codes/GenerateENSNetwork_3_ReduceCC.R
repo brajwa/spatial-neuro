@@ -52,6 +52,29 @@ computeFaceConvexity <- function(face, pp){
 }
 
 
+computeFaceList <- function(gen.ppp, network_extra2){
+    temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
+    temp_graph_obj = add_edges(as.undirected(temp_graph_obj),
+                               as.vector(t(as.matrix(network_extra2[,5:6]))))
+    
+    temp_g_o <- as_graphnel(temp_graph_obj)
+    boyerMyrvoldPlanarityTest(temp_g_o)
+    
+    temp_face_list = planarFaceTraversal(temp_g_o)
+    temp_face_node_count = sapply(temp_face_list, length)
+    
+    #### applying the shoe lace formula
+    temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, gen.ppp))
+    
+    #### eliminating the outer face, it has the largest face area
+    temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
+    temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
+    temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
+    
+    return(temp_face_list)
+}
+
+
 #### shoelace formula for computing the face area
 faceArea <- function(face, branch.ppp){
     n = length(face)
@@ -755,18 +778,22 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
 
 
 ####rewire edges
-rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean){
+rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean,
+                        orgKDE_edge_feat, triKDE_edge_feat){
     #### distance of each vertex from the point pattern boundary
     vertex_dist_boundary = bdist.points(gen.ppp)
     
     for(hd_v in high_deg_vertices){
+        
         cat("\nhd_v: ", hd_v, "\n")
         
-        #### detect the anti clockwise neighbors of a given vertex
+        #### detect the anti clockwise neighbors of a given vertex, wrapped the first one to the last
         anti_clockwise_neighbors = antiClockwiseNeighbors(hd_v, gen.ppp, network_extra1)
         anti_clockwise_neighbors[length(anti_clockwise_neighbors) + 1] = anti_clockwise_neighbors[1]
         
         for (n in c(1: (length(anti_clockwise_neighbors)-1))) {
+            #### check for cc?
+           
             p = anti_clockwise_neighbors[n]
             q = anti_clockwise_neighbors[n+1]
             
@@ -794,12 +821,17 @@ rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, f
             el2 = which( (network_extra1$ind1==hd_v & network_extra1$ind2==q) |
                              (network_extra1$ind2==hd_v & network_extra1$ind1==q))
             
-            l = sample(c(1, 2), 1)
-            if(l == 1){
+            if(length(el1)==0 | length(el2)==0){
+                next
+            }
+            
+            l = selectEdge(c(el1, el2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            
+            if(l == el1){
                 v1 = hd_v
                 v2 = p
                 el = el1
-            }else if(l == 2){
+            }else if(l == el2){
                 v1 = hd_v
                 v2 = q
                 el = el2
@@ -828,6 +860,8 @@ rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, f
             }
             
             network_extra2 = rbind(network_extra1, pq)
+            #### recompute face list
+            face_list = computeFaceList(gen.ppp, network_extra2)
             
             temp_network_extra1 = network_extra2[-c(el), ]
             
@@ -836,13 +870,77 @@ rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, f
                                        as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
             
             if(is_connected(temp_graph_obj)){
-                after_elim_0 = eliminateEdges(gen.ppp, network_extra2, el)
+                #### finding out the faces the chosen edge is a part of
+                face_index = which(unlist(lapply(face_list,
+                                                 function(x) isEdgeOnFace(x, c(network_extra2[el, ]$ind1,
+                                                                               network_extra2[el, ]$ind2)))))
+                
+                #### recompute the face features and KDE assuming the edge has been removed
+                #### and there's a new face now
+                temp_g_o <- as_graphnel(temp_graph_obj)
+                boyerMyrvoldPlanarityTest(temp_g_o)
+                
+                temp_face_list = planarFaceTraversal(temp_g_o)
+                temp_face_node_count = sapply(temp_face_list, length)
+                
+                #### applying the shoe lace formula
+                temp_face_area_list = sapply(temp_face_list, function(x) faceArea(x, gen.ppp))
+                
+                #### eliminating the outer face, it has the largest face area
+                temp_face_node_count = temp_face_node_count[-which.max(temp_face_area_list)]
+                temp_face_list = temp_face_list[-which.max(temp_face_area_list)]
+                temp_face_area_list = temp_face_area_list[-which.max(temp_face_area_list)]
+                
+                #### face features computation
+                temp_columns = c("Area_CF", "Perim.", "Ext.", "Disp.", "Elong.", "Eccentr.", "Orient.") # Area_CF: from contour function
+                temp_face_features = data.frame(matrix(nrow = 0, ncol = length(temp_columns)))
+                colnames(temp_face_features) = temp_columns
+                
+                temp_face_convexity_list = c()
+                
+                for(f in c(1: length(temp_face_list))){
+                    temp_f_feat = computeFacefeatures(f, temp_face_list, gen.ppp, NULL)
+                    temp_face_features = rbind(temp_face_features, temp_f_feat)
+                    
+                    temp_face_convexity_list = c(temp_face_convexity_list, computeFaceConvexity(temp_face_list[[f]], gen.ppp))
+                    
+                }# loop ends for each face of the temp network
+                temp_face_features$Node_Count = temp_face_node_count
+                
+                temp_triKDE_face_feat_1 = kde(as.matrix(data.frame(temp_face_area_list, temp_face_features$orient)))
+                temp_triKDE_face_feat_2 = kde(as.matrix(data.frame((temp_face_node_count))), 
+                                              h=density((temp_face_node_count))$bw)
+                temp_triKDE_edge_feat = kde(as.matrix(data.frame((temp_network_extra1$anglecomp),
+                                                                 (temp_network_extra1$euclidDist))))
+                
+                ####finding the new face
+                face_p = c()
+                for(f_i in face_index){
+                    face_p = c(face_p, as.numeric(unlist(face_list[f_i])))
+                }
+                face_p = unique(face_p)
+                face_p_index = which(sapply(lapply(temp_face_list, function(x) sort(as.numeric(unlist(x)))),
+                                            identical, sort(face_p)))
+                
+                if(length(face_p_index)==0){
+                    cat("\nError in face identification 2\n")
+                    next
+                }
+                
+                if(temp_face_convexity_list[face_p_index] < org_face_convexity_mean){ # another option: mean(temp_face_convexity_list) < org_face_convexity_mean 
+                    cat("\nEdge kept [Face convexity constraint]\n")
+                    next
+                }else{
+                    after_elim_0 = eliminateEdges(gen.ppp, network_extra2, el)
+                }
+                
+                
             }else{
                 after_elim_0 = eliminateEdges(gen.ppp, network_extra2, NULL)
             }
             
             noChange = after_elim_0[[1]]
-            network_extra2 = after_elim_0[[2]]
+            network_extra1 = after_elim_0[[2]]
             g2_degree = after_elim_0[[3]]
             face_list = after_elim_0[[4]]
             face_area_list = after_elim_0[[5]]
@@ -853,38 +951,31 @@ rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, f
             tri_face_features = after_elim_0[[10]]
             tri_face_convexity_mean = after_elim_0[[11]]
             
-            if(tri_face_convexity_mean > org_face_convexity_mean){
-                network_extra1 = network_extra2
-                
-                graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
-                graph_obj = add_edges(as.undirected(graph_obj),
-                                      as.vector(t(as.matrix(network_extra1[,5:6]))))
-                
-                #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
-                #### This is sometimes also called the clustering coefficient.
-                cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
-                cat("\nCC Sim: ", cluster_coeff_s, "\n")
-                
-                #### construct and display as corresponding ppp and linnet
-                degs = igraph::degree(graph_obj, mode="total")
-                # ord = order(as.numeric(names(degs)))
-                # degs = degs[ord]
-                
-                #### attach the degree information to the point pattern for proper visualization
-                marks(gen.ppp) = factor(degs)
-                gen.ppp$markformat = "factor"
-                g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
-                branch.lpp_s = lpp(gen.ppp, g_o_lin )
-                
-                plot(branch.lpp_s, main="Rewired", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange",
-                                                                         "dodgerblue", "white", "maroon1",
-                                                                         "mediumpurple", "yellow", "cyan"))
-                
-                break
-            }else{
-                cat("Face convexity constraint\n")
-                next
-            }
+            graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
+            graph_obj = add_edges(as.undirected(graph_obj),
+                                  as.vector(t(as.matrix(network_extra1[,5:6]))))
+            
+            #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
+            #### This is sometimes also called the clustering coefficient.
+            cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+            cat("\nCC Sim: ", cluster_coeff_s, "\n")
+            
+            #### construct and display as corresponding ppp and linnet
+            degs = igraph::degree(graph_obj, mode="total")
+            # ord = order(as.numeric(names(degs)))
+            # degs = degs[ord]
+            
+            #### attach the degree information to the point pattern for proper visualization
+            marks(gen.ppp) = factor(degs)
+            gen.ppp$markformat = "factor"
+            g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
+            branch.lpp_s = lpp(gen.ppp, g_o_lin )
+            
+            plot(branch.lpp_s, main="Rewired", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange",
+                                                                     "dodgerblue", "white", "maroon1",
+                                                                     "mediumpurple", "yellow", "cyan"))
+            
+            break
         }
     }
     
@@ -1094,6 +1185,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                     g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                     meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                     sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd){
+    set.seed(Sys.time())
     
     #### distance of each vertex from the point pattern boundary
     vertex_dist_boundary = bdist.points(gen.ppp)
@@ -1110,34 +1202,41 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     break
         # }
         
-        cat("\n-----------------------------------\nnoChange value: ", noChange, "\n")
+        cat("\n--------------------\nnoChange value: ", noChange, "\n")
+        cat("Loop count: ", loop_count, "\n")
         if(noChange >= 500){    # if the network has not been changed for certain iterations
             cat("\nNo edges rejected for 500 iterations.\n")
             break
         }
         
-        if(noChange >= 60){    # if the network has not been changed for certain iterations
-            cat("Rewiring...\n")
-
-            lst = sort(g2_degree, index.return=TRUE, decreasing=TRUE)
-            high_deg_vertices = (lapply(lst, `[`, lst$x %in% head(unique(lst$x), 1)))$ix
-            
-            after_rewire = rewireEdges(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean)
-            
-            noChange = 0
-            network_extra1 = after_rewire[[2]]
-            g2_degree = after_rewire[[3]]
-            face_list = after_rewire[[4]]
-            face_area_list = after_rewire[[5]]
-            face_node_count = after_rewire[[6]]
-            triKDE_face_feat_1 = after_rewire[[7]]
-            triKDE_face_feat_2 = after_rewire[[8]]
-            triKDE_edge_feat = after_rewire[[9]]
-            tri_face_features = after_rewire[[10]]
-            face_convexity_mean = after_rewire[[11]]
-            
-        }
-
+        # if((loop_count!=0) & ((loop_count %% 100)==0)){
+        #     cat("...Rewiring...\n")
+        # 
+        #     lst = sort(g2_degree, index.return=TRUE, decreasing=TRUE)
+        #     high_deg_vertices = (lapply(lst, `[`, lst$x %in% head(unique(lst$x), 1)))$ix
+        #     if(length(high_deg_vertices) > 1){
+        #         high_deg_vertices = sample(high_deg_vertices, 1)
+        #     }
+        # 
+        #     after_rewire = rewireEdges(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean,
+        #                                orgKDE_edge_feat, triKDE_edge_feat)
+        # 
+        #     network_extra1 = after_rewire[[2]]
+        #     g2_degree = after_rewire[[3]]
+        #     face_list = after_rewire[[4]]
+        #     face_area_list = after_rewire[[5]]
+        #     face_node_count = after_rewire[[6]]
+        #     triKDE_face_feat_1 = after_rewire[[7]]
+        #     triKDE_face_feat_2 = after_rewire[[8]]
+        #     triKDE_edge_feat = after_rewire[[9]]
+        #     tri_face_features = after_rewire[[10]]
+        #     face_convexity_mean = after_rewire[[11]]
+        #     
+        #     comparePlotOrgSim2(org_face_feature, tri_face_features, branch.all, network_extra1)
+        #     pause = readline()
+        # 
+        # }
+        
         #### cc of the current network
         cc_cur = ccFromDataframe(gen.ppp, network_extra1)
         if(cc_cur <= cluster_coeff){
@@ -1155,9 +1254,15 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             break
         }
         
-        #### prepare the vertex probability from degree values
-        prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
-        
+        if(loop_count <= 250){
+            #### prepare the vertex probability from degree values
+            prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
+    
+        }else if(loop_count > 250){
+            #### prepare the vertex probability from degree values
+            prob_vertex = computeVertexProb2(org_max_deg, g2_degree, network_extra1)
+            
+        }
         #### select a vertex at random or based on high degree
         selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
@@ -1184,12 +1289,6 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         for(selected_edge in selected_edges){
             loop_count = loop_count + 1
             
-            cat("\n-------------------------------------\nnoChange value: ", noChange, "\n")
-            if(noChange >= 60){    # if the network has not been changed for certain iterations
-                cat("\nNo edges rejected for 200 iterations.\n")
-                break
-            }
-            
             cat("Selected edge ID: ", selected_edge, "\n\n")
             #print(network_extra1[selected_edge, ])
             
@@ -1209,7 +1308,6 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #### cause in the end after deleting the boundary edges it will disconnect the network
             if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
                (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
-                
                 noChange = noChange + 1
                 cat("\nEdge kept [Boundary degree constraint]\n")
                 next
@@ -1224,7 +1322,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             }
     
             #### just to see what happens
-            if(g2_degree[v1]==3 & g2_degree[v2]==3){
+            if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
                 noChange = noChange + 1
                 cat("\nEdge kept [Internal degree constraint]\n")
                 next
@@ -1299,24 +1397,24 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 }
                 
                 edge_reject = FALSE
-                epsilon_f = 2e-07
+                epsilon_f = 0
                 epsilon_e = 0
                 convexity_param = org_face_convexity_mean
                 
-                # if(loop_count < 100){
-                #     epsilon_f = 1e-09
-                #     convexity_param = org_face_convexity_mean
-                #     
-                # }else if(loop_count >= 100 & loop_count < 200){
-                #     cat("Epsilon increment 1\n")
-                #     epsilon_f = 1.5e-08
-                #     convexity_param = org_face_convexity_mean - (org_face_convexity_sd/2)
-                #     
-                # }else if(loop_count >= 200){
-                #     cat("Epsilon increment 2\n")
-                #     epsilon_f = 2e-07
-                #     convexity_param = org_face_convexity_mean - org_face_convexity_sd
-                # }
+                if(loop_count < 100){
+                    epsilon_f = 1e-09
+                    convexity_param = org_face_convexity_mean
+
+                }else if(loop_count >= 100 & loop_count < 250){
+                    cat("Epsilon increment 1\n")
+                    epsilon_f = 1.5e-08
+                    convexity_param = org_face_convexity_mean - (org_face_convexity_sd/2)
+
+                }else if(loop_count >= 250){
+                    cat("Epsilon increment 2\n")
+                    epsilon_f = 2e-07
+                    convexity_param = org_face_convexity_mean - org_face_convexity_sd
+                }
                 
                 #### prediction
                 org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$orient[face_p_index]))
@@ -1418,7 +1516,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                                                                         "mediumpurple", "yellow", "cyan"))
         }
     }
-
+    
     #### compute index of the boundary edges again
     bb_edges_2 = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
                          (vertex_dist_boundary[network_extra1$ind2]==0) & 
