@@ -79,7 +79,6 @@ faceArea <- function(face, branch.ppp){
 #### this function returns a 2-column dataframe of the vertex coordinates
 contourNodeCoord <- function(face, pp){
     df1 = data.frame(x = pp$x[as.integer(face)], y = pp$y[as.integer(face)])
-    
     return(df1)
 }
 
@@ -100,8 +99,6 @@ contourPerimeter <- function(f_c){
 #### Given the list of all faces (as sequence of vertices) and a particular face id,
 #### this function computes all the face features under consideration of the given face id
 computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
-    #cat("face id: ", f, "\n")
-    
     #f_contour = face_contours$contours[face_contours$contours[, 1] == 0, 2:3]  # this line was used when contours were computed from watershed lines
     
     if(!is.null(corner.ppp)){
@@ -146,7 +143,12 @@ computeFacefeatures <- function(f, face_list, u_branch.ppp, corner.ppp){
 #### can be original vs. initial DT or original vs. final network
 comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, network_extra1){
     cat("Number of faces in the original network: ", length(org_face_feature$X))
-    cat("\nNumber of faces in the simulated network: ", length(face_features$area), "\n")
+    cat("\nNumber of faces in the triangulated network: ", length(face_features$area), "\n")
+    
+    myColors = c("blue", "red")
+    names(myColors) = c("real", "triangulated")
+    custom_colors = scale_colour_manual(name = "Network type", values = myColors)
+    custom_colors_2 = scale_fill_manual(name = "Network type", values = myColors)
     
     # node count
     den_org_nc = density(org_face_feature$Node_Count)
@@ -155,22 +157,26 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
     den_sim_nc = density(face_features$Node_Count)
     den_sim_nc = data.frame(x=den_sim_nc$x, y=den_sim_nc$y)
     
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_tri_node_count.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_nc, aes(x=x, y=y), color = "blue") +
-              geom_area(data = den_org_nc, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-              geom_line(data = den_sim_nc, aes(x=x, y=y), color="red") +
-              geom_area(data = den_sim_nc, aes(x=x, y=y), fill="red", alpha=0.3) +
+              geom_line(data = den_org_nc, aes(x=x, y=y, color = "real"), linewidth=0.1) +
+              geom_area(data = den_org_nc, aes(x=x, y=y, fill = "real"), alpha=0.3) +
+              geom_line(data = den_sim_nc, aes(x=x, y=y, color="triangulated"), linewidth=0.1) +
+              geom_area(data = den_sim_nc, aes(x=x, y=y, fill="triangulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-              xlab(expression(paste("Face Node Count"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated networks") )   # the titles needs changing for different runs
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              custom_colors + custom_colors_2 +
+              xlab(expression(paste("Face Node Count"))) + ylab("Density")  )# the titles needs changing for different runs
+    dev.off()
+    
     
     # area
     den_org_area = density(org_face_feature$Area_SL)
@@ -179,22 +185,27 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
     den_sim_area = density(face_features$area)
     den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
     
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_tri_face_area.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_area, aes(x=x, y=y), color = "blue") +
-              geom_area(data = den_org_area, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-              geom_line(data = den_sim_area, aes(x=x, y=y), color="red") +
-              geom_area(data = den_sim_area, aes(x=x, y=y), fill="red", alpha=0.3) +
+              geom_line(data = den_org_area, aes(x=x, y=y, color = "real"), linewidth=0.1) +
+              geom_area(data = den_org_area, aes(x=x, y=y, fill = "real"), alpha=0.3) +
+              geom_line(data = den_sim_area, aes(x=x, y=y, color="triangulated"), linewidth=0.1) +
+              geom_area(data = den_sim_area, aes(x=x, y=y, fill="triangulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-              xlab(expression(paste("Face Area"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated networks") )   # the titles needs changing for different runs
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              scale_x_continuous(guide = guide_axis(check.overlap = TRUE))+
+              custom_colors + custom_colors_2 +
+              xlab(expression(paste("Face Area"))) + ylab("Density"))  # the titles needs changing for different runs
+    dev.off()
+    
     
     # elongation
     den_org_elong = density(org_face_feature$Elong.)
@@ -203,22 +214,26 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
     den_sim_elong = density(face_features$elong)
     den_sim_elong = data.frame(x=den_sim_elong$x, y= den_sim_elong$y)
     
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_tri_face_elong.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_elong, aes(x=x, y=y), color = "blue") +
-              geom_area(data = den_org_elong, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-              geom_line(data = den_sim_elong, aes(x=x, y=y), color="red") +
-              geom_area(data = den_sim_elong, aes(x=x, y=y), fill="red", alpha=0.3) +
+              geom_line(data = den_org_elong, aes(x=x, y=y, color = "real"), linewidth=0.1) +
+              geom_area(data = den_org_elong, aes(x=x, y=y, fill = "real"), alpha=0.3) +
+              geom_line(data = den_sim_elong, aes(x=x, y=y, color="triangulated"), linewidth=0.1) +
+              geom_area(data = den_sim_elong, aes(x=x, y=y, fill="triangulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-              xlab(expression(paste("Face Elongation"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated networks")  )  # the titles needs changing for different runs
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              custom_colors + custom_colors_2 +
+              xlab(expression(paste("Face Elongation"))) + ylab("Density")  )  # the titles needs changing for different runs
+    dev.off()
+    
     
     # orientation
     den_org_orient = density(org_face_feature$Orient.)
@@ -227,23 +242,27 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
     den_sim_orient = density(face_features$orient)
     den_sim_orient = data.frame(x=den_sim_orient$x, y= den_sim_orient$y)
     
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_tri_face_orient.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_orient, aes(x=x, y=y), color = "blue") +
-              geom_area(data = den_org_orient, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-              geom_line(data = den_sim_orient, aes(x=x, y=y), color="red") +
-              geom_area(data = den_sim_orient, aes(x=x, y=y), fill="red", alpha=0.3) +
+              geom_line(data = den_org_orient, aes(x=x, y=y, color = "real"), linewidth=0.1) +
+              geom_area(data = den_org_orient, aes(x=x, y=y, fill = "real"), alpha=0.3) +
+              geom_line(data = den_sim_orient, aes(x=x, y=y, color="triangulated"), linewidth=0.1) +
+              geom_area(data = den_sim_orient, aes(x=x, y=y, fill="triangulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-              xlab(expression(paste("Face Orientation"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated networks")  )  # the titles needs changing for different runs
-
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              custom_colors + custom_colors_2 +
+              xlab(expression(paste("Face Orientation"))) + ylab("Density")  )  # the titles needs changing for different runs
+    dev.off()
+    
+    
     # edge length
     den_org_e_len = density(branch.all$euclid)
     den_org_e_len = data.frame(x=den_org_e_len$x, y=den_org_e_len$y)
@@ -251,22 +270,26 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
     den_sim_e_len = density(network_extra1$euclidDist)
     den_sim_e_len = data.frame(x=den_sim_e_len$x, y= den_sim_e_len$y)
     
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_tri_edge_len.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_e_len, aes(x=x, y=y), color = "blue") +
-              geom_area(data = den_org_e_len, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-              geom_line(data = den_sim_e_len, aes(x=x, y=y), color="red") +
-              geom_area(data = den_sim_e_len, aes(x=x, y=y), fill="red", alpha=0.3) +
+              geom_line(data = den_org_e_len, aes(x=x, y=y, color = "real"), linewidth=0.1) +
+              geom_area(data = den_org_e_len, aes(x=x, y=y, fill = "real"), alpha=0.3) +
+              geom_line(data = den_sim_e_len, aes(x=x, y=y, color="triangulated"), linewidth=0.1) +
+              geom_area(data = den_sim_e_len, aes(x=x, y=y, fill="triangulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-              xlab(expression(paste("Edge Length"))) + ylab("Density")+
-              labs(title = "Comparison of edge feature of original and simulated networks")  )  # the titles needs changing for different runs
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              custom_colors + custom_colors_2 +
+              xlab(expression(paste("Edge Length"))) + ylab("Density")  )  # the titles needs changing for different runs
+    dev.off()
+    
     
     # edge angle
     den_org_e_angle = density(apply(branch.all, 1, function(x) calcAngle(x)))
@@ -275,24 +298,28 @@ comparePlotOrgSim <- function(org_face_feature, face_features, branch.all, netwo
     den_sim_e_angle = density(network_extra1$anglecomp)
     den_sim_e_angle = data.frame(x=den_sim_e_angle$x, y= den_sim_e_angle$y)
     
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_tri_edge_angle.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_e_angle, aes(x=x, y=y), color = "blue") +
-              geom_area(data = den_org_e_angle, aes(x=x, y=y), fill = "blue", alpha=0.3) +
-              geom_line(data = den_sim_e_angle, aes(x=x, y=y), color="red") +
-              geom_area(data = den_sim_e_angle, aes(x=x, y=y), fill="red", alpha=0.3) +
+              geom_line(data = den_org_e_angle, aes(x=x, y=y, color = "real"), linewidth=0.1) +
+              geom_area(data = den_org_e_angle, aes(x=x, y=y, fill = "real"), alpha=0.3)+
+              geom_line(data = den_sim_e_angle, aes(x=x, y=y, color="triangulated"), linewidth=0.1) +
+              geom_area(data = den_sim_e_angle, aes(x=x, y=y, fill="triangulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
-              xlab(expression(paste("Edge Angle"))) + ylab("Density")+
-              labs(title = "Comparison of edge feature of original and simulated networks")  )  # the titles needs changing for different runs
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              custom_colors + custom_colors_2 +
+              xlab(expression(paste("Edge Angle"))) + ylab("Density") ) # the titles needs changing for different runs
+    dev.off()
     
 }
+
 comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, network_extra1){
     cat("Number of faces in the original network: ", length(org_face_feature$X))
     cat("\nNumber of faces in the simulated network: ", length(face_features$area), "\n")
@@ -309,26 +336,25 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
     den_sim_nc = density(face_features$Node_Count)
     den_sim_nc = data.frame(x=den_sim_nc$x, y=den_sim_nc$y)
     
-    # svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-    #               "simulated_node_count.svg", sep=""), width = 8, height = 6)
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_node_count.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_nc, aes(x=x, y=y, color = "real")) +
+              geom_line(data = den_org_nc, aes(x=x, y=y, color = "real"), linewidth=0.1) +
               geom_area(data = den_org_nc, aes(x=x, y=y, fill = "real"), alpha=0.3) +
-              geom_line(data = den_sim_nc, aes(x=x, y=y, color="simulated")) +
+              geom_line(data = den_sim_nc, aes(x=x, y=y, color="simulated"), linewidth=0.1) +
               geom_area(data = den_sim_nc, aes(x=x, y=y, fill="simulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
               custom_colors + custom_colors_2 +
-              xlab(expression(paste("Face Node Count"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated network")  )# the titles needs changing for different runs
-    #dev.off()
+              xlab(expression(paste("Face Node Count"))) + ylab("Density"))# the titles needs changing for different runs
+    dev.off()
     
     
     # area
@@ -338,26 +364,26 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
     den_sim_area = density(face_features$area)
     den_sim_area = data.frame(x=den_sim_area$x, y=den_sim_area$y)
     
-    # svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-    #               "simulated_face_area.svg", sep=""), width = 8, height = 6)
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_face_area.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_area, aes(x=x, y=y, color = "real")) +
+              geom_line(data = den_org_area, aes(x=x, y=y, color = "real"), linewidth=0.1) +
               geom_area(data = den_org_area, aes(x=x, y=y, fill = "real"), alpha=0.3) +
-              geom_line(data = den_sim_area, aes(x=x, y=y, color="simulated")) +
+              geom_line(data = den_sim_area, aes(x=x, y=y, color="simulated"), linewidth=0.1) +
               geom_area(data = den_sim_area, aes(x=x, y=y, fill="simulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
+              scale_x_continuous(guide = guide_axis(check.overlap = TRUE))+
               custom_colors + custom_colors_2 +
-              xlab(expression(paste("Face Area"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated network") )  # the titles needs changing for different runs
-    #dev.off()
+              xlab(expression(paste("Face Area"))) + ylab("Density"))  # the titles needs changing for different runs
+    dev.off()
     
     
     # elongation
@@ -367,26 +393,25 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
     den_sim_elong = density(face_features$elong)
     den_sim_elong = data.frame(x=den_sim_elong$x, y= den_sim_elong$y)
     
-    # svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-    #               "simulated_face_elong.svg", sep=""), width = 8, height = 6)
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_face_elong.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_elong, aes(x=x, y=y, color = "real")) +
+              geom_line(data = den_org_elong, aes(x=x, y=y, color = "real"), linewidth=0.1) +
               geom_area(data = den_org_elong, aes(x=x, y=y, fill = "real"), alpha=0.3) +
-              geom_line(data = den_sim_elong, aes(x=x, y=y, color="simulated")) +
+              geom_line(data = den_sim_elong, aes(x=x, y=y, color="simulated"), linewidth=0.1) +
               geom_area(data = den_sim_elong, aes(x=x, y=y, fill="simulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
               custom_colors + custom_colors_2 +
-              xlab(expression(paste("Face Elongation"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated network")  )  # the titles needs changing for different runs
-    #dev.off()
+              xlab(expression(paste("Face Elongation"))) + ylab("Density"))  # the titles needs changing for different runs
+    dev.off()
     
     
     # orientation
@@ -396,26 +421,25 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
     den_sim_orient = density(face_features$orient)
     den_sim_orient = data.frame(x=den_sim_orient$x, y= den_sim_orient$y)
     
-    # svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-    #               "simulated_face_orient.svg", sep=""), width = 8, height = 6)
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_face_orient.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_orient, aes(x=x, y=y, color = "real")) +
+              geom_line(data = den_org_orient, aes(x=x, y=y, color = "real"), linewidth=0.1) +
               geom_area(data = den_org_orient, aes(x=x, y=y, fill = "real"), alpha=0.3) +
-              geom_line(data = den_sim_orient, aes(x=x, y=y, color="simulated")) +
+              geom_line(data = den_sim_orient, aes(x=x, y=y, color="simulated"), linewidth=0.1) +
               geom_area(data = den_sim_orient, aes(x=x, y=y, fill="simulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
               custom_colors + custom_colors_2 +
-              xlab(expression(paste("Face Orientation"))) + ylab("Density")+
-              labs(title = "Comparison of face feature of original and simulated network")  )  # the titles needs changing for different runs
-    #dev.off()
+              xlab(expression(paste("Face Orientation"))) + ylab("Density"))  # the titles needs changing for different runs
+    dev.off()
     
     
     # edge length
@@ -425,26 +449,25 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
     den_sim_e_len = density(network_extra1$euclidDist)
     den_sim_e_len = data.frame(x=den_sim_e_len$x, y= den_sim_e_len$y)
     
-    # svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-    #               "simulated_edge_len.svg", sep=""), width = 8, height = 6)
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_edge_len.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_e_len, aes(x=x, y=y, color = "real")) +
+              geom_line(data = den_org_e_len, aes(x=x, y=y, color = "real"), linewidth=0.1) +
               geom_area(data = den_org_e_len, aes(x=x, y=y, fill = "real"), alpha=0.3) +
-              geom_line(data = den_sim_e_len, aes(x=x, y=y, color="simulated")) +
+              geom_line(data = den_sim_e_len, aes(x=x, y=y, color="simulated"), linewidth=0.1) +
               geom_area(data = den_sim_e_len, aes(x=x, y=y, fill="simulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
               custom_colors + custom_colors_2 +
-              xlab(expression(paste("Edge Length"))) + ylab("Density")+
-              labs(title = "Comparison of edge feature of original and simulated network")  )  # the titles needs changing for different runs
-    #dev.off()
+              xlab(expression(paste("Edge Length"))) + ylab("Density"))  # the titles needs changing for different runs
+    dev.off()
     
     
     # edge angle
@@ -454,26 +477,25 @@ comparePlotOrgSim2 <- function(org_face_feature, face_features, branch.all, netw
     den_sim_e_angle = density(network_extra1$anglecomp)
     den_sim_e_angle = data.frame(x=den_sim_e_angle$x, y= den_sim_e_angle$y)
     
-    # svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-    #               "simulated_edge_angle.svg", sep=""), width = 8, height = 6)
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_edge_angle.svg", sep=""), width = 1.85, height = 1.35)
     print(ggplot() +
-              geom_line(data = den_org_e_angle, aes(x=x, y=y, color = "real")) +
+              geom_line(data = den_org_e_angle, aes(x=x, y=y, color = "real"), linewidth=0.1) +
               geom_area(data = den_org_e_angle, aes(x=x, y=y, fill = "real"), alpha=0.3)+
-              geom_line(data = den_sim_e_angle, aes(x=x, y=y, color="simulated")) +
+              geom_line(data = den_sim_e_angle, aes(x=x, y=y, color="simulated"), linewidth=0.1) +
               geom_area(data = den_sim_e_angle, aes(x=x, y=y, fill="simulated"), alpha=0.3) +
               
-              theme(legend.position="top", legend.text=element_text(size=16), legend.title = element_blank(),
+              theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(), 
+                    legend.key.height = unit(0.3, 'cm'), legend.key.width = unit(0.3, 'cm'),
                     legend.box.margin=margin(-10,-10,-10,-10),
-                    plot.title = element_text(hjust = 0.5, size=18),
-                    plot.subtitle = element_text(hjust = 0.5, size=16),
-                    axis.text.x = element_text(size = 16), axis.text.y = element_text(size = 16),
-                    axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),
+                    plot.title = element_text(hjust = 0.5, size=10),
+                    plot.subtitle = element_text(hjust = 0.5, size=8),
+                    axis.text.x = element_text(size = 7.5), axis.text.y = element_text(size = 7.5),
+                    axis.title.x = element_text(size = 8), axis.title.y = element_text(size = 8),
                     panel.background = element_rect(fill='white', colour='black'),
-                    panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) +
+                    panel.grid.major = element_line(color = "grey", linewidth=0.2, linetype=2)) +
               custom_colors + custom_colors_2 +
-              xlab(expression(paste("Edge Angle"))) + ylab("Density")+
-              labs(title = "Comparison of edge feature of original and simulated network") ) # the titles needs changing for different runs
-    #dev.off()
+              xlab(expression(paste("Edge Angle"))) + ylab("Density")) # the titles needs changing for different runs
+    dev.off()
     
 }
 
@@ -517,6 +539,26 @@ computeVertexProb2 <- function(org_max_deg, g2_degree, network_extra1){
     }
     return(v_prob)
 }
+
+
+####given a vertex id and the network structure, finds its neighbors in a clockwise sequence
+antiClockwiseNeighbors <- function(hd_v, gen.ppp, network_extra1){
+    adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==hd_v],
+                             network_extra1$ind2[network_extra1$ind1==hd_v])
+    
+    angles = c()
+    for(v in adj_vertices_from_df){
+        nom = gen.ppp$y[v]-gen.ppp$y[hd_v]
+        denom = gen.ppp$x[v]-gen.ppp$x[hd_v]
+        angle = (as.numeric(atan2(nom, denom)) *180/pi) + 180
+        
+        angles = c(angles, angle)
+    }
+    
+    anti_clockwise_neighbors = adj_vertices_from_df[sort(angles, index.return=TRUE)$ix]
+    return(anti_clockwise_neighbors)
+}
+
 
 #### Given a face and an edge find if that edge is present in the face
 isEdgeOnFace <- function(face, edge){
@@ -638,8 +680,12 @@ netMetrics <- function(gen.ppp, network_extra){
 #### eliminated the given edges from the network and 
 #### recomputes all network features
 eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
+    if(is.null(edges_to_eliminate)){
+        temp_network_extra1 = network_extra1
+    }else{
+        temp_network_extra1 = network_extra1[-c(edges_to_eliminate), ]
+    }
     
-    temp_network_extra1 = network_extra1[-c(edges_to_eliminate), ]
     temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
     temp_graph_obj = add_edges(as.undirected(temp_graph_obj), 
                                as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
@@ -705,6 +751,159 @@ eliminateEdges <- function(gen.ppp, network_extra1, edges_to_eliminate){
     
     return(list(noChange, network_extra1, g2_degree, face_list, face_area_list, face_node_count,
                 triKDE_face_feat_1, triKDE_face_feat_2, triKDE_edge_feat, tri_face_features, tri_face_convexity_mean))
+}
+
+
+####rewire edges
+rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean){
+    #### distance of each vertex from the point pattern boundary
+    vertex_dist_boundary = bdist.points(gen.ppp)
+    
+    for(hd_v in high_deg_vertices){
+        cat("\nhd_v: ", hd_v, "\n")
+        
+        #### detect the anti clockwise neighbors of a given vertex
+        anti_clockwise_neighbors = antiClockwiseNeighbors(hd_v, gen.ppp, network_extra1)
+        anti_clockwise_neighbors[length(anti_clockwise_neighbors) + 1] = anti_clockwise_neighbors[1]
+        
+        for (n in c(1: (length(anti_clockwise_neighbors)-1))) {
+            p = anti_clockwise_neighbors[n]
+            q = anti_clockwise_neighbors[n+1]
+            
+            pq_index = which((network_extra1$ind1==p & network_extra1$ind2==q) |
+                           (network_extra1$ind2==p & network_extra1$ind1==q) )
+            
+            if(length(pq_index)==1){
+                cat("Rewiring edge already exists\n")
+                next
+            }
+            
+            points(gen.ppp$x[p], gen.ppp$y[p], cex=1.5, pch=21, bg="red")
+            points(gen.ppp$x[q], gen.ppp$y[q], cex=1.5, pch=21, bg="red")
+            
+            pq =  c(gen.ppp$x[p], gen.ppp$y[p],
+                    gen.ppp$x[q], gen.ppp$y[q],
+                    p, q,
+                    sqrt( ((gen.ppp$x[p]-gen.ppp$x[q])^2) + ((gen.ppp$y[p]-gen.ppp$y[q])^2) ),
+                    calcAngle(c(gen.ppp$x[p], gen.ppp$y[p], gen.ppp$x[q], gen.ppp$y[q])),
+                    0)
+            
+            el1 = which( (network_extra1$ind1==hd_v & network_extra1$ind2==p) |
+                             (network_extra1$ind2==hd_v & network_extra1$ind1==p))
+            
+            el2 = which( (network_extra1$ind1==hd_v & network_extra1$ind2==q) |
+                             (network_extra1$ind2==hd_v & network_extra1$ind1==q))
+            
+            l = sample(c(1, 2), 1)
+            if(l == 1){
+                v1 = hd_v
+                v2 = p
+                el = el1
+            }else if(l == 2){
+                v1 = hd_v
+                v2 = q
+                el = el2
+            }
+            
+            #### if any of the end vertices of the selected edge has degree 3,
+            #### and if that is on the boundary we won't allow it
+            #### cause in the end after deleting the boundary edges it will disconnect the network
+            if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
+               (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
+                cat("Rewiring edge kept [Boundary degree constraint]\n")
+                next
+            }
+            
+            #### if v1 and v2 both are boundary vertices, we keep the edge for now
+            if((vertex_dist_boundary[v1]==0) & (vertex_dist_boundary[v2]==0) & 
+               ((gen.ppp$x[v1]==gen.ppp$x[v2])| (gen.ppp$y[v1]==gen.ppp$y[v2]) ) ){
+                cat("Rewiring edge kept [Boundary edge constraint]\n")
+                next
+            }
+            
+            #### just to see what happens
+            if(g2_degree[hd_v] <= 3){
+                cat("Rewiring edge internal degree constraint\n")
+                next
+            }
+            
+            network_extra2 = rbind(network_extra1, pq)
+            
+            temp_network_extra1 = network_extra2[-c(el), ]
+            
+            temp_graph_obj = make_empty_graph() %>% add_vertices(gen.ppp$n)
+            temp_graph_obj = add_edges(as.undirected(temp_graph_obj),
+                                       as.vector(t(as.matrix(temp_network_extra1[,5:6]))))
+            
+            if(is_connected(temp_graph_obj)){
+                after_elim_0 = eliminateEdges(gen.ppp, network_extra2, el)
+            }else{
+                after_elim_0 = eliminateEdges(gen.ppp, network_extra2, NULL)
+            }
+            
+            noChange = after_elim_0[[1]]
+            network_extra2 = after_elim_0[[2]]
+            g2_degree = after_elim_0[[3]]
+            face_list = after_elim_0[[4]]
+            face_area_list = after_elim_0[[5]]
+            face_node_count = after_elim_0[[6]]
+            triKDE_face_feat_1 = after_elim_0[[7]]
+            triKDE_face_feat_2 = after_elim_0[[8]]
+            triKDE_edge_feat = after_elim_0[[9]]
+            tri_face_features = after_elim_0[[10]]
+            tri_face_convexity_mean = after_elim_0[[11]]
+            
+            if(tri_face_convexity_mean > org_face_convexity_mean){
+                network_extra1 = network_extra2
+                
+                graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp$n)
+                graph_obj = add_edges(as.undirected(graph_obj),
+                                      as.vector(t(as.matrix(network_extra1[,5:6]))))
+                
+                #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
+                #### This is sometimes also called the clustering coefficient.
+                cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
+                cat("\nCC Sim: ", cluster_coeff_s, "\n")
+                
+                #### construct and display as corresponding ppp and linnet
+                degs = igraph::degree(graph_obj, mode="total")
+                # ord = order(as.numeric(names(degs)))
+                # degs = degs[ord]
+                
+                #### attach the degree information to the point pattern for proper visualization
+                marks(gen.ppp) = factor(degs)
+                gen.ppp$markformat = "factor"
+                g_o_lin = linnet(gen.ppp, edges=as.matrix(network_extra1[,5:6]))
+                branch.lpp_s = lpp(gen.ppp, g_o_lin )
+                
+                plot(branch.lpp_s, main="Rewired", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange",
+                                                                         "dodgerblue", "white", "maroon1",
+                                                                         "mediumpurple", "yellow", "cyan"))
+                
+                break
+            }else{
+                cat("Face convexity constraint\n")
+                next
+            }
+        }
+    }
+    
+    after_elim_0 = eliminateEdges(gen.ppp, network_extra1, NULL)
+    noChange = after_elim_0[[1]]
+    network_extra1 = after_elim_0[[2]]
+    g2_degree = after_elim_0[[3]]
+    face_list = after_elim_0[[4]]
+    face_area_list = after_elim_0[[5]]
+    face_node_count = after_elim_0[[6]]
+    triKDE_face_feat_1 = after_elim_0[[7]]
+    triKDE_face_feat_2 = after_elim_0[[8]]
+    triKDE_edge_feat = after_elim_0[[9]]
+    tri_face_features = after_elim_0[[10]]
+    tri_face_convexity_mean = after_elim_0[[11]]
+        
+    return(list(noChange, network_extra1, g2_degree, face_list, face_area_list, face_node_count,
+                triKDE_face_feat_1, triKDE_face_feat_2, triKDE_edge_feat, tri_face_features, tri_face_convexity_mean))
+    
 }
 
 
@@ -874,6 +1073,13 @@ deterministicEdges_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
                                                                         "dodgerblue", "white", "maroon1", 
                                                                         "mediumpurple", "yellow", "cyan"))
     
+    
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/init tri figures/init_dt.svg", sep=""), width = 8, height = 6)
+    plot(branch.lpp_dt, main="", pch=21, cex=1, bg=c("black", "red3", "green3", "orange", 
+                                                                        "dodgerblue", "white", "maroon1", 
+                                                                        "mediumpurple", "yellow", "cyan"))
+    dev.off()                                                                    
+    
     #### degree list of the constructed Delaunay graph again for edge weight calculation
     g_o_degree = degs
     
@@ -889,14 +1095,13 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                     meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                     sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd){
     
-    set.seed(Sys.time())
-    
     #### distance of each vertex from the point pattern boundary
     vertex_dist_boundary = bdist.points(gen.ppp)
     
     org_max_edge_length = max(branch.all$euclid)
     org_min_edge_length = min(branch.all$euclid)
     
+    #### main loop
     noChange = 0
     loop_count = -1
     while (TRUE) {
@@ -905,10 +1110,32 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     break
         # }
         
-        cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
+        cat("\n-----------------------------------\nnoChange value: ", noChange, "\n")
         if(noChange >= 500){    # if the network has not been changed for certain iterations
-            cat("\nNo edges rejected for 600 iterations.\n")
+            cat("\nNo edges rejected for 500 iterations.\n")
             break
+        }
+        
+        if(noChange >= 60){    # if the network has not been changed for certain iterations
+            cat("Rewiring...\n")
+
+            lst = sort(g2_degree, index.return=TRUE, decreasing=TRUE)
+            high_deg_vertices = (lapply(lst, `[`, lst$x %in% head(unique(lst$x), 1)))$ix
+            
+            after_rewire = rewireEdges(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean)
+            
+            noChange = 0
+            network_extra1 = after_rewire[[2]]
+            g2_degree = after_rewire[[3]]
+            face_list = after_rewire[[4]]
+            face_area_list = after_rewire[[5]]
+            face_node_count = after_rewire[[6]]
+            triKDE_face_feat_1 = after_rewire[[7]]
+            triKDE_face_feat_2 = after_rewire[[8]]
+            triKDE_edge_feat = after_rewire[[9]]
+            tri_face_features = after_rewire[[10]]
+            face_convexity_mean = after_rewire[[11]]
+            
         }
 
         #### cc of the current network
@@ -927,92 +1154,27 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             cat("\nRejection sampling ended [Net metrics reached target]\n")
             break
         }
-
+        
         #### prepare the vertex probability from degree values
-        if(loop_count < 200){
-            prob_vertex = computeVertexProb2(org_max_deg, g2_degree, network_extra1)
-            
-            #### select a vertex at random or based on high degree
-            selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
-            cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
-            
-            #### detect the neighbors of a given vertex
-            adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
-                                     network_extra1$ind2[network_extra1$ind1==selected_vertex])
-            
-            #### list of the edges that are between those neighboring vertices (if any)
-            #### the indices are of network_extra1
-            edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
-                                              (network_extra1$ind2 %in% adj_vertices_from_df))
-            
-            tentative_edges = which( (network_extra1$ind1==selected_vertex) | (network_extra1$ind2==selected_vertex) )
-            tentative_edges = unique( c(tentative_edges, edge_bet_adj_vertices) )
-            
-            selected_edges = selectMultEdges(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
-            
-        }else{
-            prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
-            
-            #### select a vertex at random or based on high degree
-            selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
-            cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
-            
-            #### detect the neighbors of a given vertex
-            adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
-                                     network_extra1$ind2[network_extra1$ind1==selected_vertex])
-            
-            #### list of the edges that are between those neighboring vertices (if any)
-            #### the indices are of network_extra1
-            edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
-                                              (network_extra1$ind2 %in% adj_vertices_from_df))
-            
-            tentative_edges = which( (network_extra1$ind1==selected_vertex) | (network_extra1$ind2==selected_vertex) )
-            tentative_edges = unique( c(tentative_edges, edge_bet_adj_vertices) )
-            
-            selected_edges = selectMultEdges2(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
-            
-        }
-
-        #### when there is no edges between the neighbor vertices, select an edge from the entire edge set
-        # if(length(edge_bet_adj_vertices)==0){
-        #     cat("No edges between neighboring vertices.\n")
-        #     
-        #     #### select an edge from all the edges
-        #     tentative_edges = c(1: length(network_extra1))
-        # 
-        #     set.seed(Sys.time())
-        #     selected_edges = sample.int(length(network_extra1), 1)
-        #     
-        # }else if(length(edge_bet_adj_vertices)==1){
-        #     e = edge_bet_adj_vertices
-        #     
-        #     e1 = which(((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
-        #                    ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
-        #     
-        #     e2 = which(((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
-        #                    ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
-        #     #cat(e, e1, e2, "\n")
-        #     
-        #     #### pick an edge depending on their edge feature
-        #     selected_edges = selectEdge(c(e, e1, e2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
-        # }else{
-        #     tentative_edges = c()
-        #     for (e in edge_bet_adj_vertices) {
-        #         e1 = which( ((network_extra1$ind1==network_extra1$ind1[e]) & (network_extra1$ind2==selected_vertex))|
-        #                        ((network_extra1$ind2==network_extra1$ind1[e]) & (network_extra1$ind1==selected_vertex)) )
-        #         
-        #         e2 = which( ((network_extra1$ind1==network_extra1$ind2[e]) & (network_extra1$ind2==selected_vertex))|
-        #                        ((network_extra1$ind2==network_extra1$ind2[e]) & (network_extra1$ind1==selected_vertex)) )
-        #         #cat(e, e1, e2, "\n")
-        #         
-        #         tentative_edges = c(tentative_edges, e, e1, e2)
-        #     }
-        #     
-        #     tentative_edges = unique(tentative_edges)
-        #     
-        #     #### pick many edges depending on their edge feature
-        #     selected_edges = selectMultEdges(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
-        # }
+        prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
+        
+        #### select a vertex at random or based on high degree
+        selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
+        cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
+        
+        #### detect the neighbors of a given vertex
+        adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
+                                 network_extra1$ind2[network_extra1$ind1==selected_vertex])
+        
+        #### list of the edges that are between those neighboring vertices (if any)
+        #### the indices are of network_extra1
+        edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
+                                          (network_extra1$ind2 %in% adj_vertices_from_df))
+        
+        tentative_edges = which( (network_extra1$ind1==selected_vertex) | (network_extra1$ind2==selected_vertex) )
+        tentative_edges = unique( c(tentative_edges, edge_bet_adj_vertices) )
+        
+        selected_edges = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
         
         if(length(selected_edges) == 0){
             cat("No edges selected based on edge length and/ or angle\n")
@@ -1022,9 +1184,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         for(selected_edge in selected_edges){
             loop_count = loop_count + 1
             
-            cat("\n-------------------------------------------------------------\nnoChange value: ", noChange, "\n")
-            if(noChange >= 500){    # if the network has not been changed for certain iterations
-                cat("\nNo edges rejected for 600 iterations.\n")
+            cat("\n-------------------------------------\nnoChange value: ", noChange, "\n")
+            if(noChange >= 60){    # if the network has not been changed for certain iterations
+                cat("\nNo edges rejected for 200 iterations.\n")
                 break
             }
             
@@ -1062,7 +1224,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             }
     
             #### just to see what happens
-            if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
+            if(g2_degree[v1]==3 & g2_degree[v2]==3){
                 noChange = noChange + 1
                 cat("\nEdge kept [Internal degree constraint]\n")
                 next
@@ -1137,24 +1299,24 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 }
                 
                 edge_reject = FALSE
-                epsilon_f = 0
+                epsilon_f = 2e-07
                 epsilon_e = 0
                 convexity_param = org_face_convexity_mean
                 
-                if(loop_count < 100){
-                    epsilon_f = 1e-09
-                    convexity_param = org_face_convexity_mean
-                    
-                }else if(loop_count >= 100 & loop_count < 200){
-                    cat("Epsilon increment 1\n")
-                    epsilon_f = 1.5e-08
-                    convexity_param = org_face_convexity_mean - (org_face_convexity_sd/2)
-                    
-                }else if(loop_count >= 200){
-                    cat("Epsilon increment 2\n")
-                    epsilon_f = 2e-07
-                    convexity_param = org_face_convexity_mean - org_face_convexity_sd
-                }
+                # if(loop_count < 100){
+                #     epsilon_f = 1e-09
+                #     convexity_param = org_face_convexity_mean
+                #     
+                # }else if(loop_count >= 100 & loop_count < 200){
+                #     cat("Epsilon increment 1\n")
+                #     epsilon_f = 1.5e-08
+                #     convexity_param = org_face_convexity_mean - (org_face_convexity_sd/2)
+                #     
+                # }else if(loop_count >= 200){
+                #     cat("Epsilon increment 2\n")
+                #     epsilon_f = 2e-07
+                #     convexity_param = org_face_convexity_mean - org_face_convexity_sd
+                # }
                 
                 #### prediction
                 org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$orient[face_p_index]))
@@ -1254,39 +1416,6 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             plot(branch.lpp_s, main="Sim", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange",
                                                                         "dodgerblue", "white", "maroon1",
                                                                         "mediumpurple", "yellow", "cyan"))
-        }
-    }
-    
-    ####post processing
-    while(TRUE){
-        high_deg_v = which(g2_degree > org_max_deg)
-        
-        if(length(high_deg_v)==0){
-            break
-        }
-        
-        for(hdv in high_deg_v){
-            high_e = which(network_extra1$ind1==hdv | network_extra1$ind2==hdv)
-            if(length(high_e) > 1){
-                e = selectEdge(high_e, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
-            }else{
-                e = high_e
-            }
-            
-            cat("Eliminating post processing edges\n")
-            after_elim_p = eliminateEdges(gen.ppp, network_extra1, e)
-            
-            noChange = after_elim_p[[1]]
-            network_extra1 = after_elim_p[[2]]
-            g2_degree = after_elim_p[[3]]
-            face_list = after_elim_p[[4]]
-            face_area_list = after_elim_p[[5]]
-            face_node_count = after_elim_p[[6]]
-            triKDE_face_feat_1 = after_elim_p[[7]]
-            triKDE_face_feat_2 = after_elim_p[[8]]
-            triKDE_edge_feat = after_elim_p[[9]]
-            tri_face_features = after_elim_p[[10]]
-            face_convexity_mean = after_elim_p[[11]]
         }
     }
 
@@ -1431,7 +1560,7 @@ branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "
 i = 2 # index of the ENS network we want to work on
 
 ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
-sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][12], "\\.")[[1]][1]
+sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][11], "\\.")[[1]][1]
 cat("\n(", i, ") Location: ", ens_location, "\nSample Id: ", sample_id, "\n")
 
 max_y = 1 # 4539.812 found by computation; right now keeping everything unscaled as the moments can not be computed otherwise
@@ -1447,6 +1576,11 @@ hardcoreStrauss_model_param = data_struct_list[[5]]
 
 plot(branch.lpp, main="original", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
                                                                "white", "maroon1", "mediumpurple"))
+
+svglite(paste("D:/Fall 2023/Research/Prelim/figures/org figures/org_net.svg", sep=""), width = 8, height = 6)
+plot(branch.lpp, main="", pch=21, cex=1, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
+                                                        "white", "maroon1", "mediumpurple"))
+dev.off()
 
 #### alpha, gamma, psi (meshedness, network density and compactness parameters)
 N = branch.ppp$n
@@ -1513,9 +1647,8 @@ marks(gen.ppp_wo_c) = factor(degs)
 gen.ppp_wo_c$markformat = "factor"
 branch.lpp_2 = lpp(gen.ppp_wo_c, linnet_obj )
 
-svglite(paste("D:/Fall 2023/Research/Presentations/Research Progress Figures/", 
-              "simulated_network.svg", sep=""), width = 8, height = 6)
-plot(branch.lpp_2, main="Simulated Network", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
+svglite(paste("D:/Fall 2023/Research/Prelim/figures/sim figures/sim_net.svg", sep=""), width = 8, height = 6)
+plot(branch.lpp_2, main="", pch=21, cex=1, bg=c("black", "red3", "green3", "orange", "dodgerblue", 
                                                                   "white", "maroon1", "mediumpurple", "yellow", "cyan"))
 dev.off()                                                              
 
