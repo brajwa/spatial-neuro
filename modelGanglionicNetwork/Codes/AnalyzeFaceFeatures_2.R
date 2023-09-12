@@ -168,9 +168,9 @@ columns_per_sample = c(paste("mean", colnames(face_features_combined)[1:(ncol(fa
 face_features_per_sample = data.frame(matrix(nrow = 0, ncol = length(columns_per_sample)))
 
 
-for (i in c(1: length(branch_info_files))) { # 2,13,21
+for (i in c(1:length(branch_info_files))) { # 2,13,21
     ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
-    sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][12], "\\.")[[1]][1]
+    sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][11], "\\.")[[1]][1]
     cat("\n(", i, ") Location: ", ens_location, "\nSample Id: ", sample_id, "\n")
     
     data_struct_list = constructDataStruct(sample_id, parent, branch_info_files[i], output_folder_path, max_y)
@@ -184,7 +184,13 @@ for (i in c(1: length(branch_info_files))) { # 2,13,21
     
     plot(branch.lpp, main="", pch=21, cex=1.2, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
                                                            "mediumpurple"))
-                                                           #save the network plot
+    
+    #save the network plot
+    svglite(paste("D:/Fall 2023/Research/Prelim/figures/org figures/", sample_id, ".svg", sep=""), width = 8, height = 6)
+    plot(branch.lpp, main="", pch=21, cex=1, bg=c("black", "red3", "green3", "orange", "dodgerblue", "white", "maroon1",
+                                                    "mediumpurple"))
+    dev.off()
+    
     #### spatial point pattern metrics
     num_points_pp = branch.ppp$n
     area_pp = summary(branch.ppp)$window$area
