@@ -815,26 +815,26 @@ rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, f
                     calcAngle(c(gen.ppp$x[p], gen.ppp$y[p], gen.ppp$x[q], gen.ppp$y[q])),
                     0)
             
-            el1 = which( (network_extra1$ind1==hd_v & network_extra1$ind2==p) |
-                             (network_extra1$ind2==hd_v & network_extra1$ind1==p))
+            el1 = network_extra1[(network_extra1$ind1==hd_v & network_extra1$ind2==p) |
+                             (network_extra1$ind2==hd_v & network_extra1$ind1==p), c(5,6)]
             
-            el2 = which( (network_extra1$ind1==hd_v & network_extra1$ind2==q) |
-                             (network_extra1$ind2==hd_v & network_extra1$ind1==q))
+            el2 = network_extra1[(network_extra1$ind1==hd_v & network_extra1$ind2==q) |
+                             (network_extra1$ind2==hd_v & network_extra1$ind1==q), c(5,6)]
             
-            if(length(el1)==0 | length(el2)==0){
+            if(length(el1[,1])==0 | length(el2[,1])==0){
                 next
             }
             
-            l = selectEdge(c(el1, el2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+            l = selectEdge(rbind(el1, el2), network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
             
-            if(l == el1){
+            if(identical(l, el1)){
                 v1 = hd_v
                 v2 = p
-                el = el1
-            }else if(l == el2){
+                el = which(network_extra1$ind1==el1$ind1 & network_extra1$ind2==el1$ind2)
+            }else if(identical(l, el2)){
                 v1 = hd_v
                 v2 = q
-                el = el2
+                el = which(network_extra1$ind1==el2$ind1 & network_extra1$ind2==el2$ind2)
             }
             
             #### if any of the end vertices of the selected edge has degree 3,
@@ -1002,22 +1002,24 @@ rewireEdges <- function(gen.ppp, network_extra1, high_deg_vertices, g2_degree, f
 #### original and the current networks, selects an edge to reject
 selectEdge <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat){
     set.seed(Sys.time())
-    tent_edges = sample(tent_edges) #shuffle
+    rows = sample(nrow(tent_edges))
+    tent_edges = tent_edges[rows, ] #shuffle
     
-    for (te in tent_edges) {
+    for (t in c(1:length(tent_edges[,1]))) {
+        tent = tent_edges[t, ]
+        te = which(network_extra1$ind1==tent$ind1 & network_extra1$ind2==tent$ind2)
         org_edge_est = predict(orgKDE_edge_feat, x=c((network_extra1$anglecomp)[te], (network_extra1$euclidDist)[te]))
         tri_edge_est = predict(triKDE_edge_feat, x=c((network_extra1$anglecomp)[te], (network_extra1$euclidDist)[te]))
 
         if(tri_edge_est  > org_edge_est){
-            return(te)
+            return(tent)
         }
     }
     
     #### if none of them satisfies the criterion, return a random one of them
     cat("Random edge selected\n")
-    
-    set.seed(Sys.time())
-    return(sample(tent_edges, 1))
+    tent = tent_edges[1, ]
+    return(tent)
 }
 
 
@@ -1025,19 +1027,24 @@ selectEdge <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge
 #### original and the current networks, selects many edge to reject
 selectMultEdges <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat){
     set.seed(Sys.time())
-    tent_edges = sample(tent_edges) #shuffle
+    rows = sample(nrow(tent_edges))
+    tent_edges = tent_edges[rows, ] #shuffle
     
-    e_list = c()
-    for (te in tent_edges) {
+    e_list = data.frame()
+    for (t in c(1:length(tent_edges[,1]))) {
+        tent = tent_edges[t, ]
+        te = which(network_extra1$ind1==tent$ind1 & network_extra1$ind2==tent$ind2)
+        
         org_edge_est = predict(orgKDE_edge_feat, x=c((network_extra1$anglecomp)[te], (network_extra1$euclidDist)[te]))
         tri_edge_est = predict(triKDE_edge_feat, x=c((network_extra1$anglecomp)[te], (network_extra1$euclidDist)[te]))
 
         if(tri_edge_est  > org_edge_est){
-            e_list = c(e_list, te)
+            #cat("true\n")
+            e_list = rbind(e_list, tent)
         }
     }
     
-    if(length(e_list) == 0){
+    if(is.empty(e_list)){
         #### if none of them satisfies the criterion, return a random one of them
         cat("Random edge selected\n")
         return(tent_edges)
@@ -1048,7 +1055,9 @@ selectMultEdges <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE
 
 selectMultEdges2 <- function(tent_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat){
     set.seed(Sys.time())
-    return(sample(tent_edges)) #shuffle and return
+    rows = sample(nrow(tent_edges))
+    tent_edges = tent_edges[rows, ] #shuffle and return
+    return(tent_edges)
     
 }
 
@@ -1213,9 +1222,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     cat("...Rewiring...\n")
         # 
         #     lst = sort(g2_degree, index.return=TRUE, decreasing=TRUE)
-        #     high_deg_vertices = (lapply(lst, `[`, lst$x %in% head(unique(lst$x), 1)))$ix
-        #     if(length(high_deg_vertices) > 1){
-        #         high_deg_vertices = sample(high_deg_vertices, 1)
+        #     high_deg_vertices = (lapply(lst, `[`, lst$x %in% head(unique(lst$x), 3)))$ix
+        #     if(length(high_deg_vertices) > 5){
+        #         high_deg_vertices = high_deg_vertices[1:5]
         #     }
         # 
         #     after_rewire = rewireEdges(gen.ppp, network_extra1, high_deg_vertices, g2_degree, face_list, org_face_convexity_mean,
@@ -1231,9 +1240,9 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         #     triKDE_edge_feat = after_rewire[[9]]
         #     tri_face_features = after_rewire[[10]]
         #     face_convexity_mean = after_rewire[[11]]
-        #     
-        #     comparePlotOrgSim2(org_face_feature, tri_face_features, branch.all, network_extra1)
-        #     pause = readline()
+        # 
+        #     # comparePlotOrgSim2(org_face_feature, tri_face_features, branch.all, network_extra1)
+        #     # pause = readline()
         # 
         # }
         
@@ -1254,40 +1263,41 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             break
         }
         
-        if(loop_count <= 250){
-            #### prepare the vertex probability from degree values
-            prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
-    
-        }else if(loop_count > 250){
-            #### prepare the vertex probability from degree values
-            prob_vertex = computeVertexProb2(org_max_deg, g2_degree, network_extra1)
-            
-        }
+        #### prepare the vertex probability from degree values
+        prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
+        
         #### select a vertex at random or based on high degree
         selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
         cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
         
         #### detect the neighbors of a given vertex
-        adj_vertices_from_df = c(network_extra1$ind1[network_extra1$ind2==selected_vertex],
-                                 network_extra1$ind2[network_extra1$ind1==selected_vertex])
+        adj_vertices_from_df = antiClockwiseNeighbors(selected_vertex, gen.ppp, network_extra1)
         
         #### list of the edges that are between those neighboring vertices (if any)
         #### the indices are of network_extra1
-        edge_bet_adj_vertices = which((network_extra1$ind1 %in% adj_vertices_from_df) &
-                                          (network_extra1$ind2 %in% adj_vertices_from_df))
+        edge_bet_adj_vertices = network_extra1[(network_extra1$ind1 %in% adj_vertices_from_df) &
+                                                   (network_extra1$ind2 %in% adj_vertices_from_df), c(5,6)]
         
-        tentative_edges = which( (network_extra1$ind1==selected_vertex) | (network_extra1$ind2==selected_vertex) )
-        tentative_edges = unique( c(tentative_edges, edge_bet_adj_vertices) )
+        tentative_edges = network_extra1[(network_extra1$ind1==selected_vertex) | (network_extra1$ind2==selected_vertex) , c(5,6)]
+        tentative_edges = unique( rbind(tentative_edges, edge_bet_adj_vertices) )
         
-        selected_edges = selectEdge(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+        selected_edges = selectMultEdges(tentative_edges, network_extra1, orgKDE_edge_feat, triKDE_edge_feat)
+
         
-        if(length(selected_edges) == 0){
+        if(length(selected_edges[,1]) == 0){
             cat("No edges selected based on edge length and/ or angle\n")
             quit()
         }
           
-        for(selected_edge in selected_edges){
+        for(s in c(1:length(selected_edges[, 1]))){
+            se = selected_edges[s, ]
+            selected_edge = which(network_extra1$ind1==se$ind1 & network_extra1$ind2==se$ind2)
+            
             loop_count = loop_count + 1
+            if(noChange >= 500){    # if the network has not been changed for certain iterations
+                cat("\nNo edges rejected for 500 iterations.\n")
+                break
+            }
             
             cat("Selected edge ID: ", selected_edge, "\n\n")
             #print(network_extra1[selected_edge, ])
@@ -1320,13 +1330,14 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 cat("\nEdge kept [Boundary edge constraint]\n")
                 next
             }
-    
+            
             #### just to see what happens
-            if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
+            if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                 noChange = noChange + 1
                 cat("\nEdge kept [Internal degree constraint]\n")
                 next
             }
+            
     
             #### check if removing that edge disconnects the network
             temp_network_extra1 = network_extra1[-c(selected_edge), ]
@@ -1397,24 +1408,24 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 }
                 
                 edge_reject = FALSE
-                epsilon_f = 0
+                epsilon_f = 2e-07
                 epsilon_e = 0
                 convexity_param = org_face_convexity_mean
                 
-                if(loop_count < 100){
-                    epsilon_f = 1e-09
-                    convexity_param = org_face_convexity_mean
-
-                }else if(loop_count >= 100 & loop_count < 250){
-                    cat("Epsilon increment 1\n")
-                    epsilon_f = 1.5e-08
-                    convexity_param = org_face_convexity_mean - (org_face_convexity_sd/2)
-
-                }else if(loop_count >= 250){
-                    cat("Epsilon increment 2\n")
-                    epsilon_f = 2e-07
-                    convexity_param = org_face_convexity_mean - org_face_convexity_sd
-                }
+                # if(loop_count < 100){
+                #     #epsilon_f = 1e-09
+                #     convexity_param = org_face_convexity_mean
+                # 
+                # }else if(loop_count >= 100 & loop_count < 250){
+                #     # cat("Epsilon increment 1\n")
+                #     # epsilon_f = 1.5e-08
+                #     convexity_param = org_face_convexity_mean - (org_face_convexity_sd/2)
+                # 
+                # }else if(loop_count >= 250){
+                #     # cat("Epsilon increment 2\n")
+                #     # epsilon_f = 2e-07
+                #     convexity_param = org_face_convexity_mean - org_face_convexity_sd
+                # }
                 
                 #### prediction
                 org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$orient[face_p_index]))
@@ -1554,21 +1565,25 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     gen.ppp_2 = subset.ppp(gen.ppp, !((x==gen.ppp$window$xrange[1] | x==gen.ppp$window$xrange[2]) 
                                      & (y==gen.ppp$window$yrange[1] | y==gen.ppp$window$yrange[2])))
     
+    if(is.empty(c_e)){
+        cat("No corner edges to eliminate\n")
+    }else{
     #### eliminate corner edges
-    cat("Eliminating corner edges\n")
-    after_elim_1 = eliminateEdges(gen.ppp, network_extra1, c_e)
-    
-    noChange = after_elim_1[[1]]
-    network_extra1 = after_elim_1[[2]]
-    g2_degree = after_elim_1[[3]]
-    face_list = after_elim_1[[4]]
-    face_area_list = after_elim_1[[5]]
-    face_node_count = after_elim_1[[6]]
-    triKDE_face_feat_1 = after_elim_1[[7]]
-    triKDE_face_feat_2 = after_elim_1[[8]]
-    triKDE_edge_feat = after_elim_1[[9]]
-    tri_face_features = after_elim_1[[10]]
-    face_convexity_mean = after_elim_1[[11]]
+        cat("Eliminating corner edges\n")
+        after_elim_1 = eliminateEdges(gen.ppp, network_extra1, c_e)
+        
+        noChange = after_elim_1[[1]]
+        network_extra1 = after_elim_1[[2]]
+        g2_degree = after_elim_1[[3]]
+        face_list = after_elim_1[[4]]
+        face_area_list = after_elim_1[[5]]
+        face_node_count = after_elim_1[[6]]
+        triKDE_face_feat_1 = after_elim_1[[7]]
+        triKDE_face_feat_2 = after_elim_1[[8]]
+        triKDE_edge_feat = after_elim_1[[9]]
+        tri_face_features = after_elim_1[[10]]
+        face_convexity_mean = after_elim_1[[11]]
+    }
     
     #### final simulated network
     graph_obj =  make_empty_graph() %>% add_vertices(gen.ppp_2$n)
@@ -1655,7 +1670,7 @@ face_features_combined = read.csv(paste(face_folder, "FaceFeatures_3.csv", sep =
 branch_info_folder = paste(parent, "Data/ENSMouse Branch Information (in um) v2.0/", sep="")
 branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
 
-i = 2 # index of the ENS network we want to work on
+i = 13 # index of the ENS network we want to work on
 
 ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
 sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][11], "\\.")[[1]][1]
