@@ -976,9 +976,8 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                                sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd){
     
     #### create a threshold for small face area from the original face areas
-    #### current threshold 1st quantile
     #### and see how many faces in the triangulation are small than the threshold
-    area_threshold = as.numeric(summary(org_face_feature$Area_SL)[2])
+    area_threshold = as.numeric(summary(org_face_feature$Area_SL)[3])
     small_face_count = length(which(tri_face_features$area <= area_threshold))
     deleted = 0
     noChange = 0
@@ -992,6 +991,23 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
         }
         
         if(noChange >= (3*small_face_count)){
+            break
+        }
+        
+        #### cc of the current network
+        cc_cur = ccFromDataframe(gen.ppp, network_extra1)
+        if(cc_cur <= cluster_coeff){
+            cat("\nRejection sampling ended [CC reached target]\n")
+            break
+        }
+        
+        #### other network metrics of the current network
+        metrics = netMetrics(gen.ppp, network_extra1)
+        mesh = metrics[[1]]
+        net_den = metrics[[2]]
+        compact = metrics[[3]]
+        if((mesh <= meshedness) | (net_den <= network_density) | (compact <= compactness)){
+            cat("\nRejection sampling ended [Net metrics reached target]\n")
             break
         }
         
@@ -1011,7 +1027,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
         selected_edges = network_extra1[face_edges, c(5, 6)]
         
         if(length(selected_edges[,1]) == 0){
-            cat("No edges selected based on small face area\n")
+            cat("\nNo edges selected based on small face area\n")
             break
         }
         
@@ -1025,7 +1041,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
             cat("Selected edge ID: ", selected_edge, "\n\n")
 
             if(is.na(network_extra1$ind1[selected_edge])){
-                cat("Error in finding edge\n")
+                cat("!Error in finding edge\n")
                 next
             }
             
@@ -1041,7 +1057,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
             if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
                (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
                 noChange = noChange + 1
-                cat("\nEdge kept [Boundary degree constraint]\n")
+                cat("!Edge kept [Boundary degree constraint]\n")
                 next
             }
             
@@ -1049,14 +1065,14 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
             if((vertex_dist_boundary[v1]==0) & (vertex_dist_boundary[v2]==0) & 
                ((gen.ppp$x[v1]==gen.ppp$x[v2])| (gen.ppp$y[v1]==gen.ppp$y[v2]) ) ){
                 noChange = noChange + 1
-                cat("\nEdge kept [Boundary edge constraint]\n")
+                cat("!Edge kept [Boundary edge constraint]\n")
                 next
             }
             
             #### just to see what happens
             if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                 noChange = noChange + 1
-                cat("\nEdge kept [Internal degree constraint]\n")
+                cat("!Edge kept [Internal degree constraint]\n")
                 next
             }
             
@@ -1125,7 +1141,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                                             identical, sort(face_p)))
                 
                 if(length(face_p_index)==0){
-                    cat("\nError in face identification 2\n")
+                    cat("!Error in face identification 2\n")
                     next
                 }
                 
@@ -1141,7 +1157,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                 temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
                 temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c((temp_face_node_count)[face_p_index]))
                 
-                cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
+                cat("Face est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
                 # cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
                 
                 cat("Face convexity of the new face: ", temp_face_convexity_list[face_p_index], "\n")
@@ -1154,7 +1170,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                 if(temp_face_convexity_list[face_p_index] < convexity_param){ # another option: mean(temp_face_convexity_list) < org_face_convexity_mean 
                     #### keep the edge, no change
                     #noChange = noChange + 1
-                    cat("\nEdge kept [Face convexity constraint]\n")
+                    cat("!Edge kept [Face convexity constraint]\n")
                 }else{
                     if(length(face_index)==2){
                         f1 = face_index[1]
@@ -1172,7 +1188,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                         }
                         
                     }else{
-                        cat("\nError in face identification 1\n")
+                        cat("!Error in face identification 1\n")
                         quit()
                     }
                 }
@@ -1182,7 +1198,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                     deleted = deleted + 1
                     #### remove the edge, there is a change
                     noChange = 0
-                    cat("\nEdge deleted\n")
+                    cat("Edge deleted\n")
                     
                     #### make necessary changes permanent
                     network_extra1 = temp_network_extra1
@@ -1200,13 +1216,13 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                 }else{
                     #### keep the edge, no change
                     noChange = noChange + 1
-                    cat("\nEdge kept [Face feature and/or edge estimation constraint]\n")
+                    cat("!Edge kept [Face feature and/or edge estimation constraint]\n")
                 }
                 
             }else{
                 #### keep the edge, no change
                 noChange = noChange + 1
-                cat("\nEdge kept [Connectivity constraint]\n")
+                cat("!Edge kept [Connectivity constraint]\n")
             }
             
             #### temporarily plotting each iteration
@@ -1217,7 +1233,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
             #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
             #### This is sometimes also called the clustering coefficient.
             cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
-            cat("\nCC Sim: ", cluster_coeff_s, "\n")
+            cat("CC Sim: ", cluster_coeff_s, "\n")
             
             #### construct and display as corresponding ppp and linnet
             degs = igraph::degree(graph_obj, mode="total")
@@ -1255,6 +1271,27 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
     while(TRUE) {
         cat("\nDeleted count: ", deleted, ", noChange: ", noChange, "\n")
         
+        if(noChange >= 50){
+            break
+        }
+        
+        #### cc of the current network
+        cc_cur = ccFromDataframe(gen.ppp, network_extra1)
+        if(cc_cur <= cluster_coeff){
+            cat("\nRejection sampling ended [CC reached target]\n")
+            break
+        }
+        
+        #### other network metrics of the current network
+        metrics = netMetrics(gen.ppp, network_extra1)
+        mesh = metrics[[1]]
+        net_den = metrics[[2]]
+        compact = metrics[[3]]
+        if((mesh <= meshedness) | (net_den <= network_density) | (compact <= compactness)){
+            cat("\nRejection sampling ended [Net metrics reached target]\n")
+            break
+        }
+        
         network_extra1$weight = apply(network_extra1, 1, function(x) computeEdgeWeight(g2_degree, x))
         
         y = c(min(network_extra1$weight):max(network_extra1$weight))
@@ -1276,7 +1313,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
             cat("Selected edge ID: ", selected_edge, "\n\n")
             
             if(is.na(network_extra1$ind1[selected_edge])){
-                cat("Error in finding edge\n")
+                cat("!Error in finding edge\n")
                 next
             }
             
@@ -1292,7 +1329,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
             if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
                (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
                 noChange = noChange + 1
-                cat("\nEdge kept [Boundary degree constraint]\n")
+                cat("!Edge kept [Boundary degree constraint]\n")
                 next
             }
             
@@ -1300,14 +1337,14 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
             if((vertex_dist_boundary[v1]==0) & (vertex_dist_boundary[v2]==0) & 
                ((gen.ppp$x[v1]==gen.ppp$x[v2])| (gen.ppp$y[v1]==gen.ppp$y[v2]) ) ){
                 noChange = noChange + 1
-                cat("\nEdge kept [Boundary edge constraint]\n")
+                cat("!Edge kept [Boundary edge constraint]\n")
                 next
             }
             
             #### just to see what happens
             if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
                 noChange = noChange + 1
-                cat("\nEdge kept [Internal degree constraint]\n")
+                cat("!Edge kept [Internal degree constraint]\n")
                 next
             }
             
@@ -1376,14 +1413,14 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                                             identical, sort(face_p)))
                 
                 if(length(face_p_index)==0){
-                    cat("\nError in face identification 2\n")
+                    cat("!Error in face identification 2\n")
                     next
                 }
                 
                 edge_reject = FALSE
                 epsilon_f = 0
                 epsilon_e = 0
-                convexity_param = org_face_convexity_mean
+                convexity_param = org_face_convexity_mean-org_face_convexity_sd
                 
                 #### prediction
                 org_est_1 = predict(orgKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
@@ -1392,7 +1429,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                 temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
                 temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c((temp_face_node_count)[face_p_index]))
                 
-                cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
+                cat("Face est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
                 # cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
                 
                 cat("Face convexity of the new face: ", temp_face_convexity_list[face_p_index], "\n")
@@ -1405,7 +1442,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                 if(temp_face_convexity_list[face_p_index] < convexity_param){ # another option: mean(temp_face_convexity_list) < org_face_convexity_mean 
                     #### keep the edge, no change
                     #noChange = noChange + 1
-                    cat("\nEdge kept [Face convexity constraint]\n")
+                    cat("!Edge kept [Face convexity constraint]\n")
                 }else{
                     if(length(face_index)==2){
                         # f1 = face_index[1]
@@ -1425,7 +1462,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                         edge_reject = TRUE
                         
                     }else{
-                        cat("\nError in face identification 1\n")
+                        cat("!Error in face identification 1\n")
                         quit()
                     }
                 }
@@ -1435,7 +1472,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                     deleted = deleted + 1
                     #### remove the edge, there is a change
                     noChange = 0
-                    cat("\nEdge deleted\n")
+                    cat("Edge deleted\n")
                     
                     #### make necessary changes permanent
                     network_extra1 = temp_network_extra1
@@ -1453,13 +1490,13 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                 }else{
                     #### keep the edge, no change
                     noChange = noChange + 1
-                    cat("\nEdge kept [Face feature and/or edge estimation constraint]\n")
+                    cat("!Edge kept [Face feature and/or edge estimation constraint]\n")
                 }
                 
             }else{
                 #### keep the edge, no change
                 noChange = noChange + 1
-                cat("\nEdge kept [Connectivity constraint]\n")
+                cat("!Edge kept [Connectivity constraint]\n")
             }
             
             #### temporarily plotting each iteration
@@ -1470,7 +1507,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
             #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
             #### This is sometimes also called the clustering coefficient.
             cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
-            cat("\nCC Sim: ", cluster_coeff_s, "\n")
+            cat("CC Sim: ", cluster_coeff_s, "\n")
             
             #### construct and display as corresponding ppp and linnet
             degs = igraph::degree(graph_obj, mode="total")
@@ -1510,6 +1547,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     org_max_edge_length = max(branch.all$euclid)
     org_min_edge_length = min(branch.all$euclid)
     
+    
     list[gen.ppp, branch.ppp, branch.all, org_face_feature, network_extra1, face_list, face_area_list, face_node_count, 
          g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
          meshedness, network_density, compactness, cluster_coeff, org_max_deg,
@@ -1518,6 +1556,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                        g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                        meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                        sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd)
+    
     
     #### main loop
     noChange = 0
@@ -1553,11 +1592,11 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         }
         
         #### prepare the vertex probability from degree values
-        prob_vertex = computeVertexProb2(org_max_deg, g2_degree, network_extra1)
+        prob_vertex = computeVertexProb(org_max_deg, g2_degree, network_extra1)
         
         #### select a vertex at random or based on high degree
         selected_vertex = sample.int(gen.ppp$n, 1, prob = prob_vertex)
-        cat("\nSelected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
+        cat("Selected vertex ID: ", selected_vertex, ", Degree of the selected vertex: ", g2_degree[selected_vertex], "\n")
         
         #### detect the neighbors of a given vertex
         adj_vertices_from_df = antiClockwiseNeighbors(selected_vertex, gen.ppp, network_extra1)
@@ -1592,7 +1631,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #print(network_extra1[selected_edge, ])
             
             if(is.na(network_extra1$ind1[selected_edge])){
-                cat("Error in finding edge\n")
+                cat("!Error in finding edge\n")
                 next
             }
     
@@ -1608,7 +1647,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             if((vertex_dist_boundary[v1]==0 & g2_degree[v1]<=3 & !isCornerV(v1, gen.ppp)) |
                (vertex_dist_boundary[v2]==0 & g2_degree[v2]<=3  & !isCornerV(v2, gen.ppp))){
                 noChange = noChange + 1
-                cat("\nEdge kept [Boundary degree constraint]\n")
+                cat("!Edge kept [Boundary degree constraint]\n")
                 next
             }
     
@@ -1616,14 +1655,14 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             if((vertex_dist_boundary[v1]==0) & (vertex_dist_boundary[v2]==0) & 
                ((gen.ppp$x[v1]==gen.ppp$x[v2])| (gen.ppp$y[v1]==gen.ppp$y[v2]) ) ){
                 noChange = noChange + 1
-                cat("\nEdge kept [Boundary edge constraint]\n")
+                cat("!Edge kept [Boundary edge constraint]\n")
                 next
             }
             
             #### just to see what happens
             if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                 noChange = noChange + 1
-                cat("\nEdge kept [Internal degree constraint]\n")
+                cat("!Edge kept [Internal degree constraint]\n")
                 next
             }
             
@@ -1692,7 +1731,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                                             identical, sort(face_p)))
     
                 if(length(face_p_index)==0){
-                    cat("\nError in face identification 2\n")
+                    cat("!Error in face identification 2\n")
                     next
                 }
                 
@@ -1708,7 +1747,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 temp_tri_est_1 = predict(temp_triKDE_face_feat_1, x=c(temp_face_area_list[face_p_index], temp_face_features$elong[face_p_index], temp_face_features$orient[face_p_index]))
                 temp_tri_est_2 = predict(temp_triKDE_face_feat_2, x=c((temp_face_node_count)[face_p_index]))
                 
-                cat("\nFace est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
+                cat("Face est. 1 diff: ", (org_est_1 - temp_tri_est_1), "\n")
                 # cat("\nFace est. 2 diff: ", (org_est_2 - temp_tri_est_2), "\n")
                  
                 cat("Face convexity of the new face: ", temp_face_convexity_list[face_p_index], "\n")
@@ -1720,8 +1759,8 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     
                 if(temp_face_convexity_list[face_p_index] < convexity_param){ # another option: mean(temp_face_convexity_list) < org_face_convexity_mean 
                     #### keep the edge, no change
-                    noChange = noChange + 1
-                    cat("\nEdge kept [Face convexity constraint]\n")
+                    #noChange = noChange + 1
+                    cat("!Edge kept [Face convexity constraint]\n")
                 }else{
                     if(length(face_index)==2){
                         f1 = face_index[1]
@@ -1739,7 +1778,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                         }
         
                     }else{
-                        cat("\nError in face identification 1\n")
+                        cat("!Error in face identification 1\n")
                         quit()
                     }
                 }
@@ -1748,7 +1787,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 if(edge_reject){
                     #### remove the edge, there is a change
                     noChange = 0
-                    cat("\nEdge deleted\n")
+                    cat("Edge deleted\n")
     
                     #### make necessary changes permanent
                     network_extra1 = temp_network_extra1
@@ -1766,13 +1805,13 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                 }else{
                     #### keep the edge, no change
                     noChange = noChange + 1
-                    cat("\nEdge kept [Face feature and/or edge estimation constraint]\n")
+                    cat("!Edge kept [Face feature and/or edge estimation constraint]\n")
                 }
     
             }else{
                 #### keep the edge, no change
                 noChange = noChange + 1
-                cat("\nEdge kept [Connectivity constraint]\n")
+                cat("!Edge kept [Connectivity constraint]\n")
             }
     
             #### temporarily plotting each iteration
@@ -1783,7 +1822,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             #### Transitivity measures the probability that the adjacent vertices of a vertex are connected.
             #### This is sometimes also called the clustering coefficient.
             cluster_coeff_s = igraph::transitivity(graph_obj, type = "global")
-            cat("\nCC Sim: ", cluster_coeff_s, "\n")
+            cat("CC Sim: ", cluster_coeff_s, "\n")
     
             #### construct and display as corresponding ppp and linnet
             degs = igraph::degree(graph_obj, mode="total")
@@ -1802,6 +1841,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
         }
     }
     
+    
     list[gen.ppp, branch.ppp, branch.all, org_face_feature, network_extra1, face_list, face_area_list, face_node_count, 
          g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
          meshedness, network_density, compactness, cluster_coeff, org_max_deg,
@@ -1810,6 +1850,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
                        g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                        meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                        sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd)
+    
     
     #### compute index of the boundary edges again
     bb_edges_2 = which((vertex_dist_boundary[network_extra1$ind1]==0) & 
@@ -1832,6 +1873,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
     triKDE_edge_feat = after_elim_0[[9]]
     tri_face_features = after_elim_0[[10]]
     face_convexity_mean = after_elim_0[[11]]
+    
     
     #### figure out the vertex id of the corner points
     c_v = c()
