@@ -165,3 +165,43 @@ svglite(paste("D:/Fall 2023/Research/Prelim/figures/example pp/pois_linhom.svg",
 par(mar = c(0, 0, 0, 0))  
 print(g3)
 dev.off()
+
+##########################################################################################################
+S = rStraussHard(beta=100, gamma=0.7, R=0.05, H=0.02)
+plot(S, main="", pch=21, cex=0.6, bg="black")
+
+svglite(paste("D:/Fall 2023/Research/Prelim/figures/example pp/sh_pp.svg", sep=""), width = 1.5, height = 1.5)
+par(mar = c(0, 0, 0, 0))
+plot(S, main="", pch=21, cex=0.6, bg="black")
+dev.off()
+
+S_env_linhom = envelope(S, fun = "Linhom", correction = "isotropic", nsim = 39)
+S_boot_linhom = lohboot(S, fun = "Linhom", correction = "isotropic")
+    
+my_color_map = c("CSR"="darkgrey", "Strauss-hardcore"="cyan3", "Inhom"="indianred1")
+g4 = ggplot()+
+    geom_ribbon(aes(x=S_env_linhom$r, ymin=S_env_linhom$lo-S_env_linhom$r, ymax=S_env_linhom$hi-S_env_linhom$r, fill="CSR"), alpha=0.2) +
+    geom_ribbon(aes(x=S_boot_linhom$r, ymin=S_boot_linhom$lo-S_boot_linhom$r, ymax=S_boot_linhom$hi-S_boot_linhom$r, fill="Strauss-hardcore"), alpha=0.2) +
+    
+    geom_line(aes(x=S_boot_linhom$r, y=S_boot_linhom$iso-S_boot_linhom$r, colour="Strauss-hardcore"), show.legend = F) +
+
+    theme(legend.position="top",  legend.title=element_blank(), legend.text=element_text(size=8),
+          legend.box.margin=margin(0,-10,-10,-10),
+          legend.key.size = unit(0.5, "cm"),
+          plot.title = element_text(hjust = 0.3, size=10),
+          plot.subtitle = element_text(hjust = 0.5, size=8),
+          axis.text.x = element_text(size = 9), axis.text.y = element_text(size = 8),
+          axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 8),
+          panel.background = element_rect(fill='white', colour='black'),
+          panel.grid.major = element_line(color = "grey", size=0.25, linetype=2)) +
+    scale_color_manual(values = my_color_map) + 
+    scale_fill_manual(values = my_color_map) +
+    xlab(expression(paste("Interaction distance (r)"))) + ylab("L(r)")
+#labs(title="Besag's centered inhomogeneous L-function")
+
+print(g4)
+
+svglite(paste("D:/Fall 2023/Research/Prelim/figures/example pp/sh_linhom.svg", sep=""), width = 2.5, height = 2)
+par(mar = c(0, 0, 0, 0))  
+print(g4)
+dev.off()
