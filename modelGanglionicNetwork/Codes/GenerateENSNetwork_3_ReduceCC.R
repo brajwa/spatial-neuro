@@ -1073,7 +1073,7 @@ bVertexEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_featu
                 }
                 
                 #### just to see what happens
-                if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
+                if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                     noChange = noChange + 1
                     cat("!Edge kept [Internal degree constraint]\n")
                     next
@@ -1286,7 +1286,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
             break
         }
         
-        if(noChange >= (3*small_face_count)){
+        if(noChange >= (2*small_face_count)){
             break
         }
         
@@ -1366,7 +1366,7 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
             }
             
             #### just to see what happens
-            if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
+            if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                 noChange = noChange + 1
                 cat("!Edge kept [Internal degree constraint]\n")
                 next
@@ -1640,7 +1640,7 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
             }
             
             #### just to see what happens
-            if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
+            if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                 noChange = noChange + 1
                 cat("!Edge kept [Internal degree constraint]\n")
                 next
@@ -1965,7 +1965,7 @@ rejectionSampling_3 <- function(gen.ppp, branch.ppp, branch.all, org_face_featur
             }
             
             #### just to see what happens
-            if(g2_degree[v1]<=2 | g2_degree[v2]<=2){
+            if(g2_degree[v1]<=3 | g2_degree[v2]<=3){
                 noChange = noChange + 1
                 cat("!Edge kept [Internal degree constraint]\n")
                 next
