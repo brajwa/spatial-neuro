@@ -975,6 +975,9 @@ smallFaceEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_fea
                                meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                                sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd){
     
+    #### distance of each vertex from the point pattern boundary
+    vertex_dist_boundary = bdist.points(gen.ppp)
+    
     #### create a threshold for small face area from the original face areas
     #### and see how many faces in the triangulation are small than the threshold
     area_threshold = as.numeric(summary(org_face_feature$Area_SL)[3])
@@ -1265,13 +1268,15 @@ heavyEdgeRejection <- function(gen.ppp, branch.ppp, branch.all, org_face_feature
                    g2_degree, orgKDE_face_feat_1, orgKDE_face_feat_2, triKDE_face_feat_1, triKDE_face_feat_2, orgKDE_edge_feat, triKDE_edge_feat,
                    meshedness, network_density, compactness, cluster_coeff, org_max_deg,
                    sample_id, tri_face_features, org_face_convexity_mean, org_face_convexity_sd){
+    #### distance of each vertex from the point pattern boundary
+    vertex_dist_boundary = bdist.points(gen.ppp)
     
     deleted = 0
     noChange = 0
     while(TRUE) {
         cat("\nDeleted count: ", deleted, ", noChange: ", noChange, "\n")
         
-        if(noChange >= 50){
+        if(noChange >= 30){
             break
         }
         
@@ -1995,7 +2000,7 @@ face_features_combined = read.csv(paste(face_folder, "FaceFeatures_3.csv", sep =
 branch_info_folder = paste(parent, "Data/ENSMouse Branch Information (in um) v2.0/", sep="")
 branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
 
-i = 2 # index of the ENS network we want to work on
+i = 21 # index of the ENS network we want to work on
 
 ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
 sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][11], "\\.")[[1]][1]
