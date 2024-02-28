@@ -1,9 +1,5 @@
 #### loading required libraries (there might be more libraries loaded than required)
-load.lib = c("deldir", "spatstat", "spatstat.utils", "magrittr", "dplyr", "igraph", "scales", "httr", "tidyverse", "ggnetwork", "ggplot2", "poweRlaw",
-             "imager", "viridis", "plotrix", "openxlsx", "tidyr", "spdep", "maptools", "tmap", "OpenImageR", "dismo", "lctools",
-             "officer", "rvg", "oce", "OneR", "RandomFieldsUtils", "RandomFields", "Cairo", "knitr", "scorepeak", "Rcpp", "emdist",
-             "RImageJROI", "svglite", "transport", "Barycenter", "T4transport", "wvtool", "adimpro", "reshape2", "proxy", "RColorBrewer", "tictoc",
-             "ggrepel", "scatterplot3d", "car", "e1071", "rgl", "this.path")
+load.lib = c("this.path", "spatstat")
 
 install.lib = load.lib[!load.lib %in% installed.packages()]
 for(lib in install.lib) install.packages(lib, dependencies=TRUE)
@@ -18,7 +14,7 @@ parent = strsplit(dir, folder)
 
 
 #### input location
-folder_path = paste(parent, "Data/Inputs/", sep = "")
+folder_path = paste(parent, "Data/Peripheral Axon/Inputs/", sep = "")
 data_files = list.files(path=folder_path, pattern = ".csv", full.names = FALSE)
 extension = ".csv"
 
@@ -37,7 +33,7 @@ for (file_name in data_files) {
   
   pp_list[[length(pp_list) + 1]] = axon_pp
   
-  cat("y-range: ", axon_pp$window$yrange[2], "\n\n")
+  cat("y-range: ", axon_pp$window$yrange, "\n\n")
   
   y_ranges[length(y_ranges) + 1] = axon_pp$window$yrange[2]
 }
