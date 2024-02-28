@@ -2300,7 +2300,7 @@ face_features_combined = read.csv(paste(face_folder, "FaceFeatures_3.csv", sep =
 branch_info_folder = paste(parent, "Data/ENSMouse Branch Information (in um) v2.0/", sep="")
 branch_info_files = list.files(branch_info_folder, recursive = TRUE, pattern = "\\.csv", full.names = TRUE)
 
-i = 2 # index of the ENS network we want to work on
+i = 21 # index of the ENS network we want to work on
 
 ens_location = strsplit(branch_info_files[i], "/")[[1]][11]
 sample_id = strsplit(strsplit(branch_info_files[i], "/")[[1]][11], "\\.")[[1]][1]
