@@ -35,7 +35,8 @@ for (file_name in data_files) {
     pp_list[[length(pp_list) + 1]] = axon_pp
 }
 
-axon_pp = pp_list[[16]]
+axon_pp = pp_list[[15]]
+summary(axon_pp)
 plot(axon_pp, pch=19, cex=0.6, bg="black")
 
 epsilon = 0.01
@@ -44,8 +45,23 @@ init_r = min(nndist(axon_pp)) + epsilon
 inhom_l = Linhom(axon_pp, correction = "border")
 limit_r = max(inhom_l$r)
 
+inhom_l = Linhom(axon_pp, correction = "border")
+ggobj = ggplot(data = inhom_l) + 
+  geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
+  geom_line(aes(x=inhom_l$r, y=inhom_l$border-inhom_l$r), linewidth=1) +
+  theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
+        #legend.box.margin=margin(-10,-10,-10,-10),
+        plot.title = element_text(hjust = 0.5, size=10),
+        plot.subtitle = element_text(hjust = 0.5, size=10),
+        axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
+        axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
+        panel.background = element_rect(fill='white', colour='black'),
+        panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
+  xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
+plot(ggobj)
+
 ####figuring out R
-range_R = data.frame(r=seq(init_r, limit_r, by=0.001))
+range_R = data.frame(r=seq(init_r, limit_r, by=0.002))
 p = profilepl(s=range_R, f=StraussHard, axon_pp~x+y, aic=TRUE, rbord = init_r)
 p
 
