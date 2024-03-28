@@ -93,10 +93,10 @@ ggplot(data = df, aes(x = x, y = y, label=Image_ID)) +
     subtitle = "Analysis: Kernel-smoothed Spatial Map\nLocal Inhomogeneous L-Function")
   
   # labs(subtitle = "no sector")
-  # labs(subtitle = expression("vertical sector (90 ± 15) "*degree))
+  # labs(subtitle = expression("vertical sector (90 ? 15) "*degree))
     
   # labs(title = "Local Inhomogeneous L-Function",
-  #      subtitle = expression("vertical sector (90 ± 15) "*degree))
+  #      subtitle = expression("vertical sector (90 ? 15) "*degree))
 
 dev.off()
 
