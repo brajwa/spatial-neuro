@@ -1,9 +1,107 @@
 #### loading required libraries (there might be more libraries loaded than required)
-load.lib = c("this.path", "spatstat", "ggplot2", "tidyverse", "cowplot", "svglite")
+load.lib = c("this.path", "spatstat", "ggplot2", "tidyverse", "cowplot", "svglite", "ggpmisc", "dplyr")
 
 install.lib = load.lib[!load.lib %in% installed.packages()]
 for(lib in install.lib) install.packages(lib, dependencies=TRUE)
 sapply(load.lib, require, character=TRUE)
+
+
+#### computes and returns the x-coordinates at which the given function crosses the horizontal axis
+#### parameter: points is a dataframe with two columns, x and y, defining the function points
+computeCrossOverPoints <- function(points){
+  points = points[is.finite(rowSums(points)),]
+  x_intercepts = c()
+  i = 1
+  j = 2
+  while(j <= length(points$x)){
+    if( (points$y[i] <= 0 & points$y[j] >= 0) | (points$y[i] >= 0 & points$y[j] <= 0) ){
+      x1 = points$x[i]
+      x2 = points$x[j]
+      
+      y1 = points$y[i]
+      y2 = points$y[j]
+      
+      x_cross = x1 + ((x2-x1)*y1)/(y1-y2)
+      x_intercepts = c(x_intercepts, x_cross)
+    }
+    
+    i = i + 1
+    j = j + 1
+  }
+  return(x_intercepts)
+}
+
+
+#### computes and returns the interaction distances for the given point pattern that reflect significant
+#### interaction based on its pair correlation function
+detectLocalPeaks <- function(axon_pp, peak_threshold){
+  inhom_pcf = pcfinhom(axon_pp)
+  
+  #### translate the pcf to y=0, to detect the crossover points
+  translated_pcf = data.frame(x=inhom_pcf$r, y=inhom_pcf$trans-1)
+  x_cross = computeCrossOverPoints(translated_pcf)
+  x_cross = c(0, x_cross, max(inhom_pcf$r)) # the cross over points are now range endpoints
+  
+  #### takes absolute value of the pcf to detect the peaks within the computed ranges
+  modified_pcf = data.frame(r=inhom_pcf$r, f=abs(inhom_pcf$trans-1))
+  
+  intr_info = data.frame(matrix(nrow=0, ncol = 4))
+  i = 1
+  j = 2
+  while(j <= length(x_cross)){
+    begin = x_cross[i]
+    end = x_cross[j]
+    
+    filtered_pcf = modified_pcf[(modified_pcf$r>=begin & modified_pcf$r<=end), ]
+    filtered_pcf = filtered_pcf[is.finite(rowSums(filtered_pcf)),]
+    
+    if(max(filtered_pcf$f) >= peak_threshold){
+      intr_dist = filtered_pcf$r[which.max(filtered_pcf$f)]
+      
+      filtered_pcf_2 = translated_pcf[(translated_pcf$x>=begin & translated_pcf$x<=end), ]
+      filtered_pcf_2 = filtered_pcf_2[is.finite(rowSums(filtered_pcf_2)),]
+      if(sum(filtered_pcf_2$y) < 0){
+        intr_type = "inhibition"
+      }else{
+        intr_type = "attraction"
+      }
+    }else{
+      intr_dist = NA
+      intr_type = "random"
+    }
+    
+    intr_info = rbind(intr_info, c(begin, end, intr_dist, intr_type))
+    
+    i = i + 1
+    j = j + 1
+  }
+  colnames(intr_info) = c("begin", "end", "intr_dist", "intr_type")
+  
+  ggobj = ggplot(data = inhom_pcf) + 
+    geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
+    geom_hline(aes(yintercept=1)) +  
+    geom_line(aes(x=r, y=trans), linewidth=1) +
+    geom_vline(xintercept=as.numeric(intr_info$intr_dist[!is.na(intr_info$intr_dist)]), lty=2, colour="blue")
+    theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
+          #legend.box.margin=margin(-10,-10,-10,-10),
+          plot.title = element_text(hjust = 0.5, size=10),
+          plot.subtitle = element_text(hjust = 0.5, size=10),
+          axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
+          axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
+          panel.background = element_rect(fill='white', colour='black'),
+          panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
+    xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
+  plot(ggobj)
+  
+  return(intr_info)
+  
+  # p_r = modified_pcf$r[ggpmisc::find_peaks(modified_pcf$f)]
+  # ggplot(data = modified_pcf, aes(x = r, y = f)) + 
+  #   geom_line() + 
+  #   stat_peaks(col = "red") +
+  #   geom_vline(xintercept = p_r, linewidth=0.3, lty=2, colour="blue")
+  
+}
 
 
 #### extracting parent directory information for accessing input and output location
@@ -65,7 +163,7 @@ for(axon_pp in pelvic_pp){
           panel.background = element_rect(fill='white', colour='black'),
           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
-  plot(ggobj)
+  #plot(ggobj)
   # svglite(paste(parent, "Output/Peripheral Axon/Inhom-L/pelvic_pp_inhom_l_", i, ".svg", sep=""), width = 4.5, height = 3)
   # par(mar = c(0, 0, 0, 0))
   # plot(ggobj)
@@ -85,11 +183,18 @@ for(axon_pp in pelvic_pp){
           panel.background = element_rect(fill='white', colour='black'),
           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
-  plot(ggobj)
+  #plot(ggobj)
   # svglite(paste(parent, "Output/Peripheral Axon/PCF/pelvic_pp_inhom_pcf_", i, ".svg", sep=""), width = 4.5, height = 3)
   # par(mar = c(0, 0, 0, 0))
   # plot(ggobj)
   # dev.off()
+  
+  env_pcf = envelope(axon_pp, "pcf")
+  env_pcf = env_pcf[is.finite(rowSums(env_pcf)),]
+  p_t = mean(env_pcf$hi-env_pcf$lo)
+  cat(p_t, "\n")
+  # p_t = 0.08
+  print(detectLocalPeaks(axon_pp, peak_threshold = p_t))
   
   i = i + 1
 }
