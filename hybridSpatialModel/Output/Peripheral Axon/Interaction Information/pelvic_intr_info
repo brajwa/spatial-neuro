@@ -1,0 +1,522 @@
+
+Restarting R session...
+
+> #### loading required libraries (there might be more libraries loaded than required)
+> load.lib = c("this.path", "spatstat", "ggplot2", "tidyverse", "cowplot", "svglite", "ggpmisc", "dplyr")
+> 
+> install.lib = load.lib[!load.lib %in% installed.packages()]
+> for(lib in install.lib) install.packages(lib, dependencies=TRUE)
+> sapply(load.lib, require, character=TRUE)
+Loading required package: this.path
+Loading required package: spatstat
+Loading required package: spatstat.data
+Loading required package: spatstat.geom
+spatstat.geom 3.2-9
+Loading required package: spatstat.random
+spatstat.random 3.2-3
+Loading required package: spatstat.explore
+Loading required package: nlme
+spatstat.explore 3.2-6
+Loading required package: spatstat.model
+Loading required package: rpart
+spatstat.model 3.2-10
+Loading required package: spatstat.linnet
+spatstat.linnet 3.1-4
+
+spatstat 3.0-7 
+For an introduction to spatstat, type ‘beginner’ 
+
+Loading required package: ggplot2
+Loading required package: tidyverse
+── Attaching core tidyverse packages ───────────────────────────────────────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ lubridate 1.9.3     ✔ tibble    3.2.1
+✔ purrr     1.0.2     ✔ tidyr     1.3.1
+── Conflicts ─────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::collapse() masks nlme::collapse()
+✖ dplyr::filter()   masks stats::filter()
+✖ dplyr::lag()      masks stats::lag()
+ℹ Use the conflicted package to force all conflicts to become errors
+Loading required package: cowplot
+
+Attaching package: ‘cowplot’
+
+The following object is masked from ‘package:lubridate’:
+
+    stamp
+
+Loading required package: svglite
+Loading required package: ggpmisc
+Loading required package: ggpp
+Registered S3 methods overwritten by 'ggpp':
+  method                  from   
+  heightDetails.titleGrob ggplot2
+  widthDetails.titleGrob  ggplot2
+
+Attaching package: ‘ggpp’
+
+The following object is masked from ‘package:ggplot2’:
+
+    annotate
+
+Registered S3 method overwritten by 'ggpmisc':
+  method                  from   
+  as.character.polynomial polynom
+this.path  spatstat   ggplot2 tidyverse   cowplot   svglite   ggpmisc     dplyr 
+     TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE 
+Warning message:
+In .recacheSubclasses(def@className, def, env) :
+  undefined subclass "ndiMatrix" of class "replValueSp"; definition not updated
+> 
+> 
+> #### computes and returns the x-coordinates at which the given function crosses the horizontal axis
+> #### parameter: points is a dataframe with two columns, x and y, defining the function points
+> computeCrossOverPoints <- function(points){
++   points = points[is.finite(rowSums(points)),]
++   x_intercepts = c()
++   i = 1
++   j = 2
++   while(j <= length(points$x)){
++     if( (points$y[i] <= 0 & points$y[j] >= 0) | (points$y[i] >= 0 & points$y[j] <= 0) ){
++       x1 = points$x[i]
++       x2 = points$x[j]
++       
++       y1 = points$y[i]
++       y2 = points$y[j]
++       
++       x_cross = x1 + ((x2-x1)*y1)/(y1-y2)
++       x_intercepts = c(x_intercepts, x_cross)
++     }
++     
++     i = i + 1
++     j = j + 1
++   }
++   return(x_intercepts)
++ }
+> 
+> 
+> #### computes and returns the interaction distances for the given point pattern that reflect significant
+> #### interaction based on its pair correlation function
+> detectLocalPeaks <- function(axon_pp, peak_threshold){
++   inhom_pcf = pcfinhom(axon_pp)
++   
++   #### translate the pcf to y=0, to detect the crossover points
++   translated_pcf = data.frame(x=inhom_pcf$r, y=inhom_pcf$trans-1)
++   x_cross = computeCrossOverPoints(translated_pcf)
++   x_cross = c(0, x_cross, max(inhom_pcf$r)) # the cross over points are now range endpoints
++   
++   #### takes absolute value of the pcf to detect the peaks within the computed ranges
++   modified_pcf = data.frame(r=inhom_pcf$r, f=abs(inhom_pcf$trans-1))
++   
++   intr_info = data.frame(matrix(nrow=0, ncol = 4))
++   i = 1
++   j = 2
++   while(j <= length(x_cross)){
++     begin = x_cross[i]
++     end = x_cross[j]
++     
++     filtered_pcf = modified_pcf[(modified_pcf$r>=begin & modified_pcf$r<=end), ]
++     filtered_pcf = filtered_pcf[is.finite(rowSums(filtered_pcf)),]
++     
++     if(max(filtered_pcf$f) >= peak_threshold){
++       intr_dist = filtered_pcf$r[which.max(filtered_pcf$f)]
++       
++       filtered_pcf_2 = translated_pcf[(translated_pcf$x>=begin & translated_pcf$x<=end), ]
++       filtered_pcf_2 = filtered_pcf_2[is.finite(rowSums(filtered_pcf_2)),]
++       if(sum(filtered_pcf_2$y) < 0){
++         intr_type = "inhibition"
++       }else{
++         intr_type = "attraction"
++       }
++     }else{
++       intr_dist = NA
++       intr_type = "random"
++     }
++     
++     intr_info = rbind(intr_info, c(begin, end, intr_dist, intr_type))
++     
++     i = i + 1
++     j = j + 1
++   }
++   colnames(intr_info) = c("begin", "end", "intr_dist", "intr_type")
++   
++   ggobj = ggplot(data = inhom_pcf) + 
++     geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
++     geom_hline(aes(yintercept=1)) +  
++     geom_line(aes(x=r, y=trans), linewidth=1) +
++     geom_vline(xintercept=as.numeric(intr_info$intr_dist[!is.na(intr_info$intr_dist)]), lty=2, colour="blue")
++     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
++           #legend.box.margin=margin(-10,-10,-10,-10),
++           plot.title = element_text(hjust = 0.5, size=10),
++           plot.subtitle = element_text(hjust = 0.5, size=10),
++           axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
++           axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
++           panel.background = element_rect(fill='white', colour='black'),
++           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
++     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
++   plot(ggobj)
++   
++   return(intr_info)
++   
++   # p_r = modified_pcf$r[ggpmisc::find_peaks(modified_pcf$f)]
++   # ggplot(data = modified_pcf, aes(x = r, y = f)) + 
++   #   geom_line() + 
++   #   stat_peaks(col = "red") +
++   #   geom_vline(xintercept = p_r, linewidth=0.3, lty=2, colour="blue")
++   
++ }
+> 
+> 
+> #### extracting parent directory information for accessing input and output location
+> dir = this.dir()
+> folder = strsplit(dir, "/")
+> folder = folder[[1]][length(folder[[1]])]
+> parent = strsplit(dir, folder)
+> 
+> 
+> #### input location
+> folder_path = paste(parent, "Data/Peripheral Axon/Inputs/", sep = "")
+> data_files = list.files(path=folder_path, pattern = ".csv", full.names = FALSE)
+> extension = ".csv"
+> 
+> 
+> pp_list = list()
+> 
+> for (file_name in data_files) {
++   file_name = strsplit(file_name, ".csv")[[1]]
++   print(file_name)
++   
++   axon_locations = unique(read.csv(paste(folder_path, file_name, extension, sep="")))
++   retrieved_contour = readRDS(paste(folder_path, file_name, ".rds", sep=""))
++   
++   axon_pp = ppp(x=axon_locations$X, y=axon_locations$Y, checkdup=F, window = retrieved_contour)
++   axon_pp = rescale.ppp(axon_pp, s=320153.4)  #pre-computed maximum y-range of all the fascicles (ScalingFactorComputation.R)
++   axon_pp = shift.ppp(axon_pp, origin = "centroid")
++   
++   pp_list[[length(pp_list) + 1]] = axon_pp
++   
++   # svglite(paste(parent, "Output/Peripheral Axon/PP/", file_name, ".svg", sep=""), width = 3, height = 3)
++   # par(mar = c(0, 0, 0, 0))
++   # plot(axon_pp, pch=19, cex=0.3, bg="black", main="")
++   # dev.off()
++ }
+[1] "11326_2_C_IR_F2 ICE merge_pred_mi"
+[1] "11326_2_C_IR_F3 ICECB ICE merge_pred_mi"
+[1] "11326_2_C_IR_FASCICLE1 no layers_pred_mi"
+[1] "11327_1_C_IL_montage compressed_pred_mi"
+[1] "11327_2_C_IR ICE+photoshop merge c_pred_mi"
+[1] "11327_3_AB_1V_FASCICLE1_pred_mi"
+[1] "11327_4_AB_1D_pred_mi"
+[1] "11327_5_AB-2V_1_montage_pred_mi"
+[1] "11327_AB-2V_2_12-70 ICE only + manual_pred_mi"
+[1] "11328_4_AB_1D_F1 montage no layers_pred_mi"
+[1] "11328_5_AB-2V_2_montage_pred_mi"
+[1] "896_2_CR F1 CE ICECB ICE merge_pred_mi"
+[1] "896_2_CR F3 ICE _pred_mi"
+[1] "896_4_Abdominal Vagus Posterior Trunk_pred_mi"
+[1] "896_AbdVagAntGast_FASCICLE1_EM_pred_mi"
+[1] "896_AbdVagAntGast_FASCICLE2_EM_pred_mi"
+[1] "897_5_F1 ICECB ICE merge_pred_mi"
+[1] "897_AbdVagAntGast_FASCICLE2_EM_pred_mi"
+[1] "sub-131_sam-1_Image_em_pred_mi"
+[1] "sub-131_sam-2_Image_em_pred_mi"
+[1] "sub-131_sam-3_Image_em_pred_mi"
+[1] "sub-131_sam-4_Image_em_pred_mi"
+[1] "sub-131_sam-5_Image_em_pred_mi"
+[1] "sub-131_sam-8_Image_em_pred_mi"
+[1] "sub-131_sam-9_Image_em_pred_mi"
+[1] "sub-401_sam-1_Image_em_pred_mi"
+[1] "sub-401_sam-2_Image_em_pred_mi"
+[1] "sub-401_sam-3_Image_em_pred_mi"
+[1] "sub-401_sam-4_Image_em_pred_mi"
+Warning messages:
+1: 1 point was rejected as lying outside the specified window 
+2: 1 point was rejected as lying outside the specified window 
+3: 2 points were rejected as lying outside the specified window 
+4: 4 points were rejected as lying outside the specified window 
+5: 3 points were rejected as lying outside the specified window 
+6: 4 points were rejected as lying outside the specified window 
+7: 3 points were rejected as lying outside the specified window 
+> 
+> 
+> #### investigate the pelvic samples
+> pelvic_pp = pp_list[c(19:29)]
+> max_inhom_l_r = c()
+> 
+> i = 1
+> for(axon_pp in pelvic_pp){
++   summary(axon_pp)
++   plot(axon_pp, pch=19, cex=0.3, bg="black")
++   
++   inhom_l = Linhom(axon_pp)
++   max_inhom_l_r[length(max_inhom_l_r) + 1] = max(inhom_l$r)
++   ggobj = ggplot(data = inhom_l) + 
++     geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
++     geom_line(aes(x=inhom_l$r, y=inhom_l$border-inhom_l$r), linewidth=1) +
++     geom_vline(xintercept = min(nndist(axon_pp)), linewidth=0.3, lty=2, colour="blue") +
++     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
++           #legend.box.margin=margin(-10,-10,-10,-10),
++           plot.title = element_text(hjust = 0.5, size=10),
++           plot.subtitle = element_text(hjust = 0.5, size=10),
++           axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
++           axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
++           panel.background = element_rect(fill='white', colour='black'),
++           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
++     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
++   #plot(ggobj)
++   # svglite(paste(parent, "Output/Peripheral Axon/Inhom-L/pelvic_pp_inhom_l_", i, ".svg", sep=""), width = 4.5, height = 3)
++   # par(mar = c(0, 0, 0, 0))
++   # plot(ggobj)
++   # dev.off()
++   
++   inhom_pcf = pcfinhom(axon_pp)
++   ggobj = ggplot(data = inhom_pcf) + 
++     geom_hline(aes(yintercept=1)) + geom_vline(aes(xintercept=0)) + 
++     geom_line(aes(x=inhom_pcf$r, y=inhom_pcf$trans), linewidth=1) +
++     geom_vline(xintercept = min(nndist(axon_pp)), linewidth=0.3, lty=2, colour="blue") +
++     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
++           #legend.box.margin=margin(-10,-10,-10,-10),
++           plot.title = element_text(hjust = 0.5, size=10),
++           plot.subtitle = element_text(hjust = 0.5, size=10),
++           axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
++           axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
++           panel.background = element_rect(fill='white', colour='black'),
++           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
++     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
++   #plot(ggobj)
++   # svglite(paste(parent, "Output/Peripheral Axon/PCF/pelvic_pp_inhom_pcf_", i, ".svg", sep=""), width = 4.5, height = 3)
++   # par(mar = c(0, 0, 0, 0))
++   # plot(ggobj)
++   # dev.off()
++   
++   env_pcf = envelope(axon_pp, "pcf")
++   env_pcf = env_pcf[is.finite(rowSums(env_pcf)),]
++   p_t = mean(env_pcf$hi-env_pcf$lo)
++   cat(p_t, "\n")
++   # p_t = 0.08
++   print(detectLocalPeaks(axon_pp, peak_threshold = p_t))
++   
++   i = i + 1
++ }
+number of data points exceeds 1000 - computing border correction estimate only
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.09101186 
+                 begin                  end            intr_dist  intr_type
+1                    0 0.000732955070135246 0.000152544333117115 inhibition
+2 0.000732955070135246   0.0203166788230992  0.00228816499675672 attraction
+3   0.0203166788230992   0.0216774288463839                 <NA>     random
+4   0.0216774288463839   0.0229519062560343                 <NA>     random
+5   0.0229519062560343   0.0247529029058071                 <NA>     random
+6   0.0247529029058071   0.0332392214496686                 <NA>     random
+7   0.0332392214496686   0.0781026985559627   0.0443904009370804 inhibition
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.3259402 
+                 begin                  end            intr_dist  intr_type
+1                    0 0.000773193676749749 0.000177725746784811 inhibition
+2 0.000773193676749749   0.0106269074172689  0.00213270896141773 attraction
+3   0.0106269074172689   0.0303318607846078                 <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.4158669 
+                begin                 end            intr_dist  intr_type
+1                   0 0.00119766234903958 8.08269326227992e-05 inhibition
+2 0.00119766234903958 0.00734759565812788  0.00226315411343838 attraction
+3 0.00734759565812788  0.0193577177965674                 <NA>     random
+4  0.0193577177965674  0.0198531127560499                 <NA>     random
+5  0.0198531127560499  0.0206916947514366                 <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.3296071 
+                begin                 end            intr_dist  intr_type
+1                   0  0.0013997640101697 5.21366017144736e-05 inhibition
+2  0.0013997640101697 0.00824912799631361  0.00271110328915263 attraction
+3 0.00824912799631361 0.00915861529954913                 <NA>     random
+4 0.00915861529954913 0.00945902606259834                 <NA>     random
+5 0.00945902606259834  0.0100408111625066                 <NA>     random
+6  0.0100408111625066  0.0111477818754065                 <NA>     random
+7  0.0111477818754065  0.0138155971117231                 <NA>     random
+8  0.0138155971117231  0.0140879284597918                 <NA>     random
+9  0.0140879284597918  0.0266939400778105                 <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.2114496 
+                 begin                 end           intr_dist  intr_type
+1                    0 0.00126696826356528 0.00033524199054517 inhibition
+2  0.00126696826356528 0.00681472384288489 0.00254783912814329 attraction
+3  0.00681472384288489 0.00750667733760535                <NA>     random
+4  0.00750667733760535 0.00891582286001362                <NA>     random
+5  0.00891582286001362  0.0111072634474901                <NA>     random
+6   0.0111072634474901  0.0120635372010064                <NA>     random
+7   0.0120635372010064  0.0131851415792411                <NA>     random
+8   0.0131851415792411  0.0135955350465159                <NA>     random
+9   0.0135955350465159  0.0247143013797567                <NA>     random
+10  0.0247143013797567   0.024940437315355                <NA>     random
+11   0.024940437315355  0.0272485906272827                <NA>     random
+12  0.0272485906272827  0.0316260776243153                <NA>     random
+13  0.0316260776243153  0.0343287798318254                <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.3215078 
+                begin                 end            intr_dist  intr_type
+1                   0 0.00141287759702685 0.000363764066506119 inhibition
+2 0.00141287759702685 0.00853170726701176  0.00227352541566324 attraction
+3 0.00853170726701176  0.0174186717862723                 <NA>     random
+4  0.0174186717862723  0.0180528788823989                 <NA>     random
+5  0.0180528788823989  0.0191674746739171                 <NA>     random
+6  0.0191674746739171  0.0232809002563916                 <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.1932419 
+                  begin                  end          intr_dist  intr_type
+1                     0 0.000105134689042073               <NA>     random
+2  0.000105134689042073  0.00130354045766636 0.0003874682034193 inhibition
+3   0.00130354045766636   0.0120472110016466 0.0027122774239351 attraction
+4    0.0120472110016466   0.0146089751675035               <NA>     random
+5    0.0146089751675035   0.0163500654398288               <NA>     random
+6    0.0163500654398288   0.0175478674543327               <NA>     random
+7    0.0175478674543327   0.0192776149440826               <NA>     random
+8    0.0192776149440826   0.0206238389062707               <NA>     random
+9    0.0206238389062707    0.021172293098047               <NA>     random
+10    0.021172293098047   0.0396767440301363               <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.1344411 
+                  begin                  end           intr_dist  intr_type
+1                     0 0.000839266748549291 0.00020541255231742 inhibition
+2  0.000839266748549291   0.0211737939842652 0.00236224435165033 attraction
+3    0.0211737939842652   0.0219561125883914                <NA>     random
+4    0.0219561125883914    0.026607647056008                <NA>     random
+5     0.026607647056008   0.0274252659875266                <NA>     random
+6    0.0274252659875266     0.02878168521878                <NA>     random
+7      0.02878168521878   0.0350394384410045                <NA>     random
+8    0.0350394384410045   0.0361915526805536                <NA>     random
+9    0.0361915526805536   0.0367440613707516                <NA>     random
+10   0.0367440613707516   0.0380587293112241                <NA>     random
+11   0.0380587293112241    0.038747935507629                <NA>     random
+12    0.038747935507629   0.0479911561575627                <NA>     random
+13   0.0479911561575627   0.0494225062102172                <NA>     random
+14   0.0494225062102172   0.0507405128424722                <NA>     random
+15   0.0507405128424722   0.0525856133932595                <NA>     random
+number of data points exceeds 1000 - computing border correction estimate only
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.1174307 
+                 begin                 end            intr_dist  intr_type
+1                    0  0.0011356680042332 0.000266332531723203 inhibition
+2   0.0011356680042332 0.00870784051346505  0.00239699278550883 attraction
+3  0.00870784051346505 0.00966517523326365                 <NA>     random
+4  0.00966517523326365   0.010813823950032                 <NA>     random
+5    0.010813823950032  0.0112234238302263                 <NA>     random
+6   0.0112234238302263  0.0117643143938478                 <NA>     random
+7   0.0117643143938478  0.0122688563941378                 <NA>     random
+8   0.0122688563941378  0.0171852970369234                 <NA>     random
+9   0.0171852970369234  0.0245583097436843                 <NA>     random
+10  0.0245583097436843  0.0247793460812661                 <NA>     random
+11  0.0247793460812661  0.0365257176034332                 <NA>     random
+12  0.0365257176034332  0.0375836025492191                 <NA>     random
+13  0.0375836025492191  0.0381702467731229                 <NA>     random
+14  0.0381702467731229  0.0385138102369869                 <NA>     random
+15  0.0385138102369869  0.0385957787420829                 <NA>     random
+16  0.0385957787420829  0.0395398699940513                 <NA>     random
+17  0.0395398699940513  0.0412326177725215                 <NA>     random
+18  0.0412326177725215  0.0421209234645935                 <NA>     random
+19  0.0421209234645935  0.0454540854140933                 <NA>     random
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.2300987 
+                 begin                 end            intr_dist  intr_type
+1                    0 0.00120550802444143 0.000252391864817513 inhibition
+2  0.00120550802444143  0.0129138883475133  0.00265011458058388 attraction
+3   0.0129138883475133  0.0139199812985241                 <NA>     random
+4   0.0139199812985241  0.0147592385401885                 <NA>     random
+5   0.0147592385401885  0.0254907644082132                 <NA>     random
+6   0.0254907644082132  0.0268171420235502                 <NA>     random
+7   0.0268171420235502  0.0281735340045018                 <NA>     random
+8   0.0281735340045018  0.0286548846835549                 <NA>     random
+9   0.0286548846835549  0.0298335092923506                 <NA>     random
+10  0.0298335092923506  0.0303202306708904                 <NA>     random
+11  0.0303202306708904  0.0323061586966416                 <NA>     random
+number of data points exceeds 1000 - computing border correction estimate only
+Generating 99 simulations of CSR  ...
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 
+99.
+
+Done.
+0.07236163 
+                begin                 end            intr_dist  intr_type
+1                   0 0.00106524216079696 0.000138005556071146 inhibition
+2 0.00106524216079696    0.04420195471353  0.00262210556535178 attraction
+3    0.04420195471353  0.0451190947013694                 <NA>     random
+4  0.0451190947013694  0.0458355506068976                 <NA>     random
+5  0.0458355506068976   0.070658844708427                 <NA>     random
+Warning messages:
+1: Internal error: fvlabels truncated the function name 
+2: Internal error: fvlabels truncated the function name 
+3: Internal error: fvlabels truncated the function name 
+> 

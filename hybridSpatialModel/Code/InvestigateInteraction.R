@@ -34,7 +34,7 @@ computeCrossOverPoints <- function(points){
 
 #### computes and returns the interaction distances for the given point pattern that reflect significant
 #### interaction based on its pair correlation function
-detectLocalPeaks <- function(axon_pp, peak_threshold){
+detectLocalPeaks <- function(axon_pp, pp_id, peak_threshold, parent_path){
   inhom_pcf = pcfinhom(axon_pp)
   
   #### translate the pcf to y=0, to detect the crossover points
@@ -92,6 +92,10 @@ detectLocalPeaks <- function(axon_pp, peak_threshold){
           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
   plot(ggobj)
+  # svglite(paste(parent_path, "Output/Peripheral Axon/Interaction Information/pelvic_pp_pcf_intr_", pp_id, ".svg", sep=""), width = 4.5, height = 3)
+  # par(mar = c(0, 0, 0, 0))
+  # plot(ggobj)
+  # dev.off()
   
   return(intr_info)
   
@@ -189,12 +193,13 @@ for(axon_pp in pelvic_pp){
   # plot(ggobj)
   # dev.off()
   
+  #### compute envelope of pcf to get the CSR band
+  #### this will act as peak threshold 
   env_pcf = envelope(axon_pp, "pcf")
   env_pcf = env_pcf[is.finite(rowSums(env_pcf)),]
   p_t = mean(env_pcf$hi-env_pcf$lo)
   cat(p_t, "\n")
-  # p_t = 0.08
-  print(detectLocalPeaks(axon_pp, peak_threshold = p_t))
+  print(detectLocalPeaks(axon_pp, i, peak_threshold = p_t, parent))
   
   i = i + 1
 }
