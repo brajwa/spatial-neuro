@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='324.00pt' height='216.00pt' viewBox='0 0 324.00 216.00'>
+<defs>
+  <style type='text/css'><![CDATA[
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite text {
+      white-space: pre;
+    }
+  ]]></style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: #FFFFFF;'/>
+<defs>
+  <clipPath id='cpMC4wMHwzMjQuMDB8MC4wMHwyMTYuMDA='>
+    <rect x='0.00' y='0.00' width='324.00' height='216.00' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHwzMjQuMDB8MC4wMHwyMTYuMDA=)'>
+<rect x='0.00' y='0.00' width='324.00' height='216.00' style='stroke-width: 1.07; stroke: #FFFFFF; fill: #FFFFFF;' />
+</g>
+<defs>
+  <clipPath id='cpMjcuMDB8MzE4LjUyfDUuNDh8MTgzLjc0'>
+    <rect x='27.00' y='5.48' width='291.52' height='178.26' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMjcuMDB8MzE4LjUyfDUuNDh8MTgzLjc0)'>
+<rect x='27.00' y='5.48' width='291.52' height='178.26' style='stroke-width: 1.07; fill: #FFFFFF;' />
+<polyline points='27.00,152.16 318.52,152.16 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='27.00,118.02 318.52,118.02 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='27.00,83.88 318.52,83.88 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='27.00,49.74 318.52,49.74 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='27.00,15.60 318.52,15.60 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='72.27,183.74 72.27,5.48 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='136.31,183.74 136.31,5.48 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='200.35,183.74 200.35,5.48 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='264.39,183.74 264.39,5.48 ' style='stroke-width: 0.53; stroke: #FFFFFF; stroke-linecap: butt;' />
+<polyline points='27.00,169.23 318.52,169.23 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='27.00,135.09 318.52,135.09 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='27.00,100.95 318.52,100.95 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='27.00,66.81 318.52,66.81 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='27.00,32.67 318.52,32.67 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='40.25,183.74 40.25,5.48 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='104.29,183.74 104.29,5.48 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='168.33,183.74 168.33,5.48 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='232.37,183.74 232.37,5.48 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<polyline points='296.41,183.74 296.41,5.48 ' style='stroke-width: 0.53; stroke: #BEBEBE; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<line x1='27.00' y1='169.23' x2='318.52' y2='169.23' style='stroke-width: 1.07; stroke-linecap: butt;' />
+<line x1='40.25' y1='183.74' x2='40.25' y2='5.48' style='stroke-width: 1.07; stroke-linecap: butt;' />
+<polyline points='40.25,5.48 40.77,13.58 41.28,93.43 41.80,117.01 42.32,129.19 42.84,136.17 43.35,139.62 43.87,141.77 44.39,142.28 44.91,142.60 45.42,143.17 45.94,143.87 46.46,144.37 46.98,144.64 47.49,144.17 48.01,143.49 48.53,142.67 49.05,141.82 49.56,141.21 50.08,141.09 50.60,141.51 51.12,142.26 51.64,143.28 52.15,144.29 52.67,145.33 53.19,146.12 53.71,146.72 54.22,147.37 54.74,148.23 55.26,148.97 55.78,149.76 56.29,150.61 56.81,151.35 57.33,151.91 57.85,152.13 58.36,152.47 58.88,152.82 59.40,153.12 59.92,153.47 60.43,153.78 60.95,154.07 61.47,154.38 61.99,154.83 62.51,155.25 63.02,155.53 63.54,155.60 64.06,155.63 64.58,155.57 65.09,155.50 65.61,155.50 66.13,155.57 66.65,155.80 67.16,156.03 67.68,156.19 68.20,156.37 68.72,156.79 69.23,157.06 69.75,157.07 70.27,157.01 70.79,157.06 71.30,157.02 71.82,157.06 72.34,157.06 72.86,156.92 73.38,156.66 73.89,156.33 74.41,156.02 74.93,155.71 75.45,155.44 75.96,155.15 76.48,154.92 77.00,154.79 77.52,154.74 78.03,154.78 78.55,154.94 79.07,155.20 79.59,155.55 80.10,156.00 80.62,156.39 81.14,156.86 81.66,157.46 82.17,158.13 82.69,158.77 83.21,159.38 83.73,160.03 84.25,160.74 84.76,161.66 85.28,162.64 85.80,163.58 86.32,164.41 86.83,165.14 87.35,165.76 87.87,166.39 88.39,166.94 88.90,167.38 89.42,167.65 89.94,167.80 90.46,167.91 90.97,168.03 91.49,168.10 92.01,168.11 92.53,168.10 93.04,168.18 93.56,168.29 94.08,168.45 94.60,168.72 95.12,168.98 95.63,169.12 96.15,169.19 96.67,169.10 97.19,168.92 97.70,168.74 98.22,168.52 98.74,168.24 99.26,168.06 99.77,168.04 100.29,167.96 100.81,167.99 101.33,168.20 101.84,168.56 102.36,168.96 102.88,169.30 103.40,169.55 103.91,169.86 104.43,170.20 104.95,170.38 105.47,170.45 105.99,170.47 106.50,170.42 107.02,170.35 107.54,170.25 108.06,170.26 108.57,170.37 109.09,170.50 109.61,170.70 110.13,170.98 110.64,171.27 111.16,171.55 111.68,171.70 112.20,171.87 112.71,172.07 113.23,172.19 113.75,172.25 114.27,172.32 114.78,172.32 115.30,172.36 115.82,172.48 116.34,172.50 116.86,172.48 117.37,172.49 117.89,172.56 118.41,172.67 118.93,172.74 119.44,172.86 119.96,173.14 120.48,173.47 121.00,173.73 121.51,174.02 122.03,174.34 122.55,174.59 123.07,174.79 123.58,174.98 124.10,175.22 124.62,175.45 125.14,175.59 125.65,175.64 126.17,175.58 126.69,175.47 127.21,175.43 127.73,175.34 128.24,175.15 128.76,175.01 129.28,174.82 129.80,174.66 130.31,174.52 130.83,174.35 131.35,174.18 131.87,173.99 132.38,173.70 132.90,173.42 133.42,173.17 133.94,172.98 134.45,172.77 134.97,172.57 135.49,172.48 136.01,172.47 136.52,172.50 137.04,172.55 137.56,172.56 138.08,172.56 138.60,172.58 139.11,172.64 139.63,172.71 140.15,172.78 140.67,172.92 141.18,173.07 141.70,173.21 142.22,173.28 142.74,173.34 143.25,173.49 143.77,173.69 144.29,173.81 144.81,173.83 145.32,173.75 145.84,173.63 146.36,173.52 146.88,173.51 147.39,173.46 147.91,173.35 148.43,173.14 148.95,172.90 149.47,172.73 149.98,172.61 150.50,172.53 151.02,172.54 151.54,172.64 152.05,172.79 152.57,172.98 153.09,173.18 153.61,173.33 154.12,173.45 154.64,173.61 155.16,173.76 155.68,173.81 156.19,173.79 156.71,173.78 157.23,173.83 157.75,173.92 158.27,174.00 158.78,174.10 159.30,174.24 159.82,174.49 160.34,174.77 160.85,174.95 161.37,175.09 161.89,175.22 162.41,175.31 162.92,175.38 163.44,175.41 163.96,175.42 164.48,175.38 164.99,175.26 165.51,175.13 166.03,174.91 166.55,174.74 167.06,174.58 167.58,174.45 168.10,174.34 168.62,174.20 169.14,174.06 169.65,173.87 170.17,173.75 170.69,173.72 171.21,173.73 171.72,173.70 172.24,173.64 172.76,173.54 173.28,173.45 173.79,173.35 174.31,173.32 174.83,173.31 175.35,173.26 175.86,173.22 176.38,173.23 176.90,173.18 177.42,173.18 177.93,173.23 178.45,173.23 178.97,173.11 179.49,172.95 180.01,172.78 180.52,172.61 181.04,172.42 181.56,172.23 182.08,172.04 182.59,171.96 183.11,171.93 183.63,171.91 184.15,171.86 184.66,171.77 185.18,171.70 185.70,171.55 186.22,171.40 186.73,171.29 187.25,171.20 187.77,171.11 188.29,171.06 188.80,171.05 189.32,171.11 189.84,171.15 190.36,171.22 190.88,171.33 191.39,171.33 191.91,171.32 192.43,171.39 192.95,171.38 193.46,171.35 193.98,171.30 194.50,171.18 195.02,170.98 195.53,170.68 196.05,170.36 196.57,170.01 197.09,169.68 197.60,169.38 198.12,169.16 198.64,169.07 199.16,169.08 199.67,169.17 200.19,169.22 200.71,169.35 201.23,169.58 201.75,169.81 202.26,170.05 202.78,170.29 203.30,170.52 203.82,170.70 204.33,170.81 204.85,170.89 205.37,171.03 205.89,171.11 206.40,171.16 206.92,171.17 207.44,171.16 207.96,171.17 208.47,171.25 208.99,171.26 209.51,171.22 210.03,171.18 210.54,171.18 211.06,171.20 211.58,171.17 212.10,171.05 212.62,170.83 213.13,170.61 213.65,170.39 214.17,170.20 214.69,170.02 215.20,169.87 215.72,169.73 216.24,169.62 216.76,169.57 217.27,169.51 217.79,169.48 218.31,169.56 218.83,169.69 219.34,169.85 219.86,170.00 220.38,170.08 220.90,170.13 221.41,170.25 221.93,170.33 222.45,170.42 222.97,170.54 223.49,170.71 224.00,170.88 224.52,171.01 225.04,171.09 225.56,171.12 226.07,171.15 226.59,171.23 227.11,171.31 227.63,171.34 228.14,171.35 228.66,171.33 229.18,171.31 229.70,171.32 230.21,171.35 230.73,171.35 231.25,171.33 231.77,171.28 232.28,171.19 232.80,171.05 233.32,170.75 233.84,170.41 234.36,170.13 234.87,169.81 235.39,169.39 235.91,168.92 236.43,168.47 236.94,168.00 237.46,167.54 237.98,167.10 238.50,166.77 239.01,166.59 239.53,166.54 240.05,166.53 240.57,166.56 241.08,166.61 241.60,166.64 242.12,166.65 242.64,166.68 243.15,166.72 243.67,166.73 244.19,166.77 244.71,166.86 245.23,166.97 245.74,167.20 246.26,167.55 246.78,167.91 247.30,168.28 247.81,168.69 248.33,169.09 248.85,169.46 249.37,169.77 249.88,170.05 250.40,170.35 250.92,170.60 251.44,170.67 251.95,170.65 252.47,170.64 252.99,170.48 253.51,170.26 254.02,170.10 254.54,169.96 255.06,169.83 255.58,169.73 256.10,169.75 256.61,169.78 257.13,169.81 257.65,169.78 258.17,169.75 258.68,169.76 259.20,169.83 259.72,169.90 260.24,169.97 260.75,170.08 261.27,170.23 261.79,170.44 262.31,170.65 262.82,170.81 263.34,170.96 263.86,171.10 264.38,171.21 264.89,171.35 265.41,171.50 265.93,171.63 266.45,171.81 266.97,172.00 267.48,172.17 268.00,172.34 268.52,172.50 269.04,172.56 269.55,172.61 270.07,172.66 270.59,172.71 271.11,172.72 271.62,172.65 272.14,172.66 272.66,172.65 273.18,172.62 273.69,172.56 274.21,172.53 274.73,172.51 275.25,172.50 275.77,172.50 276.28,172.52 276.80,172.55 277.32,172.61 277.84,172.68 278.35,172.69 278.87,172.62 279.39,172.49 279.91,172.29 280.42,172.02 280.94,171.77 281.46,171.49 281.98,171.16 282.49,170.86 283.01,170.59 283.53,170.35 284.05,170.14 284.56,169.96 285.08,169.80 285.60,169.65 286.12,169.50 286.64,169.32 287.15,169.13 287.67,168.89 288.19,168.66 288.71,168.46 289.22,168.30 289.74,168.13 290.26,167.98 290.78,167.82 291.29,167.68 291.81,167.61 292.33,167.61 292.85,167.64 293.36,167.70 293.88,167.79 294.40,167.84 294.92,167.89 295.43,167.98 295.95,168.07 296.47,168.18 296.99,168.27 297.51,168.35 298.02,168.44 298.54,168.54 299.06,168.63 299.58,168.69 300.09,168.69 300.61,168.68 301.13,168.64 301.65,168.59 302.16,168.53 302.68,168.42 303.20,168.26 303.72,168.13 304.23,168.03 304.75,168.00 305.27,167.98 ' style='stroke-width: 2.13; stroke-linecap: butt;' />
+<line x1='51.36' y1='183.74' x2='51.36' y2='5.48' style='stroke-width: 0.64; stroke: #0000FF; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+</g>
+<g clip-path='url(#cpMC4wMHwzMjQuMDB8MC4wMHwyMTYuMDA=)'>
+<text x='22.06' y='172.10' text-anchor='end' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='4.45px' lengthAdjust='spacingAndGlyphs'>1</text>
+<text x='22.06' y='137.96' text-anchor='end' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='4.45px' lengthAdjust='spacingAndGlyphs'>2</text>
+<text x='22.06' y='103.82' text-anchor='end' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='4.45px' lengthAdjust='spacingAndGlyphs'>3</text>
+<text x='22.06' y='69.68' text-anchor='end' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='4.45px' lengthAdjust='spacingAndGlyphs'>4</text>
+<text x='22.06' y='35.54' text-anchor='end' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='4.45px' lengthAdjust='spacingAndGlyphs'>5</text>
+<polyline points='24.26,169.23 27.00,169.23 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='24.26,135.09 27.00,135.09 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='24.26,100.95 27.00,100.95 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='24.26,66.81 27.00,66.81 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='24.26,32.67 27.00,32.67 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='40.25,186.48 40.25,183.74 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='104.29,186.48 104.29,183.74 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='168.33,186.48 168.33,183.74 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='232.37,186.48 232.37,183.74 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='296.41,186.48 296.41,183.74 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<text x='40.25' y='194.41' text-anchor='middle' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.02px' lengthAdjust='spacingAndGlyphs'>0.000</text>
+<text x='104.29' y='194.41' text-anchor='middle' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.02px' lengthAdjust='spacingAndGlyphs'>0.005</text>
+<text x='168.33' y='194.41' text-anchor='middle' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.02px' lengthAdjust='spacingAndGlyphs'>0.010</text>
+<text x='232.37' y='194.41' text-anchor='middle' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.02px' lengthAdjust='spacingAndGlyphs'>0.015</text>
+<text x='296.41' y='194.41' text-anchor='middle' style='font-size: 8.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.02px' lengthAdjust='spacingAndGlyphs'>0.020</text>
+<text x='121.26' y='206.21' style='font-size: 10.00px; font-family: "Arial";' textLength='53.90px' lengthAdjust='spacingAndGlyphs'>Distance, r (</text>
+<text x='175.16' y='206.21' style='font-size: 10.00px; font-family: "Symbol";' textLength='5.76px' lengthAdjust='spacingAndGlyphs'>μ</text>
+<text x='180.92' y='206.21' style='font-size: 10.00px; font-family: "Arial";' textLength='43.34px' lengthAdjust='spacingAndGlyphs'>m scaled)</text>
+<text transform='translate(12.66,94.61) rotate(-90)' text-anchor='middle' style='font-size: 10.00px; font-family: "Arial";' textLength='110.59px' lengthAdjust='spacingAndGlyphs'>Pair Correlation Function</text>
+</g>
+</svg>
