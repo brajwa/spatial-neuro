@@ -47,20 +47,26 @@ for(axon_pp in pelvic_pp){
   inhom_l = Linhom(axon_pp, correction = "border")
   max_inhom_l_r[length(max_inhom_l_r) + 1] = max(inhom_l$r)
   
-  ggobj = ggplot(data = inhom_l) + 
-    geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
-    geom_line(aes(x=inhom_l$r, y=inhom_l$border-inhom_l$r), linewidth=1) +
-    geom_vline(xintercept = min(nndist(axon_pp)), linewidth=1, lty=2, colour="blue") +
-    theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
-          #legend.box.margin=margin(-10,-10,-10,-10),
-          plot.title = element_text(hjust = 0.5, size=10),
-          plot.subtitle = element_text(hjust = 0.5, size=10),
-          axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
-          axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
-          panel.background = element_rect(fill='white', colour='black'),
-          panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
-    xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
-  plot(ggobj)
+  inhom_pcf = pcfinhom(axon_pp)
+  
+  par(mfrow = c(1,2))
+  plot(inhom_l, .-r~r)
+  plot(inhom_pcf)
+  
+  # ggobj = ggplot(data = inhom_l) + 
+  #   geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
+  #   geom_line(aes(x=inhom_l$r, y=inhom_l$border-inhom_l$r), linewidth=1) +
+  #   geom_vline(xintercept = min(nndist(axon_pp)), linewidth=1, lty=2, colour="blue") +
+  #   theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
+  #         #legend.box.margin=margin(-10,-10,-10,-10),
+  #         plot.title = element_text(hjust = 0.5, size=10),
+  #         plot.subtitle = element_text(hjust = 0.5, size=10),
+  #         axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
+  #         axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
+  #         panel.background = element_rect(fill='white', colour='black'),
+  #         panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
+  #   xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
+  # plot(ggobj)
 }
 
 limit_r = min(max_inhom_l_r)
