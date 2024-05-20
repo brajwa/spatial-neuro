@@ -131,7 +131,7 @@ for (file_name in data_files) {
   retrieved_contour = readRDS(paste(folder_path, file_name, ".rds", sep=""))
   
   axon_pp = ppp(x=axon_locations$X, y=axon_locations$Y, checkdup=F, window = retrieved_contour)
-  axon_pp = rescale.ppp(axon_pp, s=320153.4)  #pre-computed maximum y-range of all the fascicles (ScalingFactorComputation.R)
+  # axon_pp = rescale.ppp(axon_pp, s=320153.4)  #pre-computed maximum y-range of all the fascicles (ScalingFactorComputation.R)
   axon_pp = shift.ppp(axon_pp, origin = "centroid")
   
   pp_list[[length(pp_list) + 1]] = axon_pp
@@ -145,7 +145,9 @@ for (file_name in data_files) {
 
 #### investigate the pelvic samples
 pelvic_pp = pp_list[c(19:29)]
+
 max_inhom_l_r = c()
+intr_info_combined = data.frame()
 
 i = 1
 for(axon_pp in pelvic_pp){
@@ -222,78 +224,52 @@ for(axon_pp in pelvic_pp){
   env_pcf = env_pcf[is.finite(rowSums(env_pcf)),]
   p_t = mean(env_pcf$hi-env_pcf$lo)
   cat(p_t, "\n")
-  print(detectLocalPeaks(axon_pp, i, peak_threshold = p_t, parent))
+  
+  intr_info = detectLocalPeaks(axon_pp, i, peak_threshold = p_t, parent)
+  print(intr_info)
+  
+  intr_info = cbind(pp_id=rep(i, length(intr_info$begin)),
+                    avg_csr_width = rep(p_t, length(intr_info$begin)), 
+                    intr_info)
+  
+  intr_info_combined = rbind(intr_info_combined, intr_info)
   
   i = i + 1
 >>>>>>> 2e898ce6c01e5bb739aa5db6310aaeaffb262bf2
 }
+colnames(intr_info_combined) = c("pelvic_pp_id", "avg_csr_width", "begin", "end", "intr_dist", "intr_type")
 
-limit_r = min(max_inhom_l_r)
 
 i = 1
 for(axon_pp in pelvic_pp){
-  epsilon = 0.01
-  init_r = min(nndist(axon_pp))
+  #intr_dist = intr_info_combined[[i]]$intr_dist
 
-  ####figuring out R
-  range_R = data.frame(r=seq(init_r, limit_r, by=0.001))
-  p = profilepl(s=range_R, f=AreaInter, axon_pp~polynom(x, y, 2), aic=TRUE, rbord = init_r)
-  p
+  #### linear inhom trend
+  fitM = ppm(axon_pp~x+y, AreaInter(r=234.658057751046))
+  fitM = ppm(axon_pp~x+y, Hybrid(AreaInter(r=234.658057751046),
+                                              AreaInter(r=732.563803472653)) )
+  fitM = ppm(axon_pp~x+y, Hybrid(AreaInter(r=234.658057751046),
+                                              AreaInter(r=732.563803472653),
+                                              AreaInter(r=0.0170024297757469)) )
   
-  # -AIC and Gamma values
-  p_info = data.frame(r=p$param$r, aic=p$prof, gamma=exp(p$allcoef$Interaction))
+  #### polynomial inhom trend
+  fitM = ppm(axon_pp~polynom(x, y, 2), AreaInter(r=0.000773193676749749))
+  fitM = ppm(axon_pp~polynom(x, y, 2), Hybrid(AreaInter(r=0.000773193676749749),
+                                              AreaInter(r=0.0106269074172689)) )
+  fitM = ppm(axon_pp~polynom(x, y, 2), Hybrid(AreaInter(r=0.000773193676749749),
+                                              AreaInter(r=0.0106269074172689),
+                                              AreaInter(r=0.0303318607846078)) )
   
-  ggobj = ggplot(data = p_info) + 
-    geom_point(aes(x=r, y=aic), size=1.5) +
-    geom_line(aes(x=r, y=aic), linewidth=1) +
-    geom_vline(xintercept = parameters(p)$r, linewidth=0.5, lty=2, colour="#69b3a2") +
-    geom_label(label=paste("Opt r: ", round(parameters(p)$r, 4), "\nOpt intr param: ", round(parameters(p)$eta, 2), sep = ""), x=parameters(p)$r, y=mean(p_info$aic),label.padding = unit(0.55, "lines"), # Rectangle size around label
-               label.size = 0.25,color = "black", fill="#69b3a2", size=2)+
-    theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
-          #legend.box.margin=margin(-10,-10,-10,-10),
-          plot.title = element_text(hjust = 0.5, size=10),
-          plot.subtitle = element_text(hjust = 0.5, size=10),
-          axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
-          axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
-          panel.background = element_rect(fill='white', colour='black'),
-          panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
-    xlab(expression(paste("Distance, r (", mu, "m)"))) + ylab("-AIC")
-  plot(ggobj)
-  svglite(paste(parent, "Output/Peripheral Axon/AIC/pelvic_pp_aic_", i, ".svg", sep=""), width = 4, height = 3)
-  par(mar = c(0, 0, 0, 0))
-  plot(ggobj)
-  dev.off()
-  
-  # opt_r = as.numeric(p$fit$interaction$par[1])
-  # opt_hc = as.numeric(p$fit$interaction$par[2])
-  # opt_gamma = as.numeric(exp(p$fit$coef[4]))
-  # org_beta = intensity(axon_pp)
-  # org_win = axon_pp$window
-  # model_1 = list(cif="straush", par=list(beta=org_beta, gamma=opt_gamma, r=opt_r, hc=opt_hc), w=org_win)
-  # sim_1 = rmh(model=model_1)
-  
-  fitM = ppm(axon_pp~polynom(x, y, 2), AreaInter(r=parameters(p)$r))
-  # fitM = ppm(axon_pp~polynom(x, y, 2), Hybrid(Hardcore(hc=init_r), AreaInter(r=parameters(p)$r)) )
-  
+  fitM
   sim_1 = simulate(fitM)
   sim_1 = sim_1$`Simulation 1`
   summary(sim_1)
   plot(sim_1, pch=19, cex=0.3, bg="black")
   
-  svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2.svg", sep=""), width = 3, height = 3)
-  par(mar = c(0, 0, 0, 0))
-  plot(sim_1, pch=19, cex=0.3, bg="black", main="")
-  dev.off()
-  
-  # d = density(axon_pp, sigma = 0.008)
-  # plot(d)
-  # 
-  # Window(sim_1) = Window(d)
-  # d = d / max(d)
-  # d$v[is.na(d$v)] = 0
-  # sim_1_thinned = rthin(sim_1, d)
-  # Window(sim_1_thinned) = Window(axon_pp)
-  # plot(sim_1_thinned, pch=19, cex=0.3, bg="black")
+  # svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2.svg", sep=""), width = 3, height = 3)
+  # par(mar = c(0, 0, 0, 0))
+  # plot(sim_1, pch=19, cex=0.3, bg="black", main="")
+  # dev.off()
   
   sim_inhom_l = Linhom(sim_1)
   ggobj = ggplot(data = sim_inhom_l) + 
@@ -309,16 +285,15 @@ for(axon_pp in pelvic_pp){
           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
   plot(ggobj)
-  svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2_inhom_l.svg", sep=""), width = 4.5, height = 3)
-  par(mar = c(0, 0, 0, 0))
-  plot(ggobj)
-  dev.off()
+  # svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2_inhom_l.svg", sep=""), width = 4.5, height = 3)
+  # par(mar = c(0, 0, 0, 0))
+  # plot(ggobj)
+  # dev.off()
   
   sim_inhom_pcf = pcfinhom(sim_1)
   ggobj = ggplot(data = sim_inhom_pcf) + 
     geom_hline(aes(yintercept=1)) + geom_vline(aes(xintercept=0)) + 
     geom_line(aes(x=sim_inhom_pcf$r, y=sim_inhom_pcf$trans), linewidth=1) +
-    geom_vline(xintercept = min(nndist(axon_pp)), linewidth=0.3, lty=2, colour="blue") +
     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
           #legend.box.margin=margin(-10,-10,-10,-10),
           plot.title = element_text(hjust = 0.5, size=10),
@@ -329,11 +304,121 @@ for(axon_pp in pelvic_pp){
           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
   plot(ggobj)
-  svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2_inhom_pcf.svg", sep=""), width = 4.5, height = 3)
-  par(mar = c(0, 0, 0, 0))
-  plot(ggobj)
-  dev.off()
+  # svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2_inhom_pcf.svg", sep=""), width = 4.5, height = 3)
+  # par(mar = c(0, 0, 0, 0))
+  # plot(ggobj)
+  # dev.off()
   
   i = i + 1
-  
 }
+
+
+
+# limit_r = min(max_inhom_l_r)
+# i = 1
+# for(axon_pp in pelvic_pp){
+#   epsilon = 0.01
+#   init_r = min(nndist(axon_pp))
+# 
+#   ####figuring out R
+#   range_R = data.frame(r=seq(init_r, limit_r, by=0.001))
+#   p = profilepl(s=range_R, f=AreaInter, axon_pp~polynom(x, y, 2), aic=TRUE, rbord = init_r)
+#   p
+#   
+#   # -AIC and Gamma values
+#   p_info = data.frame(r=p$param$r, aic=p$prof, gamma=exp(p$allcoef$Interaction))
+#   
+#   ggobj = ggplot(data = p_info) + 
+#     geom_point(aes(x=r, y=aic), size=1.5) +
+#     geom_line(aes(x=r, y=aic), linewidth=1) +
+#     geom_vline(xintercept = parameters(p)$r, linewidth=0.5, lty=2, colour="#69b3a2") +
+#     geom_label(label=paste("Opt r: ", round(parameters(p)$r, 4), "\nOpt intr param: ", round(parameters(p)$eta, 2), sep = ""), x=parameters(p)$r, y=mean(p_info$aic),label.padding = unit(0.55, "lines"), # Rectangle size around label
+#                label.size = 0.25,color = "black", fill="#69b3a2", size=2)+
+#     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
+#           #legend.box.margin=margin(-10,-10,-10,-10),
+#           plot.title = element_text(hjust = 0.5, size=10),
+#           plot.subtitle = element_text(hjust = 0.5, size=10),
+#           axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
+#           axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
+#           panel.background = element_rect(fill='white', colour='black'),
+#           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
+#     xlab(expression(paste("Distance, r (", mu, "m)"))) + ylab("-AIC")
+#   plot(ggobj)
+#   svglite(paste(parent, "Output/Peripheral Axon/AIC/pelvic_pp_aic_", i, ".svg", sep=""), width = 4, height = 3)
+#   par(mar = c(0, 0, 0, 0))
+#   plot(ggobj)
+#   dev.off()
+#   
+#   # opt_r = as.numeric(p$fit$interaction$par[1])
+#   # opt_hc = as.numeric(p$fit$interaction$par[2])
+#   # opt_gamma = as.numeric(exp(p$fit$coef[4]))
+#   # org_beta = intensity(axon_pp)
+#   # org_win = axon_pp$window
+#   # model_1 = list(cif="straush", par=list(beta=org_beta, gamma=opt_gamma, r=opt_r, hc=opt_hc), w=org_win)
+#   # sim_1 = rmh(model=model_1)
+#   
+#   fitM = ppm(axon_pp~polynom(x, y, 2), AreaInter(r=parameters(p)$r))
+#   # fitM = ppm(axon_pp~polynom(x, y, 2), Hybrid(Hardcore(hc=init_r), AreaInter(r=parameters(p)$r)) )
+#   
+#   sim_1 = simulate(fitM)
+#   sim_1 = sim_1$`Simulation 1`
+#   summary(sim_1)
+#   plot(sim_1, pch=19, cex=0.3, bg="black")
+#   
+#   svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2.svg", sep=""), width = 3, height = 3)
+#   par(mar = c(0, 0, 0, 0))
+#   plot(sim_1, pch=19, cex=0.3, bg="black", main="")
+#   dev.off()
+#   
+  # d = density(axon_pp, sigma = 0.008)
+  # plot(d)
+  # 
+  # Window(sim_1) = Window(d)
+  # d = d / max(d)
+  # d$v[is.na(d$v)] = 0
+  # sim_1_thinned = rthin(sim_1, d)
+  # Window(sim_1_thinned) = Window(axon_pp)
+  # plot(sim_1_thinned, pch=19, cex=0.3, bg="black")
+#   
+#   sim_inhom_l = Linhom(sim_1)
+#   ggobj = ggplot(data = sim_inhom_l) + 
+#     geom_hline(aes(yintercept=0)) + geom_vline(aes(xintercept=0)) + 
+#     geom_line(aes(x=sim_inhom_l$r, y=sim_inhom_l$border-sim_inhom_l$r), linewidth=1) +
+#     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
+#           #legend.box.margin=margin(-10,-10,-10,-10),
+#           plot.title = element_text(hjust = 0.5, size=10),
+#           plot.subtitle = element_text(hjust = 0.5, size=10),
+#           axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
+#           axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
+#           panel.background = element_rect(fill='white', colour='black'),
+#           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
+#     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Besag's centered L-function")
+#   plot(ggobj)
+#   svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2_inhom_l.svg", sep=""), width = 4.5, height = 3)
+#   par(mar = c(0, 0, 0, 0))
+#   plot(ggobj)
+#   dev.off()
+#   
+#   sim_inhom_pcf = pcfinhom(sim_1)
+#   ggobj = ggplot(data = sim_inhom_pcf) + 
+#     geom_hline(aes(yintercept=1)) + geom_vline(aes(xintercept=0)) + 
+#     geom_line(aes(x=sim_inhom_pcf$r, y=sim_inhom_pcf$trans), linewidth=1) +
+#     geom_vline(xintercept = min(nndist(axon_pp)), linewidth=0.3, lty=2, colour="blue") +
+#     theme(legend.position="top", legend.text=element_text(size=8), legend.title = element_blank(),
+#           #legend.box.margin=margin(-10,-10,-10,-10),
+#           plot.title = element_text(hjust = 0.5, size=10),
+#           plot.subtitle = element_text(hjust = 0.5, size=10),
+#           axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8),
+#           axis.title.x = element_text(size = 10), axis.title.y = element_text(size = 10),
+#           panel.background = element_rect(fill='white', colour='black'),
+#           panel.grid.major = element_line(color = "grey", linewidth=0.25, linetype=2)) + 
+#     xlab(expression(paste("Distance, r (", mu, "m scaled)"))) + ylab("Pair Correlation Function")
+#   plot(ggobj)
+#   svglite(paste(parent, "Output/Peripheral Axon/Simulated PP/pelvic_pp_", i, "_sim2_inhom_pcf.svg", sep=""), width = 4.5, height = 3)
+#   par(mar = c(0, 0, 0, 0))
+#   plot(ggobj)
+#   dev.off()
+#   
+#   i = i + 1
+#   
+# }
